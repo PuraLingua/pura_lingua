@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_binary_proc_macros"
+name = "pura_lingua_binary_proc_macros"
 edition = "2024"
 version.workspace = true
 

@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_global"
+name = "pura_lingua_global"
 version = "0.1.0"
 edition = "2024"
 
@@ -34,12 +34,12 @@ bitfields = { workspace = true }
 
 string_name = { workspace = true }
 
-binary_traits = { package = "pura_lingua_v2_binary_traits", path = "../binary_traits" }
-binary_types = { package = "pura_lingua_v2_binary_types", path = "../binary_types" }
-binary_proc_macros = { package = "pura_lingua_v2_binary_proc_macros", path = "../binary_proc_macros" }
+binary_traits = { package = "pura_lingua_binary_traits", path = "../binary_traits" }
+binary_types = { package = "pura_lingua_binary_types", path = "../binary_types" }
+binary_proc_macros = { package = "pura_lingua_binary_proc_macros", path = "../binary_proc_macros" }
 
-proc_macros = { package = "pura_lingua_v2_proc_macros", path = "../global_proc_macros" }
-global_errors = { package = "pura_lingua_v2_global_errors", path = "../global_errors" }
+proc_macros = { package = "pura_lingua_proc_macros", path = "../global_proc_macros" }
+global_errors = { package = "pura_lingua_global_errors", path = "../global_errors" }
 
 [dev-dependencies]
 env_logger = { version = "0.11" }

@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_string_name"
+name = "pura_lingua_string_name"
 edition = "2024"
 version.workspace = true
 

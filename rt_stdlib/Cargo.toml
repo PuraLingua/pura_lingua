@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_runtime_stdlib"
+name = "pura_lingua_runtime_stdlib"
 edition = "2024"
 version.workspace = true
 

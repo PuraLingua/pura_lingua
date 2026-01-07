@@ -26,13 +26,13 @@ pub enum PredefinedCrateName {
 impl PredefinedCrateName {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Global => "pura_lingua_v2_global",
-            Self::Binary => "pura_lingua_v2_binary",
-            Self::BinaryProcMacros => "pura_lingua_v2_binary_proc_macros",
-            Self::BinaryTraits => "pura_lingua_v2_binary_traits",
-            Self::BinaryTypes => "pura_lingua_v2_binary_types",
+            Self::Global => "pura_lingua_global",
+            Self::Binary => "pura_lingua_binary",
+            Self::BinaryProcMacros => "pura_lingua_binary_proc_macros",
+            Self::BinaryTraits => "pura_lingua_binary_traits",
+            Self::BinaryTypes => "pura_lingua_binary_types",
 
-            Self::Runtime => "pura_lingua_v2_runtime",
+            Self::Runtime => "pura_lingua_runtime",
         }
     }
     pub fn as_ident(&self, span: Span) -> Ident {

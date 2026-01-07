@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_proc_macros"
+name = "pura_lingua_proc_macros"
 version = "0.1.0"
 edition = "2024"
 

@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_global_errors"
+name = "pura_lingua_global_errors"
 edition = "2024"
 version.workspace = true
 

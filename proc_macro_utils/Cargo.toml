@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_proc_macro_utils"
+name = "pura_lingua_proc_macro_utils"
 edition = "2024"
 version.workspace = true
 

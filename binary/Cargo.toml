@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_binary"
+name = "pura_lingua_binary"
 version.workspace = true
 edition = "2024"
 
@@ -12,6 +12,6 @@ derive_more = { version = "2.0.1", features = ["full"] }
 const_for = "0.1.5"
 bitfields = { workspace = true }
 
-proc_macros = { path = "../binary_proc_macros", package = "pura_lingua_v2_binary_proc_macros" }
-traits = { package = "pura_lingua_v2_binary_traits", path = "../binary_traits" }
-types = { package = "pura_lingua_v2_binary_types", path = "../binary_types" }
+proc_macros = { path = "../binary_proc_macros", package = "pura_lingua_binary_proc_macros" }
+traits = { package = "pura_lingua_binary_traits", path = "../binary_traits" }
+types = { package = "pura_lingua_binary_types", path = "../binary_types" }

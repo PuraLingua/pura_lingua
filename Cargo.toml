@@ -1,6 +1,6 @@
 [package]
 version.workspace = true
-name = "pura_lingua_v2"
+name = "pura_lingua"
 edition = "2024"
 
 [workspace]
@@ -12,7 +12,8 @@ members = [
 	"binary_types",
 	"global",
 	"global_errors",
-	"proc_macro_utils", "rt_proc_macros",
+	"proc_macro_utils",
+	"rt_proc_macros",
 	"rt_stdlib",
 	"runtime",
 	"string_name",
@@ -23,14 +24,15 @@ path = "./src/_lib.rs"
 
 [dependencies]
 global = { workspace = true, optional = true }
+binary = { path = "./binary", package = "pura_lingua_binary", optional = true }
 
 [workspace.dependencies]
-global = { package = "pura_lingua_v2_global", path = "./global" }
-global_proc_macros = { package = "pura_lingua_v2_proc_macros", path = "./global_proc_macros" }
+global = { package = "pura_lingua_global", path = "./global" }
+global_proc_macros = { package = "pura_lingua_proc_macros", path = "./global_proc_macros" }
 
-string_name = { package = "pura_lingua_v2_string_name", path = "./string_name" }
+string_name = { package = "pura_lingua_string_name", path = "./string_name" }
 
-proc_macro_utils = { package = "pura_lingua_v2_proc_macro_utils", path = "./proc_macro_utils" }
+proc_macro_utils = { package = "pura_lingua_proc_macro_utils", path = "./proc_macro_utils" }
 
 bitfields = { git = "https://github.com/ExPuritate/bitfields-rs.git", features = [
 	"std",
@@ -65,3 +67,4 @@ indexmap = { version = "2.9" }
 [features]
 default = []
 basic = ["dep:global"]
+binary = ["basic", "dep:binary"]

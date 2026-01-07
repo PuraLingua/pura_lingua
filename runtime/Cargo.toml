@@ -1,5 +1,5 @@
 [package]
-name = "pura_lingua_v2_runtime"
+name = "pura_lingua_runtime"
 edition = "2024"
 version.workspace = true
 
@@ -10,7 +10,7 @@ bitfields = { workspace = true }
 sealed = { workspace = true }
 enumflags2 = { workspace = true }
 
-proc_macros = { package = "pura_lingua_v2_runtime_proc_macros", path = "../rt_proc_macros" }
+proc_macros = { package = "pura_lingua_runtime_proc_macros", path = "../rt_proc_macros" }
 
 libffi = "5.0.0"
 parking_lot = "0.12.5"
