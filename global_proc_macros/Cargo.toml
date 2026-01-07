@@ -1,0 +1,18 @@
+[package]
+name = "pura_lingua_v2_proc_macros"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+proc-macro2 = "1.0.94"
+quote = "1.0.40"
+syn = { version = "2.0.100", features = ["full"] }
+convert_case = "0.8"
+# tracing = { workspace = true }
+virtue = { version = "0.0.18", features = ["proc-macro2"] }
+indexmap = "2.12.1"
+bitfields = { workspace = true }
+proc_macro_utils = { workspace = true }
+
+[lib]
+proc-macro = true

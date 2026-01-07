@@ -1,0 +1,14 @@
+[package]
+name = "pura_lingua_v2_binary_traits"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+indexmap = { workspace = true }
+string_name = { workspace = true }
+
+global_errors = { package = "pura_lingua_v2_global_errors", path = "../global_errors" }
+types = { package = "pura_lingua_v2_binary_types", path = "../binary_types" }
+enumflags2 = { version = "0.7.12", features = ["std"] }
+num_enum = "0.7.3"
+const_for = "0.1.5"

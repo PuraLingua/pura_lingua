@@ -1,0 +1,21 @@
+[package]
+name = "pura_lingua_v2_runtime"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+global = { workspace = true }
+either = { workspace = true }
+bitfields = { workspace = true }
+sealed = { workspace = true }
+enumflags2 = { workspace = true }
+
+proc_macros = { package = "pura_lingua_v2_runtime_proc_macros", path = "../rt_proc_macros" }
+
+libffi = "5.0.0"
+parking_lot = "0.12.5"
+bon = "3.6.5"
+inkwell = { version = "0.7.1", features = ["llvm18-1-prefer-static"] }
+derive_more = { workspace = true, features = ["debug"] }
+contracts = "0.6.7"
+line-ending = { git = "https://github.com/ExPuritate/rust-line-ending.git" }

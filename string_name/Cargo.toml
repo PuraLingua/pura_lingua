@@ -1,0 +1,13 @@
+[package]
+name = "pura_lingua_v2_string_name"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+global_proc_macros = { workspace = true }
+
+faststr = { version = "0.2.31" }
+derive_more = { version = "2.0.1", features = ["deref", "std"] }
+
+[lib]
+path = "./src/string_name.rs"

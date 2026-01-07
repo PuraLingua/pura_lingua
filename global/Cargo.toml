@@ -1,0 +1,49 @@
+[package]
+name = "pura_lingua_v2_global"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { version = "1.0.98", features = ["backtrace"] }
+num_enum = "0.7.3"
+tracing = { version = "0.1.41" }
+paste = "1.0.15"
+
+thiserror = "2.0.12"
+iota = "0.2.3"
+
+derive-ctor = "1.0.6"
+getset = { git = "https://github.com/ExPuritate/getset" }
+
+
+faststr = { version = "0.2.31" }
+bon = "3.6.5"
+const_format = "0.2.34"
+cfg-if = "1.0.1"
+log = { version = "0.4" }
+
+indexmap = { workspace = true }
+serde = { workspace = true }
+konst = { workspace = true }
+derive_more = { workspace = true }
+enumflags2 = { workspace = true }
+string-interner = { workspace = true }
+unicode-xid = { workspace = true }
+sealed = { workspace = true }
+bitfields = { workspace = true }
+
+string_name = { workspace = true }
+
+binary_traits = { package = "pura_lingua_v2_binary_traits", path = "../binary_traits" }
+binary_types = { package = "pura_lingua_v2_binary_types", path = "../binary_types" }
+binary_proc_macros = { package = "pura_lingua_v2_binary_proc_macros", path = "../binary_proc_macros" }
+
+proc_macros = { package = "pura_lingua_v2_proc_macros", path = "../global_proc_macros" }
+global_errors = { package = "pura_lingua_v2_global_errors", path = "../global_errors" }
+
+[dev-dependencies]
+env_logger = { version = "0.11" }
+
+[features]
+default = ["interned_string_name"]
+interned_string_name = []

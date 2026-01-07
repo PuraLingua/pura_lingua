@@ -1,0 +1,14 @@
+[package]
+name = "pura_lingua_v2_global_errors"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+string_name = { workspace = true }
+
+derive_more = { version = "2.0.1", features = ["display", "std"] }
+thiserror = "2.0.12"
+anyhow = { version = "1.0.98", features = ["backtrace"] }
+
+[lib]
+path = "./src/errors.rs"

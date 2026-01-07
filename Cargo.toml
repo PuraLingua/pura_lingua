@@ -1,0 +1,67 @@
+[package]
+version.workspace = true
+name = "pura_lingua_v2"
+edition = "2024"
+
+[workspace]
+package.version = "0.1.0"
+resolver = "3"
+members = [
+	"binary",
+	"binary_traits",
+	"binary_types",
+	"global",
+	"global_errors",
+	"proc_macro_utils", "rt_proc_macros",
+	"rt_stdlib",
+	"runtime",
+	"string_name",
+]
+
+[lib]
+path = "./src/_lib.rs"
+
+[dependencies]
+global = { workspace = true, optional = true }
+
+[workspace.dependencies]
+global = { package = "pura_lingua_v2_global", path = "./global" }
+global_proc_macros = { package = "pura_lingua_v2_proc_macros", path = "./global_proc_macros" }
+
+string_name = { package = "pura_lingua_v2_string_name", path = "./string_name" }
+
+proc_macro_utils = { package = "pura_lingua_v2_proc_macro_utils", path = "./proc_macro_utils" }
+
+bitfields = { git = "https://github.com/ExPuritate/bitfields-rs.git", features = [
+	"std",
+] }
+line-ending = { git = "https://github.com/ExPuritate/rust-line-ending.git" }
+
+serde = { version = "1.0.219", features = ["std", "derive"] }
+toml = { version = "0.9.5" }
+konst = { version = "0.4", features = [
+	"alloc",
+	"rust_latest_stable",
+	"const_panic_derive",
+] }
+either = { version = "1.15" }
+enumflags2 = { version = "0.7.11", features = ["std"] }
+derive_more = { version = "2.0.1", features = ["full", "std"] }
+paste = "1.0.15"
+const_format = "0.2.35"
+ctor = "0.6.0"
+scopeguard-lite = "1.0.0"
+string-interner = "0.19.0"
+walkdir = "2.5.0"
+unicode-xid = "0.2.0"
+sealed = "0.6"
+digest = { version = "0.11.0-rc.2" }
+md-5 = { version = "0.10.6" }
+sha1 = { version = "0.10.6" }
+sha2 = { version = "0.10.9" }
+blake3 = { version = "1.8.2" }
+indexmap = { version = "2.9" }
+
+[features]
+default = []
+basic = ["dep:global"]

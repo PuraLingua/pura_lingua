@@ -1,0 +1,9 @@
+[package]
+name = "pura_lingua_v2_runtime_stdlib"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+
+[lib]
+crate-type = ["cdylib"]
