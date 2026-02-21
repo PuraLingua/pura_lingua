@@ -1,5 +1,3 @@
-use std::alloc::Layout;
-
 use enumflags2::make_bitflags;
 
 use crate::{
@@ -8,7 +6,7 @@ use crate::{
         class::Class,
         method::{Method, MethodDisplayOptions},
     },
-    value::managed_reference::{ArrayAccessor, ManagedReference},
+    value::managed_reference::{ArrayAccessor, FieldAccessor, ManagedReference},
     virtual_machine::cpu::CPU,
 };
 
@@ -24,19 +22,19 @@ pub extern "system" fn Construct_String(
         .get_core_type(CoreTypeId::System_String)
         .unwrap_class();
 
-    let f_message_ptr = this
+    let f_message_mut = this
+        .const_access_mut::<FieldAccessor<_>>()
         .typed_field_mut::<ManagedReference<Class>>(
-            false,
             System_Exception_FieldId::Message as _,
             Default::default(),
         )
         .unwrap();
 
-    *f_message_ptr = message;
+    *f_message_mut = message;
 
     let f_stack_trace_mut = this
+        .const_access_mut::<FieldAccessor<_>>()
         .typed_field_mut::<ManagedReference<Class>>(
-            false,
             System_Exception_FieldId::StackTrace as _,
             Default::default(),
         )
@@ -61,7 +59,7 @@ pub extern "system" fn Construct_String(
             .unwrap()
     };
     for (ind, stack_name) in stack_trace_rs.into_iter().enumerate() {
-        f_stack_trace_slice_mut[ind] = ManagedReference::new_string(cpu, stack_name);
+        f_stack_trace_slice_mut[ind] = ManagedReference::new_string(cpu, &stack_name);
     }
 }
 
@@ -79,7 +77,7 @@ mod tests {
 
     use crate::{
         stdlib::{
-            CoreTypeId, System_Array_1_MethodId, System_Exception_FieldId,
+            CoreTypeId, CoreTypeIdExt as _, System_Array_1_MethodId, System_Exception_FieldId,
             System_Exception_MethodId, System_Object_MethodId, System_UInt8_StaticMethodId,
             System_UInt16_StaticMethodId,
         },
@@ -161,7 +159,7 @@ mod tests {
             .get_method(System_Exception_MethodId::Constructor_String as _)
             .unwrap();
 
-        let message = ManagedReference::new_string(&cpu, "AAA".to_owned());
+        let message = ManagedReference::new_string(&cpu, "AAA");
         unsafe {
             method.as_ref().typed_res_call::<()>(
                 &cpu,
@@ -170,8 +168,8 @@ mod tests {
             );
         }
         let f_message = exception_ptr
+            .const_access::<FieldAccessor<_>>()
             .typed_field::<ManagedReference<Class>>(
-                false,
                 System_Exception_FieldId::Message as _,
                 Default::default(),
             )
@@ -186,8 +184,8 @@ mod tests {
         );
 
         let f_stack_trace = exception_ptr
+            .const_access::<FieldAccessor<_>>()
             .typed_field::<ManagedReference<Class>>(
-                false,
                 System_Exception_FieldId::StackTrace as _,
                 Default::default(),
             )

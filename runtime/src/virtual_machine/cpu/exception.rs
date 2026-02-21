@@ -1,4 +1,13 @@
-use crate::{type_system::class::Class, value::managed_reference::ManagedReference};
+use std::mem::DropGuard;
+
+use stdlib_header::CoreTypeId;
+
+use crate::{
+    stdlib::System_InvalidEnumException_MethodId,
+    type_system::{class::Class, method::MethodRef},
+    value::managed_reference::ManagedReference,
+    virtual_machine::cpu::CPU,
+};
 
 pub struct ExceptionManager {
     exception: ManagedReference<Class>,
@@ -21,6 +30,75 @@ impl ExceptionManager {
     }
     pub fn get_exception(&self) -> &ManagedReference<Class> {
         &self.exception
+    }
+}
+
+#[repr(transparent)]
+pub struct ThrowHelper(CPU);
+
+impl ThrowHelper {
+    pub fn invalid_enum(&self, enum_name: &str, message: &str) -> bool {
+        let destroyer = |mut x: ManagedReference<Class>| {
+            x.destroy(&self.0);
+        };
+        let enum_name = DropGuard::new(ManagedReference::new_string(&self.0, enum_name), destroyer);
+        let message = DropGuard::new(ManagedReference::new_string(&self.0, message), destroyer);
+        self.0
+            .throw_exception(
+                match self.0.new_object(
+                    &self
+                        .0
+                        .vm_ref()
+                        .assembly_manager()
+                        .get_core_type(CoreTypeId::System_InvalidEnumException)
+                        .into(),
+                    &MethodRef::Index(
+                        System_InvalidEnumException_MethodId::Constructor_String_String as u32,
+                    ),
+                    &[
+                        (&*enum_name as *const ManagedReference<Class>)
+                            .cast_mut()
+                            .cast(),
+                        (&*message as *const ManagedReference<Class>)
+                            .cast_mut()
+                            .cast(),
+                    ],
+                ) {
+                    None => return false,
+                    Some(exception) => exception,
+                },
+            )
+            .unwrap();
+        true
+    }
+    #[cfg(windows)]
+    pub fn win32(&self, mut code: i32) -> bool {
+        use crate::stdlib::System_Win32Exception_MethodId;
+
+        self.0
+            .throw_exception(
+                match self.0.new_object(
+                    &self
+                        .0
+                        .vm_ref()
+                        .assembly_manager()
+                        .get_core_type(CoreTypeId::System_Win32Exception)
+                        .into(),
+                    &MethodRef::Index(System_Win32Exception_MethodId::Constructor_I32 as _),
+                    &[(&raw mut code).cast()],
+                ) {
+                    None => return false,
+                    Some(exception) => exception,
+                },
+            )
+            .unwrap();
+        true
+    }
+}
+
+impl CPU {
+    pub fn throw_helper<'a>(&'a self) -> &'a ThrowHelper {
+        unsafe { &*(self as *const Self as *const ThrowHelper) }
     }
 }
 

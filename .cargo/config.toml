@@ -1,0 +1,11 @@
+[patch."https://github.com/ExPuritate/bitfields-rs.git"]
+bitfields = { path = 'D:\bitfields-rs\bitfields' }
+
+[patch."https://github.com/ExPuritate/getset.git"]
+getset = { path = 'D:\getset-rs' }
+
+[patch."https://github.com/ExPuritate/rust-line-ending.git"]
+line-ending = { path = 'D:\ForeignGitHubRepos\jzombie\rust-line-ending' }
+
+[patch."https://github.com/ExPuritate/mem-leak-detector.git"]
+mem_leak_detector = { path = 'D:\rust_projects\mem_leak_detector' }

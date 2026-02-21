@@ -12,8 +12,8 @@ use global::{
 };
 
 use crate::{
-    memory::{GetLayoutOptions, alloc_type},
-    stdlib::CoreTypeId,
+    memory::GetLayoutOptions,
+    stdlib::CoreTypeIdExt as _,
     type_system::{
         assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle,
@@ -32,7 +32,7 @@ pub struct Struct {
     attr: TypeAttr,
 
     // Note that Struct does not have parents
-    method_table: NonNull<MethodTable<Self>>,
+    pub(crate) method_table: NonNull<MethodTable<Self>>,
     fields: Vec<Field>,
     sctor: u32,
 
@@ -148,7 +148,7 @@ impl Struct {
 }
 
 impl Struct {
-    pub fn assembly_ref(&self) -> &Assembly {
+    pub const fn assembly_ref(&self) -> &Assembly {
         unsafe { self.assembly.as_ref() }
     }
 
@@ -159,27 +159,6 @@ impl Struct {
     pub fn val_layout(&self) -> Layout {
         self.method_table_ref()
             .mem_layout(GetLayoutOptions::default())
-    }
-
-    fn core_val_libffi_type(&self) -> Option<libffi::middle::Type> {
-        let assem = self.assembly_ref();
-        if !assem.is_core {
-            return None;
-        }
-
-        let types = assem.types.read().unwrap();
-        let id = types.iter().position(|x| match x {
-            super::type_handle::NonGenericTypeHandle::Class(ty) => unsafe {
-                std::ptr::addr_eq(self.method_table.as_ptr(), ty.as_ref().method_table_ref())
-            },
-            super::type_handle::NonGenericTypeHandle::Struct(ty) => unsafe {
-                std::ptr::addr_eq(self.method_table.as_ptr(), ty.as_ref().method_table_ref())
-            },
-        })? as u32;
-
-        let id = CoreTypeId::try_from(id).ok()?;
-
-        id.val_libffi_type()
     }
 
     pub fn val_libffi_type(&self) -> libffi::middle::Type {

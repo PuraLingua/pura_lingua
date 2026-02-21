@@ -1,5 +1,13 @@
-pub mod Array;
+pub mod Array_1;
+pub mod DynamicLibrary;
 pub mod Exception;
+pub mod InvalidEnumException;
+pub mod LargeString;
+pub mod NonPurusCallConfiguration;
+pub mod NonPurusCallType;
+pub mod Nullable;
 pub mod Object;
+pub mod Pointer;
 pub mod String;
+pub mod Win32Exception;
 pub mod _Integers;

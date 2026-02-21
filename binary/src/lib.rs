@@ -1,36 +1,28 @@
-#![feature(iterator_try_collect)]
-#![feature(try_find)]
-#![feature(const_trait_impl)]
 #![feature(decl_macro)]
-#![feature(marker_trait_attr)]
-#![feature(generic_const_exprs)]
-#![feature(macro_metavar_expr)]
-#![feature(maybe_uninit_array_assume_init)]
-#![feature(cold_path)]
-#![feature(char_max_len)]
-#![feature(super_let)]
-#![feature(specialization)]
-#![feature(derive_const)]
-#![feature(const_clone)]
-#![feature(panic_internals)]
-#![feature(const_format_args)]
-#![feature(ptr_as_ref_unchecked)]
+#![feature(const_trait_impl)]
 #![feature(const_default)]
 #![feature(const_try)]
-#![allow(internal_features)]
-#![allow(incomplete_features)]
+
+pub extern crate binary_core;
+pub extern crate proc_macros;
+
+pub mod item_token;
 
 pub mod assembly;
-pub mod core;
-mod custom_attribute;
-mod implement;
-// #[cfg(test)]
-// mod tests;
-mod ty;
+pub mod custom_attribute;
+pub mod ty;
 
-pub(crate) type Error = global::errors::BinaryError;
+#[cfg(test)]
+mod tests;
 
-pub use assembly::Assembly;
-pub use custom_attribute::*;
-pub use ty::*;
-pub use types::item_token;
+pub mod prelude {
+    pub use crate::item_token::{
+        ItemToken, ItemTokenBuilder, ItemType, MethodToken, MethodTokenBuilder, MethodType,
+        TypeToken, TypeTokenBuilder, TypeType,
+    };
+
+    pub use crate::assembly::Assembly;
+    pub use crate::custom_attribute::{CustomAttribute, CustomAttributeValue, Integer};
+    pub use crate::ty::{ClassDef, StructDef, TypeDef, TypeRef, TypeSpec};
+    pub use binary_core::{BinaryResult, Error};
+}

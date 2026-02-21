@@ -13,7 +13,7 @@ use super::{
     type_handle::{NonGenericTypeHandle, type_generic_resolver},
 };
 
-#[derive(Getters)]
+#[derive(Getters, Clone, Debug)]
 #[getset(get = "pub")]
 pub struct Field {
     pub(crate) name: Box<str>,
@@ -84,7 +84,10 @@ impl Field {
         }
     }
 
-    fn get_type_with_type<T: GetAssemblyRef + GetTypeVars>(&self, ty: &T) -> NonGenericTypeHandle {
+    pub fn get_type_with_type<T: GetAssemblyRef + GetTypeVars>(
+        &self,
+        ty: &T,
+    ) -> NonGenericTypeHandle {
         self.get_type_with_generic_resolver(|g_index| type_generic_resolver(g_index, ty))
     }
 

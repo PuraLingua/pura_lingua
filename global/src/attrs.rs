@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use binary_proc_macros::{ReadFromFile, WriteToFile};
+use binary_proc_macros::{ReadFromSection, WriteToSection};
 use derive_ctor::ctor;
 use enumflags2::{BitFlags, bitflags, make_bitflags};
 use getset::{CopyGetters, Getters, MutGetters, Setters};
@@ -14,7 +14,9 @@ pub enum FieldImplementationFlags {
     Static,
 }
 
-#[derive(Clone, Copy, Debug, ctor, CopyGetters, Setters, MutGetters, ReadFromFile, WriteToFile)]
+#[derive(
+    Clone, Copy, Debug, ctor, CopyGetters, Setters, MutGetters, ReadFromSection, WriteToSection,
+)]
 #[ctor(pub new)]
 #[getset(set = "pub", get_mut = "pub")]
 #[get_copy = "pub"]
@@ -39,7 +41,15 @@ pub enum MethodImplementationFlags {
 }
 
 #[derive(
-    Clone, Copy, Debug, TryFromPrimitive, IntoPrimitive, Eq, PartialEq, ReadFromFile, WriteToFile,
+    Clone,
+    Copy,
+    Debug,
+    TryFromPrimitive,
+    IntoPrimitive,
+    Eq,
+    PartialEq,
+    ReadFromSection,
+    WriteToSection,
 )]
 #[derive_const(Default)]
 #[repr(u8)]
@@ -71,7 +81,7 @@ impl std::fmt::Display for CallConvention {
 }
 
 #[derive(
-    Clone, CopyGetters, Debug, ctor, Setters, MutGetters, Getters, ReadFromFile, WriteToFile,
+    Clone, CopyGetters, Debug, ctor, Setters, MutGetters, Getters, ReadFromSection, WriteToSection,
 )]
 #[ctor(pub new)]
 #[getset(set = "pub", get_mut = "pub")]
@@ -80,7 +90,7 @@ pub struct MethodAttr<TType> {
     vis: Visibility,
     impl_flags: BitFlags<MethodImplementationFlags>,
     #[getset(skip)]
-    #[get = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     overrides: Option<u32>,
     #[getset(skip)]
     #[get = "pub"]
@@ -111,10 +121,48 @@ impl<TType> MethodAttr<TType> {
             local_variable_types: self.local_variable_types.into_iter().map(f).collect(),
         }
     }
+    pub fn try_map_types<_TType, E, F>(self, f: F) -> Result<MethodAttr<_TType>, E>
+    where
+        F: Fn(TType) -> Result<_TType, E>,
+    {
+        Ok(MethodAttr {
+            vis: self.vis,
+            impl_flags: self.impl_flags,
+            overrides: self.overrides,
+            local_variable_types: self.local_variable_types.into_iter().map(f).try_collect()?,
+        })
+    }
+    pub fn add_local_variable(&mut self, ty: TType) {
+        self.local_variable_types.push(ty);
+    }
 }
 
-#[derive(Clone, Copy, CopyGetters, Debug, ctor, Setters, Getters, ReadFromFile, WriteToFile)]
-#[ctor(pub new)]
+impl<TType, E> MethodAttr<Result<TType, E>> {
+    pub fn transpose(self) -> Result<MethodAttr<TType>, E> {
+        Ok(MethodAttr {
+            vis: self.vis,
+            impl_flags: self.impl_flags,
+            overrides: self.overrides,
+            local_variable_types: self.local_variable_types.into_iter().try_collect()?,
+        })
+    }
+}
+
+impl<TType> MethodAttr<Option<TType>> {
+    pub fn transpose(self) -> Option<MethodAttr<TType>> {
+        Some(MethodAttr {
+            vis: self.vis,
+            impl_flags: self.impl_flags,
+            overrides: self.overrides,
+            local_variable_types: self.local_variable_types.into_iter().try_collect()?,
+        })
+    }
+}
+
+#[derive(
+    Clone, Copy, CopyGetters, Debug, ctor, Setters, Getters, ReadFromSection, WriteToSection,
+)]
+#[ctor(pub const new)]
 #[getset(set = "pub", get_mut = "pub")]
 #[get_copy = "pub"]
 pub struct ParameterAttr {
@@ -136,7 +184,15 @@ pub enum ParameterImplementationFlags {
 }
 
 #[derive(
-    Clone, Copy, Debug, TryFromPrimitive, IntoPrimitive, Eq, PartialEq, ReadFromFile, WriteToFile,
+    Clone,
+    Copy,
+    Debug,
+    TryFromPrimitive,
+    IntoPrimitive,
+    Eq,
+    PartialEq,
+    ReadFromSection,
+    WriteToSection,
 )]
 #[repr(u8)]
 pub enum Visibility {
@@ -146,8 +202,11 @@ pub enum Visibility {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, UnwrapEnum, WithType, Eq, PartialEq, ReadFromFile, WriteToFile)]
-#[with_type(derive = (TryFromPrimitive, IntoPrimitive, Clone, Copy, ReadFromFile, WriteToFile))]
+#[derive(
+    Clone, Copy, Debug, UnwrapEnum, WithType, Eq, PartialEq, ReadFromSection, WriteToSection,
+)]
+#[with_type(derive = (TryFromPrimitive, IntoPrimitive, Clone, Copy, ReadFromSection,
+    WriteToSection,))]
 #[unwrap_enum(ref, ref_mut)]
 pub enum TypeSpecificAttr {
     Class(BitFlags<ClassImplementationFlags>),
@@ -201,8 +260,8 @@ pub enum InterfaceImplementationFlags {
     MutGetters,
     Eq,
     PartialEq,
-    ReadFromFile,
-    WriteToFile,
+    ReadFromSection,
+    WriteToSection,
 )]
 #[ctor(pub new)]
 #[getset(set = "pub", get_mut = "pub")]

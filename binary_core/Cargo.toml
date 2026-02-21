@@ -1,0 +1,13 @@
+[package]
+name = "pura_lingua_binary_core"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+enumflags2 = { workspace = true }
+indexmap = { workspace = true }
+
+global_errors = { package = "pura_lingua_global_errors", path = "../global_errors" }
+
+[dev-dependencies]
+proc_macros = { path = "../binary_proc_macros", package = "pura_lingua_binary_proc_macros" }

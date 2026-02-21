@@ -11,11 +11,29 @@ sealed = { workspace = true }
 enumflags2 = { workspace = true }
 
 proc_macros = { package = "pura_lingua_runtime_proc_macros", path = "../rt_proc_macros" }
+binary = { package = "pura_lingua_binary", path = "../binary" }
+stdlib_header = { package = "pura_lingua_runtime_stdlib", path = "../rt_stdlib" }
 
 libffi = "5.0.0"
 parking_lot = "0.12.5"
 bon = "3.6.5"
-inkwell = { version = "0.7.1", features = ["llvm18-1-prefer-static"] }
+inkwell = { version = "0.8.0", features = ["llvm18-1-prefer-static"] }
 derive_more = { workspace = true, features = ["debug"] }
 contracts = "0.6.7"
 line-ending = { git = "https://github.com/ExPuritate/rust-line-ending.git" }
+widestring = { version = "1.2.1", features = ["debugger_visualizer"] }
+
+mem_leak_detector = { git = "https://github.com/ExPuritate/mem-leak-detector.git" }
+slab = "0.4.12"
+thiserror = "2.0.18"
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+features = [
+	"Win32_UI_WindowsAndMessaging",
+	"Win32_System_LibraryLoader",
+	"Win32_System_Diagnostics_Debug",
+]
+
+[target.'cfg(unix)'.dependencies.libc]
+version = "1.0.0-alpha.3"

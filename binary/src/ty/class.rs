@@ -1,27 +1,23 @@
-use crate::item_token::TypeToken;
+use binary_core::traits::StringRef;
 use global::attrs::TypeAttr;
-use global::derive_ctor::ctor;
-use global::getset::{CopyGetters, Getters};
-use global::{IndexMap, StringName};
-use proc_macros::{ReadFromFile, WriteToFile};
+use proc_macros::{ReadFromSection, WriteToSection};
 
-use crate::custom_attribute::CustomAttribute;
-use crate::field::Field;
-use crate::ty::GenericBounds;
-use crate::ty::method::Method;
+use crate::item_token::TypeToken;
 
-#[derive(ctor, Debug, Clone, Getters, CopyGetters, ReadFromFile, WriteToFile)]
-#[getset(get = "pub")]
+use super::{Field, GenericBounds, Method};
+
+#[derive(Clone, Debug, ReadFromSection, WriteToSection)]
 pub struct ClassDef {
-    pub(crate) parent: Option<TypeToken>,
-    pub(crate) type_vars: IndexMap<StringName, GenericBounds>,
-    #[getset(skip)]
-    #[get_copy = "pub"]
-    pub(crate) attr: TypeAttr,
+    pub main: Option<u32>,
 
-    pub(crate) custom_attributes: Vec<CustomAttribute>,
+    pub name: StringRef,
+    pub attr: TypeAttr,
 
-    pub(crate) name: StringName,
-    pub(crate) methods: Vec<Method>,
-    pub(crate) fields: Vec<Field>,
+    pub parent: Option<TypeToken>,
+
+    pub method_table: Vec<Method>,
+    pub fields: Vec<Field>,
+    pub sctor: Option<u32>,
+
+    pub generic_bounds: Option<Vec<GenericBounds>>,
 }

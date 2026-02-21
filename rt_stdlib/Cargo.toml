@@ -4,6 +4,5 @@ edition = "2024"
 version.workspace = true
 
 [dependencies]
-
-[lib]
-crate-type = ["cdylib"]
+global = { workspace = true }
+proc_macros = { package = "pura_lingua_runtime_stdlib_proc_macros", path = "../rt_stdlib_proc_macros" }

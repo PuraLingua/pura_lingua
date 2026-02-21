@@ -1,7 +1,7 @@
 use std::ptr::NonNull;
 
 use crate::{
-    stdlib::CoreTypeId,
+    stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::{
         assembly::Assembly,
         class::Class,
@@ -25,7 +25,7 @@ fn test_layout() {
             vec![NonGenericTypeHandle::Class(
                 Class::new(
                     assem,
-                    "Test.Test".to_owned(),
+                    "Test::Test".to_owned(),
                     global::attr!(
                         class Public {}
                     ),

@@ -9,7 +9,10 @@ use crate::{
         System_UInt8_StaticMethodId, System_UInt64_MethodId, System_UInt64_StaticMethodId,
     },
     test_utils::{g_core_class, g_core_type},
-    type_system::{assembly::Assembly, class::Class, field::Field, type_ref::TypeRef},
+    type_system::{
+        assembly::Assembly, assembly_manager::AssemblyRef, class::Class, field::Field,
+        type_ref::TypeRef,
+    },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
     virtual_machine::{EnsureVirtualMachineInitialized, global_vm},
 };
@@ -77,112 +80,17 @@ fn test_call() {
 
 #[test]
 fn test_normal_f() {
+    EnsureVirtualMachineInitialized();
+
     let vm = global_vm();
     let cpu_id = vm.add_cpu();
     let cpu = vm.get_cpu(cpu_id).unwrap();
     let assembly_manager = vm.assembly_manager();
-    assembly_manager.add_assembly(Assembly::new_for_adding(
-        "Test".to_owned(),
-        false,
-        |assembly| {
-            vec![
-                Class::new(
-                    assembly,
-                    "Test.Test".to_owned(),
-                    global::attr!(
-                        class Public {}
-                    ),
-                    Some(g_core_class!(System_Object)),
-                    |ty| {
-                        MethodTable::new(ty, |mt| {
-                            vec![
-                                Box::new(Method::new(
-                                    mt,
-                                    "F1".to_owned(),
-                                    global::attr!(
-                                        method Public {Static}
-                                        g_core_type!(System_UInt64),
-                                        g_core_type!(System_String),
-                                        g_core_type!(System_Exception),
-                                    ),
-                                    vec![],
-                                    g_core_type!(System_Void),
-                                    CallConvention::PlatformDefault,
-                                    None,
-                                    vec![
-                                        Instruction::Load_u64 {
-                                            register_addr: 0,
-                                            val: 10,
-                                        },
-                                        Instruction::StaticCall {
-                                            ty: g_core_type!(System_UInt64),
-                                            method: System_UInt64_StaticMethodId::ToString.into(),
-                                            args: vec![0],
-                                            ret_at: 1,
-                                        },
-                                        Instruction::NewObject {
-                                            ty: g_core_type!(System_Exception),
-                                            ctor_name: MethodRef::Index(
-                                                System_Exception_MethodId::Constructor_String as _,
-                                            ),
-                                            args: vec![1],
-                                            register_addr: 2,
-                                        },
-                                        Instruction::Throw { exception_addr: 2 },
-                                        Instruction::Load_u64 {
-                                            register_addr: 0,
-                                            val: 5,
-                                        }, // Unreachable
-                                    ],
-                                )),
-                                Box::new(Method::new(
-                                    mt,
-                                    "F2".to_owned(),
-                                    global::attr!(
-                                        method Public {Static}
-                                        g_core_type!(System_Void),
-                                    ),
-                                    vec![],
-                                    g_core_type!(System_Void),
-                                    CallConvention::PlatformDefault,
-                                    None,
-                                    vec![Instruction::StaticCall {
-                                        ty: TypeRef::Index {
-                                            assembly: string_name!("Test"),
-                                            ind: 0,
-                                        }
-                                        .into(),
-                                        method: MethodRef::Index(
-                                            System_Object_MethodId::__END as u32,
-                                        ),
-                                        args: vec![],
-                                        ret_at: 1,
-                                    }],
-                                )),
-                                // Statics
-                                Box::new(Method::default_sctor(
-                                    Some(mt),
-                                    global::attr!(method Public {Static}),
-                                )),
-                            ]
-                        })
-                        .as_non_null_ptr()
-                    },
-                    vec![Field::new(
-                        "Field1".to_owned(),
-                        global::attr!(
-                            field Public {}
-                        ),
-                        g_core_type!(System_UInt64),
-                    )],
-                    None,
-                    None,
-                )
-                .as_non_null_ptr()
-                .into(),
-            ]
-        },
-    ));
+    assembly_manager
+        .load_binaries(&[
+            binary::assembly::Assembly::from_path("../TestData/TestNormalF.plb").unwrap(),
+        ])
+        .unwrap();
 
     let assembly = global_vm()
         .assembly_manager()

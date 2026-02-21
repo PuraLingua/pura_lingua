@@ -39,7 +39,7 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         cpu: &&CPU,
         this: Option<&NonNull<()>>,
         args: &[*mut c_void],
-    ) -> (Vec<*mut c_void>, Vec<(usize, Layout)>) {
+    ) -> Vec<*mut c_void> {
         // It will be either 0 or 1
         let this_arg_len = if self.attr.is_static() { 0 } else { 1 };
         let mut complete_arg = Vec::with_capacity(3 + this_arg_len + args.len());
@@ -49,8 +49,6 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             let this = this.unwrap();
             complete_arg.push((&raw const *this).cast_mut().cast());
         }
-
-        let copied_args = Vec::new();
 
         for (ind, a) in args.iter().enumerate() {
             if !self.args[ind].attr.is_by_ref() {
@@ -76,7 +74,7 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             }
         }
 
-        (complete_arg, copied_args)
+        complete_arg
     }
 
     pub fn untyped_call(
@@ -86,6 +84,7 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         args: &[*mut c_void],
     ) -> (NonNull<u8>, Layout) {
         println!("Calling Method: {}", self.display(BitFlags::all()));
+
         if std::ptr::addr_eq(
             default_entry_point::__default_entry_point::<T> as *const c_void,
             self.entry_point.as_ptr(),
@@ -97,11 +96,14 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         }
         cpu.push_call_stack_native(self).unwrap();
         let cif = self.get_cif();
-        let (mut args, copied_args) = self.handle_args(&cpu, this.as_ref(), args);
+
+        let mut args = self.handle_args(&cpu, this.as_ref(), args);
+
         let mut ret_layout = self.get_return_type().val_layout();
         if ret_layout.size() < size_of::<usize>() {
             ret_layout = Layout::new::<usize>();
         }
+
         let result =
             std::alloc::Allocator::allocate_zeroed(&std::alloc::Global, ret_layout).unwrap();
         unsafe {
@@ -113,13 +115,13 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             );
         }
 
-        for (ca_index, ca_layout) in copied_args {
-            if let Some(ca_ptr) = NonNull::new(args[ca_index]) {
-                unsafe {
-                    Allocator::deallocate(&std::alloc::Global, ca_ptr.cast(), ca_layout);
-                }
-            }
-        }
+        // for (ca_index, ca_layout) in copied_args {
+        //     if let Some(ca_ptr) = NonNull::new(args[ca_index]) {
+        //         unsafe {
+        //             Allocator::deallocate(&std::alloc::Global, ca_ptr.cast(), ca_layout);
+        //         }
+        //     }
+        // }
 
         cpu.pop_call_stack().unwrap();
 

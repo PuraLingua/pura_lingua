@@ -9,7 +9,12 @@ pub fn derive_str_enum_impl(input: DeriveInput) -> syn::Result<TokenStream> {
         return Err(Error::new(Span::call_site(), "only enums are supported"));
     };
 
-    let mut global_crate = Path::from(PredefinedCrateName::Global.as_ident(Span::call_site()));
+    let crate_data = proc_macro_utils::crate_name_resolution::parse_attributes(&input.attrs);
+
+    let mut global_crate = crate_data
+        .get(&PredefinedCrateName::Global)
+        .cloned()
+        .unwrap_or(PredefinedCrateName::Global.as_path(Span::call_site()));
 
     let variants = &data.variants;
     let mut ts = TokenStream::new();
@@ -61,7 +66,7 @@ pub fn derive_str_enum_impl(input: DeriveInput) -> syn::Result<TokenStream> {
         variants_ts.extend(quote!(Self:: #v_name,));
     }
 
-    val_str_dict.sort_by(|(_, a), (_, b)| a.to_string().len().cmp(&b.to_string().len()));
+    val_str_dict.sort_by_key(|(_, a)| a.to_string().len());
 
     for (v_name, _) in &val_str_dict {
         variants_ordered_ts.extend(quote!(Self:: #v_name,));

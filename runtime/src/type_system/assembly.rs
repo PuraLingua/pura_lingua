@@ -45,15 +45,12 @@ impl Assembly {
         }
     }
 
+    #[inline]
     pub fn add_type<T>(&self, ty: NonNull<T>) -> u32
     where
         NonGenericTypeHandle: From<NonNull<T>>,
     {
-        let mut types = self.types.write().unwrap();
-        let index = types.len();
-        types.push(NonGenericTypeHandle::from(ty));
-
-        index as _
+        self.add_type_handle(NonGenericTypeHandle::from(ty))
     }
 
     pub fn add_type_handle(&self, ty: NonGenericTypeHandle) -> u32 {

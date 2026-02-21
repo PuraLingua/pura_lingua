@@ -14,8 +14,6 @@ use crate::{
     value::managed_reference::ManagedReference,
 };
 
-use super::CPU;
-
 pub struct CallStack {
     stack: Vec<CallStackFrame>,
 }
@@ -54,7 +52,13 @@ impl CallStack {
         self.push(CallStackFrame::native(method));
     }
 
-    pub fn capture<'a>(&self) -> impl Iterator<Item = &str> {
+    pub fn mark_all(&mut self) {
+        for frame in &mut self.stack {
+            frame.mark_all();
+        }
+    }
+
+    pub fn capture(&self) -> impl Iterator<Item = &str> {
         #[inline]
         fn filter(frame: &&CallStackFrame) -> bool {
             !frame.should_hide_when_capturing()
@@ -66,10 +70,10 @@ impl CallStack {
             .map(CallStackFrame::name)
     }
 
-    pub fn capture_with_options<'a>(
-        &'a self,
+    pub fn capture_with_options(
+        &self,
         options: BitFlags<MethodDisplayOptions>,
-    ) -> impl Iterator<Item = String> + use<'a> {
+    ) -> impl Iterator<Item = String> {
         #[inline]
         fn filter(frame: &&CallStackFrame) -> bool {
             !frame.should_hide_when_capturing()
@@ -148,6 +152,15 @@ impl CallStackFrame {
     }
 }
 
+impl CallStackFrame {
+    pub fn mark_all(&mut self) {
+        match self {
+            Self::Native(frame) => frame.mark_all(),
+            Self::Common(frame) => frame.mark_all(),
+        }
+    }
+}
+
 pub struct NativeCallStackFrame {
     pub(crate) method: NonNull<Method<()>>,
     pub(crate) kind: NonGenericTypeHandleKind,
@@ -172,13 +185,115 @@ impl NativeCallStackFrame {
             references: Vec::with_capacity(capacity),
         }
     }
+    pub fn mark_all(&mut self) {
+        for r in &mut self.references {
+            if let Some(header) = r.header_mut() {
+                header.set_is_marked(true);
+            }
+        }
+    }
+}
+
+pub struct LocalVariableInfo {
+    pub offset: usize,
+    pub layout: Layout,
+    pub is_managed_reference: bool,
+}
+
+#[derive(Clone, Copy)]
+pub struct LocalVariable {
+    pub ptr: NonNull<u8>,
+    pub layout: Layout,
+    pub is_managed_reference: bool,
+}
+
+impl LocalVariable {
+    pub fn as_ref_typed<'a, T>(&self) -> &'a T {
+        debug_assert!(self.layout.size() >= size_of::<T>());
+        unsafe { self.ptr.cast::<T>().as_ref() }
+    }
+    pub fn as_mut_typed<'a, T>(&mut self) -> &'a mut T {
+        debug_assert!(self.layout.size() >= size_of::<T>());
+        unsafe { self.ptr.cast::<T>().as_mut() }
+    }
+    pub fn write_typed<T>(self, val: T) {
+        debug_assert!(self.layout.size() >= size_of::<T>());
+        unsafe {
+            self.ptr.cast::<T>().write(val);
+        }
+    }
+    pub fn zero(self) {
+        unsafe {
+            self.ptr.write_bytes(0, self.layout.size());
+        }
+    }
+    pub const fn as_bytes(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.ptr.as_ptr().cast_const(), self.layout.size()) }
+    }
+    pub const fn as_bytes_mut(&mut self) -> &mut [u8] {
+        unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.layout.size()) }
+    }
+    pub fn is_all_zero(&self) -> bool {
+        !self.as_bytes().iter().any(|x| x.ne(&0))
+    }
+    /// # Safety
+    /// See [`std::ptr::NonNull::copy_from`]
+    #[contracts::debug_requires(self.layout.size() >= count)]
+    pub const unsafe fn copy_from(self, src: NonNull<u8>, count: usize) {
+        unsafe {
+            self.ptr.copy_from(src, count);
+        }
+    }
+    /// # Safety
+    /// See [`std::ptr::NonNull::copy_to`]
+    pub const unsafe fn copy_to(self, dest: NonNull<u8>, count: usize) {
+        #[inline(always)]
+        const fn noop_check(_: Layout, _: usize) {}
+        cfg_select! {
+            debug_assertions => {
+                fn check(layout: Layout, count: usize) {
+                    if layout.size() < count {
+                        panic!(
+                            "Size at most: {} while require {count} byte(s)",
+                            layout.size()
+                        )
+                    }
+                }
+            }
+            _ => {
+                #[inline(always)]
+                fn check(_: Layout, _: usize) {}
+            }
+        }
+        std::intrinsics::const_eval_select((self.layout, count), noop_check, check);
+        unsafe {
+            self.ptr.copy_to(dest, count);
+        }
+    }
+    /// # Safety
+    /// See [`std::ptr::NonNull::copy_from`] where count = self.layout.size()
+    pub const unsafe fn copy_all_from(self, src: NonNull<u8>) {
+        unsafe {
+            self.ptr.copy_from(src, self.layout.size());
+        }
+    }
+    /// # Safety
+    /// See [`std::ptr::NonNull::copy_to`] where count = self.layout.size()
+    pub const unsafe fn copy_all_to(self, dest: NonNull<u8>) {
+        unsafe {
+            self.ptr.copy_to(dest, self.layout.size());
+        }
+    }
+    pub const fn ptr(&self) -> NonNull<u8> {
+        self.ptr
+    }
 }
 
 pub struct CommonCallStackFrame {
     method: NonNull<Method<()>>,
     kind: NonGenericTypeHandleKind,
     full_layout: Layout,
-    layouts: Vec<(usize, Layout)>,
+    layouts: Vec<LocalVariableInfo>,
 
     register_ptr: NonNull<u8>,
 }
@@ -187,7 +302,7 @@ impl CommonCallStackFrame {
     pub fn new<T: GetNonGenericTypeHandleKind>(
         method: &Method<T>,
         full_layout: Layout,
-        layouts: Vec<(usize, Layout)>,
+        layouts: Vec<LocalVariableInfo>,
     ) -> Self {
         let register_ptr = if full_layout.size() == 0 {
             NonNull::dangling()
@@ -213,43 +328,50 @@ impl CommonCallStackFrame {
         let ty_ref = method.require_method_table_ref().ty_ref();
 
         let mut full_layout = Layout::new::<()>();
-        let mut layouts = Vec::with_capacity(types.len());
+        let mut infos = Vec::with_capacity(types.len());
 
         for ty in types {
-            let layout = ty
+            let ty = ty
                 .load(ty_ref.__get_assembly_ref().manager_ref())
                 .unwrap()
-                .val_layout_with_type(ty_ref);
+                .get_non_generic_with_method(method);
+            let layout = ty.val_layout();
             let offset;
             (full_layout, offset) = full_layout.extend(layout).unwrap();
-            layouts.push((offset, layout));
+            infos.push(LocalVariableInfo {
+                offset,
+                layout,
+                is_managed_reference: ty.is_managed_reference(),
+            });
         }
 
-        Self::new(method, full_layout, layouts)
+        Self::new(method, full_layout, infos)
     }
 
-    pub fn get(&self, i: u64) -> Option<(NonNull<u8>, Layout)> {
-        self.layouts
-            .get(i as usize)
-            .map(|(offset, layout)| unsafe { (self.register_ptr.byte_add(*offset), *layout) })
+    pub fn get(&self, i: u64) -> Option<LocalVariable> {
+        self.layouts.get(i as usize).map(
+            |&LocalVariableInfo {
+                 offset,
+                 layout,
+                 is_managed_reference,
+             }| LocalVariable {
+                ptr: unsafe { self.register_ptr.byte_add(offset) },
+                layout,
+                is_managed_reference,
+            },
+        )
     }
 
     pub fn get_typed<T>(&self, i: u64) -> Option<&T> {
-        self.get(i).map(|(p, l)| {
-            debug_assert!(l.size() >= size_of::<T>());
-            unsafe { p.cast::<T>().as_ref() }
-        })
+        self.get(i).map(|x| LocalVariable::as_ref_typed::<T>(&x))
     }
 
     /// Return false if i is not found
-    pub fn write_typed<T>(&self, i: u64, v: T) -> bool {
+    pub fn write_typed<T>(&self, i: u64, val: T) -> bool {
         match self.get(i) {
             None => false,
-            Some((p, l)) => {
-                debug_assert!(l.size() >= size_of::<T>());
-                unsafe {
-                    p.cast::<T>().write(v);
-                }
+            Some(local_var) => {
+                local_var.write_typed(val);
                 true
             }
         }
@@ -259,10 +381,8 @@ impl CommonCallStackFrame {
     pub fn zero_register(&self, i: u64) -> bool {
         match self.get(i) {
             None => false,
-            Some((p, l)) => {
-                unsafe {
-                    p.write_bytes(0, l.size());
-                }
+            Some(local_var) => {
+                local_var.zero();
                 true
             }
         }
@@ -275,6 +395,59 @@ impl CommonCallStackFrame {
                 self.full_layout.size(),
             )
         }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = LocalVariable> {
+        CommonCallStackFrameIter {
+            this: self,
+            index: 0,
+        }
+    }
+
+    pub fn info_iter(&self) -> impl Iterator<Item = &LocalVariableInfo> {
+        CommonCallStackFrameInfoIter {
+            this: self,
+            index: 0,
+        }
+    }
+
+    pub fn mark_all(&mut self) {
+        for mut var in self.iter().filter(|x| x.is_managed_reference) {
+            if let Some(header) = var.as_mut_typed::<ManagedReference<()>>().header_mut() {
+                header.set_is_marked(true);
+            }
+        }
+    }
+}
+
+pub struct CommonCallStackFrameIter<'a> {
+    this: &'a CommonCallStackFrame,
+    index: u64,
+}
+
+pub struct CommonCallStackFrameInfoIter<'a> {
+    this: &'a CommonCallStackFrame,
+    index: u64,
+}
+
+impl<'a> Iterator for CommonCallStackFrameIter<'a> {
+    type Item = LocalVariable;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = self.this.get(self.index)?;
+        self.index += 1;
+        Some(result)
+    }
+}
+
+impl<'a> Iterator for CommonCallStackFrameInfoIter<'a> {
+    type Item = &'a LocalVariableInfo;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = self.this.layouts.get(self.index as usize)?;
+        self.index += 1;
+
+        Some(result)
     }
 }
 

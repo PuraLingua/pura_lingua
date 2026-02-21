@@ -9,7 +9,7 @@ use global::{
 use libffi::low::CodePtr;
 
 use crate::{
-    stdlib::CoreTypeId,
+    stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::{
         generics::GenericBounds, method_table::MethodTable, type_handle::MaybeUnloadedTypeHandle,
     },
@@ -26,11 +26,13 @@ mod parameter;
 
 pub use parameter::Parameter;
 
+pub type RuntimeInstruction = Instruction<String, MaybeUnloadedTypeHandle, MethodRef, u32>;
+
 #[derive(Getters)]
 #[getset(get = "pub")]
 pub struct Method<T> {
     #[getset(skip)]
-    mt: Option<NonNull<MethodTable<T>>>,
+    pub(crate) mt: Option<NonNull<MethodTable<T>>>,
     generic: Option<NonNull<Self>>,
 
     name: Box<str>,
@@ -44,7 +46,7 @@ pub struct Method<T> {
     generic_bounds: Option<NonNull<[GenericBounds]>>,
     type_vars: Option<Box<[MaybeUnloadedTypeHandle]>>,
 
-    instructions: Vec<Instruction<MaybeUnloadedTypeHandle, MethodRef, u32>>,
+    instructions: Vec<RuntimeInstruction>,
     entry_point: CodePtr,
 }
 
@@ -76,7 +78,7 @@ where
 
         generic_bounds: Option<Vec<GenericBounds>>,
 
-        instructions: Vec<Instruction<MaybeUnloadedTypeHandle, MethodRef, u32>>,
+        instructions: Vec<RuntimeInstruction>,
     ) -> Self {
         Self {
             mt: Some(mt),
@@ -137,11 +139,18 @@ impl<T> Method<T> {
     }
     pub fn default_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
-        mut attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        attr: MethodAttr<MaybeUnloadedTypeHandle>,
     ) -> Self {
         extern "system" fn sctor<T>(_: &CPU, _: &Method<T>) {
             dt_println!("Calling default sctor");
         }
+        Self::create_sctor(mt, attr, sctor::<T>)
+    }
+    pub fn create_sctor(
+        mt: Option<NonNull<MethodTable<T>>>,
+        mut attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        rust_fn: extern "system" fn(&CPU, &Method<T>),
+    ) -> Self {
         attr.impl_flags_mut()
             .insert(MethodImplementationFlags::Static);
         Self::native(
@@ -152,7 +161,7 @@ impl<T> Method<T> {
             CoreTypeId::System_Void.static_type_ref().into(),
             CallConvention::PlatformDefault,
             None,
-            sctor::<T> as _,
+            rust_fn as _,
         )
     }
 }
@@ -213,34 +222,7 @@ impl<T> Method<T> {
         }
     }
     const fn libffi_call_convention(&self) -> libffi::middle::FfiAbi {
-        match self.call_convention {
-            CallConvention::PlatformDefault => libffi::middle::ffi_abi_FFI_DEFAULT_ABI,
-            CallConvention::CDecl => cfg_select! {
-                target_arch = "x86" => { libffi::middle::ffi_abi_FFI_MS_CDECL }
-                _ => { libffi::raw::ffi_abi_FFI_WIN64 }
-            },
-            CallConvention::CDeclWithVararg => cfg_select! {
-                target_arch = "x86" => { libffi::middle::ffi_abi_FFI_MS_CDECL }
-                _ => { libffi::raw::ffi_abi_FFI_WIN64 }
-            },
-            CallConvention::Stdcall => cfg_select! {
-                target_arch = "x86" => { libffi::middle::ffi_abi_FFI_STDCALL }
-                _ => { libffi::raw::ffi_abi_FFI_WIN64 }
-            },
-            CallConvention::Fastcall => cfg_select! {
-                target_arch = "x86" => { libffi::middle::ffi_abi_FFI_FASTCALL }
-                _ => { libffi::raw::ffi_abi_FFI_DEFAULT_ABI }
-            },
-            CallConvention::Win64 => cfg_select! {
-                all(windows, target_arch = "x86_64") => { libffi::raw::ffi_abi_FFI_WIN64 }
-                _ => { libffi::raw::ffi_abi_FFI_DEFAULT_ABI }
-            },
-            CallConvention::SystemV => cfg_select! {
-                /* cSpell:disable-next-line */
-                all(unix, target_arch = "x86_64") => { libffi::raw::ffi_abi_FFI_GNUW64 }
-                _ => { libffi::raw::ffi_abi_FFI_DEFAULT_ABI }
-            },
-        }
+        crate::libffi_utils::get_abi_by_call_convention(self.call_convention)
     }
 }
 

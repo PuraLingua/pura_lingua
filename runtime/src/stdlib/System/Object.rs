@@ -17,8 +17,8 @@ pub extern "system" fn ToString(
     match this.method_table_ref() {
         Some(mt) => {
             let name = mt.ty_ref().name();
-            ManagedReference::new_string(cpu, name.as_str().to_owned())
+            ManagedReference::new_string(cpu, name.as_str())
         }
-        None => ManagedReference::new_string(cpu, "<UNKNOWN TYPE>".to_owned()),
+        None => ManagedReference::new_string(cpu, "<UNKNOWN TYPE>"),
     }
 }

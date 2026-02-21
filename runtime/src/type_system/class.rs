@@ -1,9 +1,11 @@
 use std::alloc::{Allocator, Layout};
+use std::assert_matches;
 use std::cell::Cell;
 use std::mem::offset_of;
 use std::ptr::{NonNull, Unique};
 use std::sync::MappedRwLockReadGuard;
 
+use either::Either;
 use global::attrs::TypeAttr;
 use global::getset::{Getters, MutGetters};
 
@@ -13,20 +15,40 @@ use crate::type_system::{
 };
 use crate::value::managed_reference::ManagedReference;
 
+use super::assembly_manager::TypeLoadState;
 use super::method::Method;
+use super::type_ref::TypeRef;
 
-#[derive(Getters, MutGetters)]
+#[derive(Clone, Copy)]
+pub(crate) union Parent {
+    pub(crate) loaded: NonNull<Class>,
+    pub(crate) unloaded: NonNull<TypeRef>,
+}
+
+#[derive(Getters, MutGetters, derive_more::Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct Class {
     assembly: NonNull<Assembly>,
     generic: Option<NonNull<Class>>,
+    pub(crate) load_state: TypeLoadState,
+    main: Option<u32>,
 
     name: Box<str>,
     attr: TypeAttr,
 
-    parent: Option<NonNull<Class>>,
+    #[getset(skip)]
+    #[debug(
+        "{}",
+        m_parent.map(|x| if self.load_state == TypeLoadState::Finished {
+                format!("{:#?}", unsafe { &x.loaded })
+            } else {
+                format!("{:#?}", unsafe { &x.unloaded })
+            }
+        ).unwrap_or("None".to_owned()),
+    )]
+    pub(crate) m_parent: Option<Parent>,
 
-    method_table: NonNull<MethodTable<Self>>,
+    pub(crate) method_table: NonNull<MethodTable<Self>>,
     fields: Vec<Field>,
     sctor: u32,
 
@@ -36,7 +58,17 @@ pub struct Class {
 }
 
 impl Class {
+    pub const fn parent(&self) -> Option<NonNull<Self>> {
+        const fn map(x: Parent) -> NonNull<Class> {
+            unsafe { x.loaded }
+        }
+        self.m_parent.map(map)
+    }
+}
+
+impl Class {
     pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
+        assert_matches!(self.load_state, TypeLoadState::Finished);
         for has_instantiated in self.generic_instances.iter() {
             if unsafe { has_instantiated.as_ref() }
                 .type_vars
@@ -50,13 +82,17 @@ impl Class {
         let instantiated = Box::new(Self {
             assembly: self.assembly,
             generic: Some(NonNull::from_ref(self)),
+            load_state: TypeLoadState::Finished,
+            main: self.main,
 
             name: self.name.clone(),
             attr: self.attr,
 
-            parent: self
-                .parent
-                .map(|parent| unsafe { parent.as_ref() }.instantiate(type_vars)),
+            m_parent: self.m_parent.map(|parent| unsafe {
+                Parent {
+                    loaded: parent.loaded.as_ref().instantiate(type_vars),
+                }
+            }),
 
             method_table: MethodTable::dup(self.method_table),
             fields: self
@@ -81,12 +117,8 @@ impl Class {
         let instantiated = Box::into_non_null(instantiated);
 
         unsafe {
-            instantiated
-                .as_ref()
-                .method_table
-                .byte_add(offset_of!(MethodTable<Self>, ty))
-                .cast::<NonNull<Self>>()
-                .write(instantiated);
+            let mut mt = instantiated.as_ref().method_table;
+            mt.as_mut().ty = instantiated;
             NonNull::from_ref(self)
                 .byte_add(offset_of!(Self, generic_instances))
                 .cast::<Vec<NonNull<Self>>>()
@@ -108,19 +140,26 @@ impl Class {
         parent: Option<NonNull<Class>>,
 
         mt_generator: F,
-        fields: Vec<Field>,
+        mut fields: Vec<Field>,
         sctor: Option<u32>,
 
         generic_bounds: Option<Vec<GenericBounds>>,
     ) -> Unique<Self> {
+        if let Some(parent) = parent.as_ref().map(|x| unsafe { x.as_ref() }) {
+            let mut current_fields = fields;
+            fields = parent.fields.clone();
+            fields.append(&mut current_fields);
+        }
         let this = Box::new(Self {
             assembly,
             generic: None,
+            load_state: TypeLoadState::Finished,
+            main: None,
 
             name: name.into_boxed_str(),
             attr,
 
-            parent,
+            m_parent: parent.map(|x| Parent { loaded: x }),
 
             // MethodTable is initialized afterwards
             method_table: NonNull::dangling(),
@@ -149,6 +188,84 @@ impl Class {
         }
 
         Unique::from_non_null(this)
+    }
+
+    /// The NonNull passed to mt_generator is always valid to be cast to &Self
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_for_binary<F: FnOnce(NonNull<Self>) -> NonNull<MethodTable<Self>>>(
+        assembly: NonNull<Assembly>,
+
+        name: String,
+        attr: TypeAttr,
+
+        parent: Option<Either<NonNull<Class>, TypeRef>>,
+
+        mt_generator: F,
+        fields: Vec<Field>,
+        sctor: Option<u32>,
+
+        generic_bounds: Option<Vec<GenericBounds>>,
+    ) -> Unique<Self> {
+        let mut load_state = TypeLoadState::Finished;
+        let parent = parent.map(|x| match x {
+            Either::Left(loaded) => Parent { loaded },
+            Either::Right(unloaded) => {
+                load_state = TypeLoadState::Loading;
+                Parent {
+                    unloaded: Box::into_non_null(Box::new(unloaded)),
+                }
+            }
+        });
+        let this = Box::new(Self {
+            assembly,
+            generic: None,
+            load_state,
+            main: None,
+
+            name: name.into_boxed_str(),
+            attr,
+
+            m_parent: parent,
+
+            // MethodTable is initialized afterwards
+            method_table: NonNull::dangling(),
+            fields,
+            sctor: 0,
+
+            generic_instances: Vec::new(),
+
+            generic_bounds: generic_bounds
+                .filter(|x| !x.is_empty())
+                .map(|x| Box::into_non_null(x.into_boxed_slice())),
+            type_vars: None,
+        });
+
+        let mut this = Box::into_non_null(this);
+
+        unsafe {
+            let mt = mt_generator(this);
+            let this_m = this.as_mut();
+            if load_state == TypeLoadState::Finished {
+                this_m.sctor = sctor.unwrap_or_else(|| {
+                    mt.as_ref()
+                        .find_last_method_by_name_ret_id(".sctor")
+                        .unwrap()
+                });
+            }
+
+            this_m.method_table = mt;
+        }
+
+        Unique::from_non_null(this)
+    }
+
+    pub(crate) fn rediscover_sctor(&mut self, hint: Option<u32>) {
+        self.sctor = hint.unwrap_or_else(|| unsafe {
+            self.method_table
+                .as_ref()
+                .find_last_method_by_name_ret_id(".sctor")
+                .unwrap()
+        });
     }
 }
 

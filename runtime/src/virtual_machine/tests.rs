@@ -3,8 +3,8 @@ use global::{attrs::CallConvention, instruction::Instruction, string_name};
 use crate::{
     test_utils::{g_core_class, g_core_type},
     type_system::{
-        assembly::Assembly, field::Field, method::Method, method_table::MethodTable,
-        type_handle::MaybeUnloadedTypeHandle, type_ref::TypeRef,
+        assembly::Assembly, assembly_manager::AssemblyRef, field::Field, method::Method,
+        method_table::MethodTable, type_ref::TypeRef,
     },
 };
 
@@ -23,7 +23,7 @@ fn test_static() {
                 vec![NonGenericTypeHandle::Class(
                     Class::new(
                         assembly,
-                        "Test.Test".to_owned(),
+                        "Test::Test".to_owned(),
                         global::attr!(
                             class Public {}
                         ),
@@ -53,7 +53,7 @@ fn test_static() {
                                         Instruction::SetStaticField {
                                             val_addr: 0,
                                             ty: TypeRef::Index {
-                                                assembly: string_name!("Test"),
+                                                assembly: AssemblyRef::Name(string_name!("Test")),
                                                 ind: 0,
                                             }
                                             .into(),

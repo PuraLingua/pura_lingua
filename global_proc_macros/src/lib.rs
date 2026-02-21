@@ -1,6 +1,5 @@
 #![feature(proc_macro_totokens)]
 #![feature(extend_one)]
-#![feature(lazy_get)]
 #![feature(decl_macro)]
 #![feature(macro_metavar_expr_concat)]
 #![feature(const_trait_impl)]

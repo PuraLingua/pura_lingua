@@ -21,12 +21,12 @@ use super::{
     method::Method,
     method_table::MethodTable,
     r#struct::Struct,
-    type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle, NonGenericTypeHandleKind},
+    type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandleKind},
 };
 
 use _sealed::*;
 
-pub trait GetAssemblyRef: TypeSealed {
+pub const trait GetAssemblyRef: TypeSealed {
     fn __get_assembly_ref(&self) -> &Assembly;
 }
 
@@ -69,8 +69,12 @@ pub const trait GetNonGenericTypeHandleKind {
     fn __get_non_generic_type_handle_kind(&self) -> NonGenericTypeHandleKind;
 }
 
+pub trait GetName {
+    fn __get_name(&self) -> &str;
+}
+
 macro get_assembly_ref_default_impl($($T:ty)*) {$(
-	impl GetAssemblyRef for $T {
+	impl const GetAssemblyRef for $T {
 		fn __get_assembly_ref(&self) -> &Assembly {
 			self.assembly_ref()
 		}
@@ -106,11 +110,29 @@ macro get_method_table_ref_default_impl($($T:ty)*) {$(
 	}
 )*}
 
+macro get_val_libffi_type_default_impl($($T:ty)*) {$(
+    impl GetValLibffiType for $T {
+        fn __get_val_libffi_type(&self) -> libffi::middle::Type {
+            self.val_libffi_type()
+        }
+    }
+)*}
+
+macro get_static_constructor_id_default_impl($($T:ty)*) {$(
+    impl const GetStaticConstructorId for $T {
+        fn __get_static_constructor_id(&self) -> u32 {
+            *self.sctor()
+        }
+    }
+)*}
+
 macro type_default_impls($($T:ty)*) {$(
 	get_assembly_ref_default_impl!($T);
 	get_type_vars_default_impl!($T);
 	get_fields_default_impl!($T);
 	get_method_table_ref_default_impl!($T);
+    get_val_libffi_type_default_impl!($T);
+    get_static_constructor_id_default_impl!($T);
 )*}
 
 type_default_impls! {
@@ -126,7 +148,7 @@ impl<T> GetTypeVars for Method<T> {
 
 impl GetParent for Class {
     fn __get_parent(&self) -> Option<NonNull<Self>> {
-        *self.parent()
+        self.parent()
     }
 }
 
@@ -146,30 +168,6 @@ impl const GetValLayout for Class {
 impl GetValLayout for Struct {
     fn __get_val_layout(&self) -> Layout {
         self.val_layout()
-    }
-}
-
-impl GetValLibffiType for Class {
-    fn __get_val_libffi_type(&self) -> libffi::middle::Type {
-        self.val_libffi_type()
-    }
-}
-
-impl GetValLibffiType for Struct {
-    fn __get_val_libffi_type(&self) -> libffi::middle::Type {
-        self.val_libffi_type()
-    }
-}
-
-impl const GetStaticConstructorId for Class {
-    fn __get_static_constructor_id(&self) -> u32 {
-        *self.sctor()
-    }
-}
-
-impl const GetStaticConstructorId for Struct {
-    fn __get_static_constructor_id(&self) -> u32 {
-        *self.sctor()
     }
 }
 
@@ -194,5 +192,17 @@ impl const GetGeneric for Class {
 impl const GetGeneric for Struct {
     fn __get_generic(&self) -> Option<NonNull<Self>> {
         *self.generic()
+    }
+}
+
+impl GetName for Class {
+    fn __get_name(&self) -> &str {
+        self.name()
+    }
+}
+
+impl GetName for Struct {
+    fn __get_name(&self) -> &str {
+        self.name()
     }
 }

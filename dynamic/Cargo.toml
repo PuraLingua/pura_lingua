@@ -1,0 +1,7 @@
+[package]
+name = "pura_lingua_dynamic"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+libloading = "0.9.0"

@@ -1,11 +1,12 @@
-use global::{StringName, WithType, getset::Getters};
-use proc_macros::{ReadFromFile, WriteToFile};
+use binary_core::traits::StringRef;
+use global::WithType;
+use proc_macros::{ReadFromSection, WriteToSection};
 
 use crate::item_token::{MethodToken, TypeToken};
 
-#[derive(Debug, Clone, Copy, WithType, ReadFromFile, WriteToFile)]
+#[derive(Debug, Clone, Copy, WithType, ReadFromSection, WriteToSection)]
 #[with_type(repr = u8)]
-#[with_type(derive = (Clone, Copy, ReadFromFile, WriteToFile))]
+#[with_type(derive = (Clone, Copy, ReadFromSection, WriteToSection))]
 pub enum Integer {
     Byte(u8),
     SByte(i8),
@@ -17,25 +18,24 @@ pub enum Integer {
     ULong(u64),
 }
 
-#[derive(Debug, Clone, WithType, ReadFromFile, WriteToFile)]
+#[derive(Debug, Clone, WithType, ReadFromSection, WriteToSection)]
 #[with_type(repr = u8)]
-#[with_type(derive = (Clone, Copy, ReadFromFile, WriteToFile))]
+#[with_type(derive = (Clone, Copy, ReadFromSection, WriteToSection))]
 pub enum CustomAttributeValue {
     Boolean(bool),
     Char(char),
     Integer(Integer),
     // TODO: float, double and System.Object are not supported yet
-    String(StringName),
+    String(StringRef),
     SystemType(TypeToken),
     PureEnum { ty: TypeToken, val: Integer },
 }
 
-#[derive(Debug, Clone, ReadFromFile, WriteToFile, Getters)]
-#[getset(get = "pub")]
+#[derive(Debug, Clone, ReadFromSection, WriteToSection)]
 pub struct CustomAttribute {
-    ty: TypeToken,
-    ctor_name: MethodToken,
-    positional_args: Vec<CustomAttributeValue>,
+    pub ty: TypeToken,
+    pub ctor_name: MethodToken,
+    pub positional_args: Vec<CustomAttributeValue>,
 }
 
 impl CustomAttribute {

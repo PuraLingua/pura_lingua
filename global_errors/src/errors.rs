@@ -145,7 +145,7 @@ pub enum EncodingError {
     UnsupportedEncoding(&'static str),
 }
 
-pub use anyhow::anyhow;
+pub use anyhow::{Error, anyhow};
 
 macro single_error($($(#[$($meta:meta)*])* $i:ident @ $ctor:ident)*) {$(
     $(#[$($meta)*])*
@@ -173,6 +173,7 @@ single_error! {
     /// [`std::option::Option::None`]
     NoneError@new
     OutOfMemoryError@new
+    PoisonError@new
 }
 
 #[derive(Clone, Copy, Debug, ::derive_more::Display, ::thiserror::Error)]

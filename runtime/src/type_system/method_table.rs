@@ -5,9 +5,11 @@ use std::{
     sync::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
 };
 
+use enumflags2::BitFlags;
+
 use crate::{
     memory::{GetFieldOffsetOptions, GetLayoutOptions},
-    stdlib::CoreTypeId,
+    stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::method::Method,
 };
 
@@ -18,6 +20,7 @@ use super::{
         GetStaticConstructorId, GetTypeVars,
     },
     method::MethodRef,
+    type_handle::NonGenericTypeHandle,
 };
 
 mod display;
@@ -47,13 +50,17 @@ impl<T> MethodTable<T> {
     /// Clone it without any caches
     pub fn dup(p: NonNull<Self>) -> NonNull<Self> {
         unsafe {
-            Box::into_non_null(Box::new(Self {
+            let mut this = Box::into_non_null(Box::new(Self {
                 ty: p.as_ref().ty,
-                methods: RwLock::new(p.as_ref().methods.get_cloned().unwrap()),
+                methods: RwLock::new(Vec::new()),
                 __override_methods: p.as_ref().__override_methods.clone(),
                 cached_layout: Cell::new(None),
                 cached_static_layout: Cell::new(None),
-            }))
+            }));
+            let mut methods = p.as_ref().methods.get_cloned().unwrap();
+            methods.iter_mut().for_each(|x| x.as_mut().mt = Some(this));
+            this.as_mut().methods = RwLock::new(methods);
+            this
         }
     }
 }
@@ -61,6 +68,13 @@ impl<T> MethodTable<T> {
 impl<T> MethodTable<T> {
     pub fn get_method(&self, id: u32) -> Option<MappedRwLockReadGuard<'_, NonNull<Method<T>>>> {
         RwLockReadGuard::filter_map(self.methods.read().unwrap(), |x| x.get(id as usize)).ok()
+    }
+    pub fn list_method_signatures(&self) -> Vec<String> {
+        let methods = self.methods.read().unwrap();
+        methods
+            .iter()
+            .map(|x| unsafe { x.as_ref().display(BitFlags::all()).to_string() })
+            .collect()
     }
     pub fn find_first_method_by_name<TName: ?Sized>(
         &self,
@@ -105,7 +119,10 @@ impl<T> MethodTable<T> {
     }
 }
 
-impl<T: GetParent + GetMethodTableRef + GetStaticConstructorId> MethodTable<T> {
+impl<T> MethodTable<T>
+where
+    T: GetAssemblyRef + GetMethodTableRef + GetParent + 'static,
+{
     /// The NonNull passed to method_generator is always valid to be cast to &Self
     pub fn new<F: FnOnce(NonNull<Self>) -> Vec<Box<Method<T>>>>(
         ty: NonNull<T>,
@@ -271,6 +288,15 @@ where
     }
 }
 
+#[derive(Copy, derive_more::Debug)]
+#[derive_const(Clone)]
+pub struct FieldMemInfo {
+    pub offset: usize,
+    pub layout: Layout,
+    #[debug("{}", ty.name())]
+    pub ty: NonGenericTypeHandle,
+}
+
 impl<T> MethodTable<T>
 where
     T: GetFields<Field = super::field::Field>
@@ -280,7 +306,6 @@ where
         + GetMethodTableRef
         + GetGeneric,
 {
-    /// 0: offset, 1: Layout
     unsafe fn _common_field_mem_info_unchecked(
         &self,
         i: u32,
@@ -289,7 +314,7 @@ where
         check: fn(&Field) -> bool,
         get_cached_offset: fn(&Field) -> Option<usize>,
         set_cached_offset: fn(&Field, usize),
-    ) -> (usize, Layout) {
+    ) -> FieldMemInfo {
         let mut total_layout = self
             .ty_ref()
             .__get_parent()
@@ -301,9 +326,7 @@ where
             .unwrap_or_else(Layout::new::<()>);
         let mut offset = 0;
         // Little hack for casting immutable to mutable
-        let fields = unsafe { NonNull::from_ref(self).as_mut() }
-            .ty_mut()
-            .__get_fields_mut();
+        let fields = self.ty_ref().__get_fields();
 
         if offset_options.prefer_cached
             && layout_options.prefer_cached
@@ -311,9 +334,13 @@ where
             && let Some(offset) = get_cached_offset(field)
             && let Some(layout) = field.cached_layout.get()
         {
-            return (offset, layout);
+            return FieldMemInfo {
+                offset,
+                layout,
+                ty: field.get_type_with_type(self.ty_ref()),
+            };
         }
-        let fields_mut = unsafe { fields.get_unchecked_mut(..(i as usize)) };
+        let fields_mut = unsafe { fields.get_unchecked(..=(i as usize)) };
 
         for f in fields_mut {
             if !check(f) {
@@ -330,9 +357,14 @@ where
             set_cached_offset(field, offset);
         }
 
-        let layout = field.layout_with_type(self.ty_ref(), layout_options);
+        let ty = field.get_type_with_type(self.ty_ref());
 
-        (offset, layout)
+        let layout = ty.val_layout();
+        if !layout_options.discard_calculated_layout {
+            field.cached_layout.set(Some(layout));
+        }
+
+        FieldMemInfo { offset, layout, ty }
     }
 
     #[allow(unsafe_op_in_unsafe_fn)]
@@ -352,10 +384,9 @@ where
             get_cached_offset,
             set_cached_offset,
         )
-        .0
+        .offset
     }
 
-    /// 0: offset, 1: Layout
     fn _common_field_mem_info(
         &self,
         i: u32,
@@ -364,7 +395,7 @@ where
         check: fn(&Field) -> bool,
         get_cached_offset: fn(&Field) -> Option<usize>,
         set_cached_offset: fn(&Field, usize),
-    ) -> Option<(usize, Layout)> {
+    ) -> Option<FieldMemInfo> {
         if (i as usize) >= self.ty_ref().__get_fields().len() {
             None
         } else {
@@ -379,6 +410,65 @@ where
                 ))
             }
         }
+    }
+
+    fn _common_all_fields_mem_info(
+        &self,
+        layout_options: GetLayoutOptions,
+        offset_options: GetFieldOffsetOptions,
+        check: fn(&Field) -> bool,
+        get_cached_offset: fn(&Field) -> Option<usize>,
+        set_cached_offset: fn(&Field, usize),
+    ) -> Vec<FieldMemInfo> {
+        let mut total_layout = self
+            .ty_ref()
+            .__get_parent()
+            .map(|x| unsafe {
+                x.as_ref()
+                    .__get_method_table_ref()
+                    ._common_calc_layout(&check)
+            })
+            .unwrap_or_else(Layout::new::<()>);
+        let mut offset = 0;
+
+        // Little hack for casting immutable to mutable
+        let fields = self.ty_ref().__get_fields();
+        let mut result = Vec::new();
+
+        for field in fields {
+            if !check(field) {
+                continue;
+            }
+            if offset_options.prefer_cached
+                && layout_options.prefer_cached
+                && let Some(_offset) = get_cached_offset(field)
+                && let Some(layout) = field.cached_layout.get()
+            {
+                result.push(FieldMemInfo {
+                    offset: _offset,
+                    layout,
+                    ty: field.get_type_with_type(self.ty_ref()),
+                });
+                (total_layout, offset) = total_layout.extend(layout).unwrap();
+                continue;
+            }
+            let ty = field.get_type_with_type(self.ty_ref());
+            let field_layout = ty.val_layout();
+            if !layout_options.discard_calculated_layout {
+                field.cached_layout.set(Some(field_layout));
+            }
+            result.push(FieldMemInfo {
+                offset,
+                layout: field_layout,
+                ty,
+            });
+            (total_layout, offset) = total_layout.extend(field_layout).unwrap();
+            if !offset_options.discard_calculated_offset {
+                set_cached_offset(field, offset);
+            }
+        }
+
+        result
     }
 
     fn _common_field_offset(
@@ -404,13 +494,31 @@ where
         }
     }
 
-    /// 0: offset, 1: Layout
+    fn _common_all_fields_offset(
+        &self,
+        options: GetFieldOffsetOptions,
+        check: fn(&Field) -> bool,
+        get_cached_offset: fn(&Field) -> Option<usize>,
+        set_cached_offset: fn(&Field, usize),
+    ) -> Vec<usize> {
+        self._common_all_fields_mem_info(
+            Default::default(),
+            options,
+            check,
+            get_cached_offset,
+            set_cached_offset,
+        )
+        .into_iter()
+        .map(|x| x.offset)
+        .collect()
+    }
+
     pub fn field_mem_info(
         &self,
         i: u32,
         layout_options: GetLayoutOptions,
         offset_options: GetFieldOffsetOptions,
-    ) -> Option<(usize, Layout)> {
+    ) -> Option<FieldMemInfo> {
         self._common_field_mem_info(
             i,
             layout_options,
@@ -420,15 +528,41 @@ where
             field_helper::set_cached_offset,
         )
     }
-    /// 0: offset, 1: Layout
+
+    pub fn all_fields_mem_info(
+        &self,
+        layout_options: GetLayoutOptions,
+        offset_options: GetFieldOffsetOptions,
+    ) -> Vec<FieldMemInfo> {
+        self._common_all_fields_mem_info(
+            layout_options,
+            offset_options,
+            field_helper::check,
+            field_helper::get_cached_offset,
+            field_helper::set_cached_offset,
+        )
+    }
     pub fn static_field_mem_info(
         &self,
         i: u32,
         layout_options: GetLayoutOptions,
         offset_options: GetFieldOffsetOptions,
-    ) -> Option<(usize, Layout)> {
+    ) -> Option<FieldMemInfo> {
         self._common_field_mem_info(
             i,
+            layout_options,
+            offset_options,
+            field_helper::check_static,
+            field_helper::get_cached_offset_static,
+            field_helper::set_cached_offset_static,
+        )
+    }
+    pub fn all_static_fields_mem_info(
+        &self,
+        layout_options: GetLayoutOptions,
+        offset_options: GetFieldOffsetOptions,
+    ) -> Vec<FieldMemInfo> {
+        self._common_all_fields_mem_info(
             layout_options,
             offset_options,
             field_helper::check_static,
@@ -448,6 +582,23 @@ where
     pub fn static_field_offset(&self, i: u32, options: GetFieldOffsetOptions) -> Option<usize> {
         self._common_field_offset(
             i,
+            options,
+            field_helper::check_static,
+            field_helper::get_cached_offset_static,
+            field_helper::set_cached_offset_static,
+        )
+    }
+
+    pub fn all_fields_offset(&self, options: GetFieldOffsetOptions) -> Vec<usize> {
+        self._common_all_fields_offset(
+            options,
+            field_helper::check,
+            field_helper::get_cached_offset,
+            field_helper::set_cached_offset,
+        )
+    }
+    pub fn all_static_fields_offset(&self, options: GetFieldOffsetOptions) -> Vec<usize> {
+        self._common_all_fields_offset(
             options,
             field_helper::check_static,
             field_helper::get_cached_offset_static,
@@ -503,8 +654,12 @@ impl<T> DropSpec for MethodTable<T> {
             }
             *m = NonNull::dangling();
         }
+        drop(methods);
+        common_drop_method_table(self);
     }
 }
+
+fn common_drop_method_table<T>(#[allow(unused)] this: &mut MethodTable<T>) {}
 
 impl<T: GetParent + GetMethodTableRef> DropSpec for MethodTable<T> {
     fn __drop(&mut self) {
@@ -522,24 +677,16 @@ impl<T: GetParent + GetMethodTableRef> DropSpec for MethodTable<T> {
 
         let mut methods = self.methods.replace(Vec::new()).unwrap();
         methods.shrink_to_fit();
-        let (parent_methods, this_methods) = unsafe {
-            let (method_ptr, len, cap) = methods.into_raw_parts();
-            debug_assert_eq!(len, cap);
-            (
-                Vec::from_raw_parts(method_ptr, parent_mt_len, parent_mt_len),
-                Vec::from_raw_parts(
-                    method_ptr.cast::<Box<Method<T>>>().add(parent_mt_len),
-                    len - parent_mt_len,
-                    len - parent_mt_len,
-                ),
-            )
-        };
-        drop(this_methods);
+        let (parent_methods, this_methods) = methods.split_at(parent_mt_len);
+        this_methods.iter().for_each(|x| unsafe {
+            drop(Box::from_non_null(*x));
+        });
         for ov in &self.__override_methods {
             unsafe {
                 drop(Box::from_non_null(parent_methods[*ov]));
             }
         }
+        common_drop_method_table(self);
     }
 }
 

@@ -1,0 +1,5 @@
+disallowed-methods = [
+	{ path = "std::ptr::NonNull::add" },
+	{ path = "std::ptr::NonNull::sub" },
+	{ path = "std::ptr::NonNull::offset" },
+]

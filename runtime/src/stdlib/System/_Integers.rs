@@ -11,5 +11,5 @@ pub extern "system" fn ToString<T: Display>(
     _: &Method<Struct>,
     this: &T,
 ) -> ManagedReference<Class> {
-    ManagedReference::new_string(cpu, this.to_string())
+    ManagedReference::new_string(cpu, &this.to_string())
 }

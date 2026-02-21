@@ -1,19 +1,12 @@
-use crate::item_token::TypeToken;
-use global::StringName;
+use binary_core::traits::StringRef;
 use global::attrs::FieldAttr;
-use global::derive_ctor::ctor;
-use global::getset::{CopyGetters, Getters};
-use proc_macros::{ReadFromFile, WriteToFile};
+use proc_macros::{ReadFromSection, WriteToSection};
 
-use crate::custom_attribute::CustomAttribute;
+use crate::item_token::TypeToken;
 
-#[derive(Clone, Debug, Getters, CopyGetters, ReadFromFile, WriteToFile, ctor)]
-#[getset(get = "pub")]
+#[derive(Clone, Debug, ReadFromSection, WriteToSection)]
 pub struct Field {
-    pub(crate) name: StringName,
-    #[getset(skip)]
-    #[get_copy = "pub"]
-    pub(crate) attr: FieldAttr,
-    pub(crate) custom_attributes: Vec<CustomAttribute>,
-    pub(crate) ty: TypeToken,
+    pub name: StringRef,
+    pub attr: FieldAttr,
+    pub ty: TypeToken,
 }

@@ -1,19 +1,32 @@
 use std::{alloc::Layout, ffi::c_void, ptr::NonNull};
 
 use global::{attrs::ParameterAttr, derive_ctor::ctor};
+use stdlib_header::CoreTypeId;
 
-use crate::type_system::{
-    get_traits::{GetAssemblyRef, GetTypeVars},
-    type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+use crate::{
+    stdlib::CoreTypeIdConstExt,
+    type_system::{
+        get_traits::{GetAssemblyRef, GetTypeVars},
+        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+    },
 };
 
 use super::Method;
 
 #[derive(ctor, Clone)]
-#[ctor(pub new)]
+#[ctor(pub const new)]
 pub struct Parameter {
     pub(crate) ty: MaybeUnloadedTypeHandle,
     pub(crate) attr: ParameterAttr,
+}
+
+impl Parameter {
+    pub const fn with_core_type(ty: CoreTypeId) -> Self {
+        Self::new(ty.static_type_ref().into(), global::attr!(parameter {}))
+    }
+    pub const fn with_core_type_attr(ty: CoreTypeId, attr: ParameterAttr) -> Self {
+        Self::new(ty.static_type_ref().into(), attr)
+    }
 }
 
 impl Parameter {

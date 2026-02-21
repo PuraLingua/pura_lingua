@@ -22,12 +22,16 @@
 #![feature(const_convert)]
 #![feature(const_range)]
 #![feature(const_try)]
-#![feature(ptr_as_ref_unchecked)]
 #![feature(const_ops)]
 #![feature(const_cmp)]
 #![feature(const_destruct)]
 #![feature(generic_const_exprs)]
 #![feature(negative_impls)]
+#![feature(try_trait_v2)]
+#![feature(try_trait_v2_residual)]
+#![feature(ptr_metadata)]
+#![feature(cfg_select)]
+#![feature(adt_const_params)]
 //
 #![allow(internal_features)]
 #![allow(static_mut_refs)]
@@ -51,11 +55,14 @@ pub mod freeze_lock;
 pub mod instruction;
 pub mod io_utils;
 pub mod macros;
+pub mod non_purus_call_configuration;
 pub mod sync;
 pub mod traits;
 
 pub mod color;
 pub mod path_searcher;
+
+pub mod std2c;
 
 // Re-exports
 pub use anyhow::{Error, Result};

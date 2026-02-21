@@ -1,41 +1,37 @@
+use binary_core::traits::StringRef;
+use global::{
+    attrs::{CallConvention, MethodAttr, ParameterAttr},
+    instruction::Instruction,
+};
+use proc_macros::{ReadFromSection, WriteToSection};
+
 use crate::item_token::{MethodToken, TypeToken};
-use global::StringName;
-use global::attrs::{CallConvention, MethodAttr, ParameterAttr};
-use global::derive_ctor::ctor;
-use global::getset::Getters;
-use global::instruction::Instruction;
-use proc_macros::{ReadFromFile, WriteToFile};
 
-use crate::custom_attribute::CustomAttribute;
-use crate::ty::GenericBounds;
+use super::GenericBounds;
 
-#[derive(Clone, Debug, Getters, ctor, ReadFromFile, WriteToFile)]
-#[allow(unused)]
-#[getset(get = "pub")]
-#[ctor(pub new)]
-pub struct MethodSign {
-    convention: CallConvention,
-    args: Vec<(TypeToken, ParameterAttr)>,
-    ret_type: TypeToken,
-}
+pub type BinaryInstruction = Instruction<StringRef, TypeToken, MethodToken, u32>;
 
-#[derive(Clone, Debug, Getters, ctor, ReadFromFile, WriteToFile)]
-#[allow(unused)]
-#[getset(get = "pub")]
-#[ctor(pub new)]
+#[derive(Clone, Debug, ReadFromSection, WriteToSection)]
 pub struct Method {
-    attr: MethodAttr<TypeToken>,
-    sign: MethodSign,
-    name: StringName,
+    pub name: StringRef,
+    pub attr: MethodAttr<TypeToken>,
+    pub args: Vec<Parameter>,
+    pub return_type: TypeToken,
+    pub call_convention: CallConvention,
 
-    custom_attributes: Vec<CustomAttribute>,
-    instructions: Vec<Instruction<TypeToken, MethodToken, u32>>,
-    type_vars: Vec<GenericBounds>,
+    pub generic_bounds: Option<Vec<GenericBounds>>,
+
+    pub instructions: Vec<BinaryInstruction>,
 }
 
-#[derive(Clone, Debug, Getters, ReadFromFile, WriteToFile, PartialEq)]
-#[getset(get = "pub")]
+#[derive(Clone, Debug, ReadFromSection, WriteToSection)]
+pub struct Parameter {
+    pub ty: TypeToken,
+    pub attr: ParameterAttr,
+}
+
+#[derive(Clone, Debug, ReadFromSection, WriteToSection)]
 pub struct MethodSpec {
-    m: u32,
-    generics: Vec<TypeToken>,
+    pub m: u32,
+    pub generics: Vec<TypeToken>,
 }

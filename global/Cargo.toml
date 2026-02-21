@@ -13,7 +13,7 @@ thiserror = "2.0.12"
 iota = "0.2.3"
 
 derive-ctor = "1.0.6"
-getset = { git = "https://github.com/ExPuritate/getset" }
+getset = { git = "https://github.com/ExPuritate/getset.git" }
 
 
 faststr = { version = "0.2.31" }
@@ -34,8 +34,7 @@ bitfields = { workspace = true }
 
 string_name = { workspace = true }
 
-binary_traits = { package = "pura_lingua_binary_traits", path = "../binary_traits" }
-binary_types = { package = "pura_lingua_binary_types", path = "../binary_types" }
+binary_core = { package = "pura_lingua_binary_core", path = "../binary_core" }
 binary_proc_macros = { package = "pura_lingua_binary_proc_macros", path = "../binary_proc_macros" }
 
 proc_macros = { package = "pura_lingua_proc_macros", path = "../global_proc_macros" }

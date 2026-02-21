@@ -4,10 +4,7 @@ use std::{
     mem::{MaybeUninit, offset_of},
     num::NonZero,
     ptr::{NonNull, Unique},
-    sync::{
-        MappedRwLockReadGuard, MappedRwLockWriteGuard, Once, RwLock, RwLockReadGuard,
-        RwLockWriteGuard,
-    },
+    sync::{MappedRwLockReadGuard, Once, RwLock, RwLockReadGuard},
 };
 
 use cpu::CPU;
@@ -19,10 +16,12 @@ use crate::{
         assembly_manager::AssemblyManager, class::Class, get_traits::GetStaticConstructorId,
         r#struct::Struct, type_handle::NonGenericTypeHandle,
     },
-    value::managed_reference::ManagedReference,
+    value::managed_reference::{FieldAccessor, ManagedReference},
+    virtual_machine::resource::ResourceManager,
 };
 
 pub mod cpu;
+pub mod resource;
 
 #[cfg(test)]
 mod tests;
@@ -31,15 +30,18 @@ mod tests;
 #[getset(get = "pub")]
 pub struct VirtualMachine {
     pub(crate) assembly_manager: AssemblyManager,
+    resource_manager: ResourceManager,
     #[getset(skip)]
     #[allow(clippy::vec_box)]
-    cpus: RwLock<Vec<Box<CPU>>>,
+    // cSpell:disable-next-line
+    central_processing_units: RwLock<Vec<Box<CPU>>>,
     #[getset(skip)]
     cpu_for_static: RwLock<Box<CPU>>,
 
     #[getset(skip)]
     pub(crate) class_static_map: RwLock<HashMap<NonNull<Class>, ManagedReference<Class>>>,
     #[getset(skip)]
+    #[allow(clippy::type_complexity)]
     pub(crate) struct_static_map: RwLock<HashMap<NonNull<Struct>, (NonNull<u8>, Layout)>>,
 }
 
@@ -58,7 +60,7 @@ impl CpuID {
 impl VirtualMachine {
     pub fn construct_in(this: NonNull<Self>) {
         unsafe {
-            this.byte_add(offset_of!(VirtualMachine, cpus))
+            this.byte_add(offset_of!(VirtualMachine, central_processing_units))
                 .cast::<RwLock<Vec<Box<CPU>>>>()
                 .write(RwLock::new(Vec::new()));
             this.byte_add(offset_of!(Self, cpu_for_static))
@@ -91,9 +93,9 @@ impl VirtualMachine {
 
     #[must_use]
     pub fn add_cpu(&self) -> CpuID {
-        let mut cpus = self.cpus.write().unwrap();
-        let index = cpus.len();
-        cpus.push(unsafe {
+        let mut central_processing_units = self.central_processing_units.write().unwrap();
+        let index = central_processing_units.len();
+        central_processing_units.push(unsafe {
             Box::from_non_null(CPU::new(NonNull::from_ref(self)).as_non_null_ptr())
         });
         CpuID::Common(unsafe { NonZero::new_unchecked(index + 1) })
@@ -102,10 +104,12 @@ impl VirtualMachine {
     pub fn get_cpu(&self, index: CpuID) -> Option<MappedRwLockReadGuard<'_, CPU>> {
         match index {
             CpuID::StaticCPU => Some(self.cpu_for_static()),
-            CpuID::Common(index) => RwLockReadGuard::filter_map(self.cpus.read().unwrap(), |x| {
-                x.get(index.get() - 1).map(|x| &**x)
-            })
-            .ok(),
+            CpuID::Common(index) => {
+                RwLockReadGuard::filter_map(self.central_processing_units.read().unwrap(), |x| {
+                    x.get(index.get() - 1).map(|x| &**x)
+                })
+                .ok()
+            }
         }
     }
 
@@ -174,7 +178,7 @@ impl VirtualMachine {
         &self,
         ty: NonGenericTypeHandle,
         field: u32,
-    ) -> Option<(NonNull<()>, Layout)> {
+    ) -> Option<(NonNull<u8>, Layout)> {
         match ty {
             NonGenericTypeHandle::Class(class) => {
                 let static_map = self.class_static_map.read().unwrap();
@@ -189,6 +193,7 @@ impl VirtualMachine {
                         unsafe { *class.as_ref().method_table() },
                         true,
                     );
+                    debug_assert!(obj.header().is_none_or(|x| x.is_static()));
                     static_map.insert(class, obj);
                     drop(static_map);
                     let sctor =
@@ -199,7 +204,9 @@ impl VirtualMachine {
 
                     obj
                 };
-                obj.field(true, field, Default::default())
+                debug_assert!(obj.header().is_none_or(|x| x.is_static()));
+                obj.const_access::<FieldAccessor<_>>()
+                    .field(field, Default::default())
             }
             NonGenericTypeHandle::Struct(s) => {
                 let static_map = self.struct_static_map.read().unwrap();
@@ -225,7 +232,7 @@ impl VirtualMachine {
                 };
                 unsafe { s.as_ref().method_table_ref() }
                     .static_field_mem_info(field, Default::default(), Default::default())
-                    .map(|x| (unsafe { obj_p.byte_add(x.0).cast() }, x.1))
+                    .map(|x| (unsafe { obj_p.byte_add(x.offset).cast() }, x.layout))
             }
         }
     }
@@ -238,9 +245,18 @@ static mut G_RUNTIM: MaybeUninit<VirtualMachine> = MaybeUninit::zeroed();
 static ENSURE_VM_INIT: Once = Once::new();
 
 #[inline(always)]
-pub const fn global_vm() -> &'static mut VirtualMachine {
+pub const unsafe fn global_vm_unchecked() -> &'static mut VirtualMachine {
     /* cSpell: disable-next-line */
     unsafe { G_RUNTIM.assume_init_mut() }
+}
+
+#[inline(always)]
+pub fn global_vm() -> &'static mut VirtualMachine {
+    if !ENSURE_VM_INIT.is_completed() {
+        std::hint::cold_path();
+        EnsureVirtualMachineInitialized();
+    }
+    unsafe { global_vm_unchecked() }
 }
 
 #[unsafe(no_mangle)]

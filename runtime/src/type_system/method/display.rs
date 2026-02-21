@@ -35,7 +35,7 @@ impl<T> fmt::Display for Display<'_, T> {
         }
 
         if self.1.contains(MethodDisplayOptions::WithReturn) {
-            write!(f, "{:?}", self.0.return_type)?;
+            write!(f, "{:?} ", self.0.return_type)?;
         }
 
         write!(f, "`{}`", self.0.name())?;
@@ -57,13 +57,15 @@ impl<T> fmt::Display for Display<'_, T> {
 impl fmt::Display for ParameterDisplay<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut flags = self.0.attr.impl_flags().iter();
+        let mut require_space = false;
         if let Some(flag) = flags.next() {
+            require_space = true;
             write!(f, "{flag}")?;
         }
         for flag in flags {
             write!(f, " {flag}")?;
         }
-        write!(f, " {:?}", self.0.ty)?;
+        write!(f, "{}{:?}", if require_space { " " } else { "" }, self.0.ty)?;
 
         Ok(())
     }

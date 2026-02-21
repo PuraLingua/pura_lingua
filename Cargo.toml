@@ -8,13 +8,16 @@ package.version = "0.1.0"
 resolver = "3"
 members = [
 	"binary",
-	"binary_traits",
-	"binary_types",
+	"binary_core",
+	"binary_proc_macros",
+	"dynamic",
 	"global",
 	"global_errors",
 	"proc_macro_utils",
+	"rt_proc_macro_shared",
 	"rt_proc_macros",
 	"rt_stdlib",
+	"rt_stdlib_proc_macros",
 	"runtime",
 	"string_name",
 ]
@@ -25,6 +28,8 @@ path = "./src/_lib.rs"
 [dependencies]
 global = { workspace = true, optional = true }
 binary = { path = "./binary", package = "pura_lingua_binary", optional = true }
+stdlib_header = { path = "./rt_stdlib", package = "pura_lingua_runtime_stdlib", optional = true }
+dynamic = { path = "./dynamic", package = "pura_lingua_dynamic", optional = true }
 
 [workspace.dependencies]
 global = { package = "pura_lingua_global", path = "./global" }
@@ -62,9 +67,11 @@ md-5 = { version = "0.10.6" }
 sha1 = { version = "0.10.6" }
 sha2 = { version = "0.10.9" }
 blake3 = { version = "1.8.2" }
-indexmap = { version = "2.9" }
+indexmap = { version = "2.13" }
 
 [features]
 default = []
 basic = ["dep:global"]
 binary = ["basic", "dep:binary"]
+stdlib_header = ["dep:stdlib_header"]
+dynamic = ["dep:dynamic"]

@@ -1,6 +1,7 @@
-use std::{alloc::Layout, fmt::Debug, pin::Pin, ptr::NonNull};
+use std::{alloc::Layout, fmt::Debug, ptr::NonNull};
 
-use global::{UnwrapEnum, traits::IUnwrap};
+use derive_more::Display;
+use global::UnwrapEnum;
 
 use crate::{
     stdlib::CoreTypeId,
@@ -17,7 +18,7 @@ use super::{
 mod convert;
 
 #[repr(u8)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Display)]
 pub enum NonGenericTypeHandleKind {
     Class = TypeHandleKind::Class as _,
     Struct = TypeHandleKind::Struct as _,
@@ -39,11 +40,26 @@ impl NonGenericTypeHandle {
         }
     }
 
+    pub fn name(&self) -> &str {
+        match self {
+            NonGenericTypeHandle::Class(ty) => unsafe { ty.as_ref().name() },
+            NonGenericTypeHandle::Struct(ty) => unsafe { ty.as_ref().name() },
+        }
+    }
+
     pub fn is_certain_core_type(&self, id: CoreTypeId) -> bool {
         self.get_core_type_id().is_some_and(|x| x == id)
     }
 
     pub fn is_pointer(&self) -> bool {
+        #[allow(clippy::match_like_matches_macro)]
+        match self {
+            Self::Class(_) => true,
+            _ => false,
+        }
+    }
+
+    pub const fn is_managed_reference(&self) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match self {
             Self::Class(_) => true,
@@ -180,6 +196,13 @@ impl TypeHandle {
         }
     }
 
+    pub fn into_non_generic(self) -> Option<NonGenericTypeHandle> {
+        match self {
+            Self::Generic(_) => None,
+            x => unsafe { Some(std::mem::transmute::<Self, NonGenericTypeHandle>(x)) },
+        }
+    }
+
     pub const fn get_int_tag(&self) -> u8 {
         // SAFETY: Because `Self` is marked `repr(u8)`, its layout is a `repr(C)` `union`
         // between `repr(C)` structs, each of which has the `u8` discriminant as its first
@@ -245,10 +268,23 @@ impl TypeHandle {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum MaybeUnloadedTypeHandle {
     Loaded(TypeHandle),
     Unloaded(TypeRef),
+}
+
+impl std::fmt::Debug for MaybeUnloadedTypeHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&match self {
+            Self::Loaded(type_handle) => {
+                format!("{type_handle:?}")
+            }
+            Self::Unloaded(type_ref) => {
+                format!("Unloaded({type_ref:?})")
+            }
+        })
+    }
 }
 
 impl PartialEq for MaybeUnloadedTypeHandle {
@@ -283,25 +319,7 @@ impl MaybeUnloadedTypeHandle {
     pub fn load(&self, assembly_manager: &AssemblyManager) -> Option<TypeHandle> {
         match self {
             Self::Loaded(th) => Some(*th),
-            Self::Unloaded(r) => match r {
-                TypeRef::Index { assembly, ind } => {
-                    let assembly = assembly_manager.get_assembly_by_name(assembly).unwrap()?;
-                    assembly
-                        .get_type_handle(*ind)
-                        .unwrap()
-                        .map(|x| *x)
-                        .map(TypeHandle::from)
-                }
-                TypeRef::Specific {
-                    assembly,
-                    ind,
-                    types,
-                } => {
-                    let assembly = assembly_manager.get_assembly_by_name(assembly).unwrap()?;
-                    let ty = assembly.get_type_handle(*ind).unwrap()?;
-                    Some(ty.instantiate(types).into())
-                }
-            },
+            Self::Unloaded(r) => r.load(assembly_manager),
         }
     }
 }

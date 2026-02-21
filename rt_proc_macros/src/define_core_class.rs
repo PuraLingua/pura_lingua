@@ -1,110 +1,8 @@
 use proc_macro_utils::crate_name_resolution::PredefinedCrateName;
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, format_ident, quote};
-use syn::{Expr, Ident, LitStr, Token, parse::Parse, token::Bracket};
 
-use crate::common::{Attr, keywords};
-
-pub struct FieldAst {
-    attr: Attr,
-    id: Ident,
-    name: LitStr,
-    ty: Expr,
-}
-
-impl Parse for FieldAst {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let attr = input.parse()?;
-        let id = input.parse()?;
-        let name = input.parse()?;
-        input.parse::<Token![=>]>()?;
-        let ty = input.parse()?;
-        input.parse::<Token![;]>()?;
-
-        Ok(Self { attr, id, name, ty })
-    }
-}
-
-pub struct DefineCoreClassAst {
-    attr: Attr,
-    assembly_name: Ident,
-    id: Ident,
-    name: LitStr,
-    parent: Option<Expr>,
-    generic_bounds: Option<Expr>,
-    fields: Vec<FieldAst>,
-    method_parent: Option<Ident>,
-    method_ids: Vec<(Option<Token![override]>, Ident)>,
-    static_method_ids: Vec<Ident>,
-    method_generator: Expr,
-}
-
-impl Parse for DefineCoreClassAst {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let attr = input.parse()?;
-        let assembly_name = input.parse()?;
-        let id = input.parse()?;
-        let name = input.parse()?;
-        let parent = if !input.peek(Token![=>]) {
-            Some(input.parse()?)
-        } else {
-            None
-        };
-        input.parse::<Token![=>]>()?;
-        let generic_bounds = if let Ok(brackets) = syn::__private::parse_brackets(input) {
-            Some(brackets.content.parse()?)
-        } else {
-            None
-        };
-
-        input.parse::<Token![#]>()?;
-        input.parse::<keywords::fields>()?;
-        input.parse::<Token![:]>()?;
-        let mut fields = Vec::new();
-        while input.peek2(Bracket) {
-            fields.push(input.parse()?);
-        }
-
-        input.parse::<Token![#]>()?;
-        input.parse::<keywords::methods>()?;
-        let method_parent = if input.peek(keywords::of) {
-            input.parse::<keywords::of>()?;
-            Some(input.parse()?)
-        } else {
-            None
-        };
-        input.parse::<Token![:]>()?;
-        let method_ids_buf;
-        syn::bracketed!(method_ids_buf in input);
-        let mut method_ids = Vec::new();
-        while !method_ids_buf.is_empty() {
-            let overridable = method_ids_buf.parse()?;
-            let id = method_ids_buf.parse()?;
-            method_ids.push((overridable, id));
-        }
-        let static_method_ids_buf;
-        syn::bracketed!(static_method_ids_buf in input);
-        let mut static_method_ids = Vec::new();
-        while !static_method_ids_buf.is_empty() {
-            static_method_ids.push(static_method_ids_buf.parse()?);
-        }
-        input.parse::<keywords::with>()?;
-        let method_generator = input.parse()?;
-        Ok(Self {
-            attr,
-            assembly_name,
-            id,
-            name,
-            parent,
-            generic_bounds,
-            fields,
-            method_parent,
-            method_ids,
-            static_method_ids,
-            method_generator,
-        })
-    }
-}
+use shared::define_core_class::*;
 
 pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
     let runtime_crate = PredefinedCrateName::Runtime.as_ident(Span::call_site());
@@ -119,35 +17,69 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
     let method_generator = &ast.method_generator;
 
     let field_ids = ast.fields.iter().map(|x| &x.id).collect::<Vec<_>>();
+    let field_id_contents = ast.fields.iter().fold(Vec::new(), |mut out, _| {
+        if let Some(last) = out.last().cloned() {
+            out.push(quote!(1u32 + #last));
+        } else {
+            out.push(match ast.field_parent.as_ref() {
+                Some(parent) => {
+                    quote!(#parent::__END as u32)
+                }
+                None => {
+                    quote!(0u32)
+                }
+            });
+        }
+        out
+    });
     let field_attrs = ast.fields.iter().map(|x| &x.attr.inner).collect::<Vec<_>>();
     let field_names = ast.fields.iter().map(|x| &x.name).collect::<Vec<_>>();
     let field_types = ast.fields.iter().map(|x| &x.ty).collect::<Vec<_>>();
 
     let method_ids = ast.method_ids.iter().map(|x| &x.1).collect::<Vec<_>>();
-    let method_id_contents =
-        ast.method_ids
-            .iter()
-            .enumerate()
-            .try_fold(Vec::new(), |mut out, (i, (o, id))| {
-                if o.is_some() {
-                    let parent = ast.method_parent.as_ref().ok_or(syn::Error::new(
-                        Span::call_site(),
-                        "Override field require field parents",
-                    ))?;
-                    out.push(quote! {
-                        (#parent::#id as u32)
-                    });
+    let method_id_contents = ast
+        .method_ids
+        .iter()
+        .try_fold(Vec::new(), |mut out, (o, id)| {
+            if o.is_some() {
+                let parent = ast.method_parent.as_ref().ok_or(syn::Error::new(
+                    Span::call_site(),
+                    "Override field require field parents",
+                ))?;
+                out.push(quote! {
+                    (#parent::#id as u32)
+                });
 
-                    Ok(out)
+                Ok(out)
+            } else {
+                if let Some(last) = out.last().cloned() {
+                    out.push(quote!(1u32 + #last));
                 } else {
-                    if let Some(last) = out.last().cloned() {
-                        out.push(quote!((#i as u32) + #last));
-                    } else {
-                        out.push(quote!(#i as u32));
-                    }
-                    Ok::<_, syn::Error>(out)
+                    out.push(match ast.method_parent.as_ref() {
+                        Some(parent) => {
+                            quote!(#parent::__END as u32)
+                        }
+                        None => {
+                            quote!(0u32)
+                        }
+                    });
                 }
-            })?;
+                Ok::<_, syn::Error>(out)
+            }
+        })?;
+
+    let method_end_content = if method_id_contents.is_empty() {
+        match ast.method_parent.as_ref() {
+            Some(parent) => {
+                quote!(= #parent::__END as u32)
+            }
+            None => {
+                quote!(= 0u32)
+            }
+        }
+    } else {
+        quote!()
+    };
 
     let static_method_ids = &ast.static_method_ids;
 
@@ -165,7 +97,7 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
         #[repr(u32)]
         pub enum #field_id_enum_ident {
             #(
-                #field_ids,
+                #field_ids = #field_id_contents,
             )*
 
             #[doc(hidden)]
@@ -179,7 +111,7 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
             )*
 
             #[doc(hidden)]
-            __END,
+            __END #method_end_content,
         }
 
         #[repr(u32)]

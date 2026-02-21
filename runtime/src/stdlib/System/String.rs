@@ -11,7 +11,8 @@ pub extern "system" fn ToString(
 ) -> ManagedReference<Class> {
     ManagedReference::new_string(
         cpu,
-        this.access::<StringAccessor>()
+        &this
+            .access::<StringAccessor>()
             .unwrap()
             .to_string_lossy()
             .unwrap(),
