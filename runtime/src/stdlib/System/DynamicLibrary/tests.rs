@@ -91,9 +91,7 @@ fn simple_dynamic_lib_test() {
                                     },
                                 ],
                             )),
-                            cfg_select! {
-                                unix => { gen_simple_dynamic_lib_to_invoke(assembly_manager, mt) }
-                            },
+                            gen_simple_dynamic_lib_to_invoke(assembly_manager, mt),
                         ]
                     }),
                     vec![Field::new(
@@ -142,7 +140,231 @@ fn simple_dynamic_lib_test() {
                 println!("Current time is: {}", std::ffi::CStr::from_ptr(buffer.as_ptr()).display());
             }
         }
+        windows => {
+            let result = unsafe {
+                fn_to_invoke
+                    .as_ref()
+                    // cSpell:disable-next-line
+                    .typed_res_call::<windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT>(&cpu, None, &[])
+            };
+            println!(
+                "You clicked {}",
+                // cSpell:disable-next-line
+                if result == windows::Win32::UI::WindowsAndMessaging::IDOK {
+                    "OK"
+                } else {
+                    "<NOTHING>"
+                }
+            );
+        }
     }
+}
+
+#[cfg(windows)]
+fn gen_simple_dynamic_lib_to_invoke(
+    _assembly_manager: &AssemblyManager,
+    mt: NonNull<MethodTable<Class>>,
+) -> Box<Method<Class>> {
+    use crate::stdlib::CoreTypeIdConstExt as _;
+
+    const TEST_CLASS_REF: TypeRef = TypeRef::Index {
+        assembly: AssemblyRef::Name(string_name!("Test")),
+        ind: 0,
+    };
+
+    Box::new(Method::new(
+        mt,
+        "ToInvoke".to_owned(),
+        global::attr!(
+            method Public {Static}
+            /* 0 */ g_core_type!(System_USize), // Pointer to function
+
+            /* 1 */ g_core_type!(System_Pointer),
+            /* 2 */ g_core_type!(System_String),
+            /* 3 */ g_core_type!(System_String),
+            /* 4 */ g_core_type!(System_UInt32),
+
+            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
+            /* 6 */ g_core_type!(System_UInt8), // Call convention
+            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
+            /* 8 */ g_core_type!(System_UInt8), // Encoding
+            /* 9 */ g_core_type!(System_UInt8), // Object strategy
+            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
+            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
+            /* 12 */ g_core_type!(System_USize), // Index for setting
+            /* 13 */ g_core_type!(System_USize), // For 10
+            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
+            /* 15 */ g_core_type!(System_Void),
+
+            /* 16 */ g_core_type!(System_Int32), // RET
+
+            /* 17 */ g_core_type!(System_DynamicLibrary), // Library
+            /* 18 */ g_core_type!(System_String), // MethodName
+        ),
+        vec![],
+        g_core_type!(System_Int32),
+        CallConvention::PlatformDefault,
+        None,
+        vec![
+            // LoadLibrary
+            Instruction::LoadStatic {
+                register_addr: 17,
+                ty: TEST_CLASS_REF.into(),
+                field: 0,
+            },
+            // LoadMethod
+            Instruction::Load_String {
+                register_addr: 18,
+                val: "MessageBoxW".to_owned(),
+            },
+            Instruction::InstanceCall {
+                val: 17,
+                method: MethodRef::from(System_DynamicLibrary_MethodId::GetSymbol),
+                args: vec![18],
+                ret_at: 0,
+            },
+            /* #region Arguments */
+            Instruction::Load_u64 {
+                register_addr: 1,
+                val: 0,
+            },
+            Instruction::Load_String {
+                register_addr: 2,
+                val: "Test passed".to_owned(),
+            },
+            Instruction::Load_String {
+                register_addr: 3,
+                val: "INFO".to_owned(),
+            },
+            Instruction::Load_u32 {
+                register_addr: 4,
+                // cSpell:disable-next-line
+                val: windows::Win32::UI::WindowsAndMessaging::MB_ICONINFORMATION.0,
+            },
+            /* #endregion */
+
+            /* #region Config Setup */
+            // Call convention
+            Instruction::Load_u8 {
+                register_addr: 6,
+                val: CallConvention::PlatformDefault.into(),
+            },
+            // Return type
+            Instruction::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateI32.into(),
+                args: vec![],
+                ret_at: 7,
+            },
+            // Encoding
+            Instruction::Load_u8 {
+                register_addr: 8,
+                val: non_purus_call_configuration::StringEncoding::C_Utf16.into(),
+            },
+            // Object strategy
+            Instruction::Load_u8 {
+                register_addr: 9,
+                val: non_purus_call_configuration::ObjectStrategy::PointToData.into(),
+            },
+            // New by ref argument array
+            Instruction::NewArray {
+                element_type: CoreTypeId::System_USize.static_type_ref().into(),
+                len: 0,
+                register_addr: 10,
+            },
+            // New argument array
+            Instruction::NewArray {
+                element_type: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                len: 4,
+                register_addr: 11,
+            },
+            // Arg0
+            Instruction::Load_u64 {
+                register_addr: 12,
+                val: 0,
+            },
+            Instruction::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreatePointer.into(),
+                args: vec![],
+                ret_at: 14,
+            },
+            Instruction::InstanceCall {
+                val: 11,
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![12, 14],
+                ret_at: 15,
+            },
+            // Arg 1
+            Instruction::Load_u64 {
+                register_addr: 12,
+                val: 1,
+            },
+            Instruction::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                args: vec![],
+                ret_at: 14,
+            },
+            Instruction::InstanceCall {
+                val: 11,
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![12, 14],
+                ret_at: 15,
+            },
+            // Arg 2
+            Instruction::Load_u64 {
+                register_addr: 12,
+                val: 2,
+            },
+            Instruction::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                args: vec![],
+                ret_at: 14,
+            },
+            Instruction::InstanceCall {
+                val: 11,
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![12, 14],
+                ret_at: 15,
+            },
+            // Arg 3
+            Instruction::Load_u64 {
+                register_addr: 12,
+                val: 3,
+            },
+            Instruction::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateU32.into(),
+                args: vec![],
+                ret_at: 14,
+            },
+            Instruction::InstanceCall {
+                val: 11,
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![12, 14],
+                ret_at: 15,
+            },
+            /* #endregion */
+            // Construct
+            Instruction::NewObject {
+                ty: CoreTypeId::System_NonPurusCallConfiguration
+                    .static_type_ref()
+                    .into(),
+                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
+                args: vec![6, 7, 8, 9, 10, 11],
+                register_addr: 5,
+            },
+            Instruction::DynamicNonPurusCall {
+                f_pointer: 0,
+                config: 5,
+                args: vec![1, 2, 3, 4],
+                ret_at: 16,
+            },
+            Instruction::ReturnVal { register_addr: 16 },
+        ],
+    ))
 }
 
 #[cfg(unix)]

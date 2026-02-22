@@ -435,6 +435,17 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 }
             }
 
+            Instruction::LoadNonPurusCallConfiguration { register_addr, val } => {
+                drop(frame);
+
+                let data = cpu.marshal_non_purus_configuration(val);
+
+                let frame = call_frame(cpu);
+                if !frame.write_typed(*register_addr, data) {
+                    return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
+                }
+            }
+
             Instruction::LoadArg { register_addr, arg } => {
                 let Some(arg) = args.get((*arg) as usize) else {
                     return Some(Err(Termination::LoadArgFailed(*arg)));

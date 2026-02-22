@@ -331,6 +331,7 @@ cfg_select! {
                 compile_error!("Cfg conflict");
             }
             _ => {
+                #[allow(unused)]
                 unsafe fn errno_location() -> *mut std::ffi::c_int {
                     std::ptr::null_mut()
                 }

@@ -125,6 +125,11 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
         ret_at: u64,
     },
 
+    LoadNonPurusCallConfiguration {
+        register_addr: u64,
+        val: NonPurusCallConfiguration,
+    },
+
     LoadArg {
         register_addr: u64,
         arg: u64,
@@ -307,6 +312,10 @@ macro match_helper(
             args,
             ret_at,
         }),
+
+        LoadNonPurusCallConfiguration { register_addr, val } => {
+            $success(LoadNonPurusCallConfiguration { register_addr, val })
+        }
 
         LoadArg { register_addr, arg } => $success(LoadArg { register_addr, arg }),
         LoadStatic {
@@ -577,6 +586,13 @@ where
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
+
+            LoadNonPurusCallConfiguration { register_addr, val } => {
+                write!(
+                    f,
+                    "{NAME}::LoadNonPurusCallConfiguration {register_addr:#x} {val:?}"
+                )
+            }
 
             LoadArg { register_addr, arg } => {
                 write!(f, "{NAME}::LoadArg {register_addr:#x} {arg:#x}")
