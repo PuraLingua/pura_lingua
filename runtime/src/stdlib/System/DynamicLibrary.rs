@@ -215,7 +215,7 @@ fn GetSymbolImpl(
 #[must_use]
 fn FreeLibrary(cpu: &CPU, handle: *mut c_void) -> bool {
     if handle.is_null() {
-        return;
+        return true;
     }
     unsafe {
         if libc::dlclose(handle) != 0 {
