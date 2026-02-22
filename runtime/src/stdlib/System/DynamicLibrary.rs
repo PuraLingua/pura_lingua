@@ -1,5 +1,4 @@
 use std::ffi::c_void;
-#[cfg(unix)]
 use std::ptr::NonNull;
 
 use crate::{
@@ -56,7 +55,9 @@ pub extern "system" fn Destructor(
             Default::default(),
         )
         .unwrap();
-    FreeLibrary(cpu, handle);
+    if !FreeLibrary(cpu, handle) {
+        return;
+    }
     ClearHandlePtr(this);
 }
 
@@ -83,14 +84,86 @@ fn LoadLibrary(cpu: &CPU, file: ManagedReference<Class>) -> Option<NonNull<c_voi
                 .as_ptr(),
         ))
     } {
-        Ok(x) => {
-            debug_assert!(!x.is_invalid());
-            Some(x.0)
-        }
+        Ok(x) => Some(unsafe { NonNull::new_unchecked(x.0) }),
         Err(e) => {
             println!("WIN32 API ERROR: {}", e.message());
             assert!(cpu.throw_helper().win32(e.code().0));
             None
+        }
+    }
+}
+
+#[cfg(windows)]
+fn GetSymbolImpl(
+    cpu: &CPU,
+    handle: *mut c_void,
+    name: ManagedReference<Class>,
+) -> Option<NonNull<c_void>> {
+    windows::core::link!(
+        "kernel32.dll" "system" fn WideCharToMultiByte(
+            codepage: u32,
+            dwflags: u32,
+            lpwidecharstr: windows::core::PCWSTR,
+            cchwidechar: i32,
+            lpmultibytestr: windows::core::PSTR,
+            cbmultibyte: i32,
+            lpdefaultchar: windows::core::PCSTR,
+            lpuseddefaultchar: *mut windows::core::BOOL
+        ) -> i32
+    );
+
+    let hModule = windows::Win32::Foundation::HMODULE(handle);
+
+    unsafe {
+        let name_wide = name.access::<StringAccessor>().unwrap().get_str().unwrap();
+        let len = WideCharToMultiByte(
+            windows::Win32::Globalization::CP_ACP,
+            0,
+            windows::core::PCWSTR::from_raw(name_wide.as_ptr()),
+            -1,
+            windows::core::PSTR::null(),
+            0,
+            windows::core::PCSTR::null(),
+            std::ptr::null_mut(),
+        ) as usize;
+        let mut name_out = vec![0u8; len];
+        let used_len = WideCharToMultiByte(
+            windows::Win32::Globalization::CP_ACP,
+            0,
+            windows::core::PCWSTR::from_raw(name_wide.as_ptr()),
+            -1,
+            windows::core::PSTR::from_raw(name_out.as_mut_ptr()),
+            len as _,
+            windows::core::PCSTR::null(),
+            std::ptr::null_mut(),
+        );
+
+        if used_len == 0 {
+            assert!(cpu.throw_helper().current_win32());
+        }
+        match windows::Win32::System::LibraryLoader::GetProcAddress(
+            hModule,
+            windows::core::PCSTR::from_raw(name_out.as_ptr()),
+        ) {
+            Some(x) => Some(NonNull::new_unchecked(x as _)),
+            None => {
+                assert!(cpu.throw_helper().current_win32());
+                None
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+#[must_use]
+fn FreeLibrary(cpu: &CPU, handle: *mut c_void) -> bool {
+    let hLibModule = windows::Win32::Foundation::HMODULE(handle);
+    match unsafe { windows::Win32::Foundation::FreeLibrary(hLibModule) } {
+        Ok(_) => true,
+        Err(e) => {
+            println!("WIN32 API ERROR: {}", e.message());
+            assert!(cpu.throw_helper().win32(e.code().0));
+            false
         }
     }
 }
@@ -139,15 +212,18 @@ fn GetSymbolImpl(
 }
 
 #[cfg(unix)]
-fn FreeLibrary(cpu: &CPU, handle: *mut c_void) {
+#[must_use]
+fn FreeLibrary(cpu: &CPU, handle: *mut c_void) -> bool {
     if handle.is_null() {
         return;
     }
     unsafe {
         if libc::dlclose(handle) != 0 {
             assert!(cpu.throw_helper().current_dlerror());
+            false
+        } else {
+            true
         }
     }
 }
-
 // cSpell:enable

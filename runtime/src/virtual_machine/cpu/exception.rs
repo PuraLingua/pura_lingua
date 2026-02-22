@@ -71,6 +71,11 @@ impl ThrowHelper {
             .unwrap();
         true
     }
+
+    #[cfg(windows)]
+    pub fn current_win32(&self) -> bool {
+        unsafe { self.win32(windows::Win32::Foundation::GetLastError().0 as i32) }
+    }
     #[cfg(windows)]
     pub fn win32(&self, mut code: i32) -> bool {
         use crate::stdlib::System_Win32Exception_MethodId;
@@ -326,7 +331,7 @@ cfg_select! {
                 compile_error!("Cfg conflict");
             }
             _ => {
-                unsafe fn errno_location() -> *mut libc::c_int {
+                unsafe fn errno_location() -> *mut std::ffi::c_int {
                     std::ptr::null_mut()
                 }
             }
