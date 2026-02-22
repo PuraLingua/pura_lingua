@@ -52,6 +52,8 @@ pub enum CoreTypeId {
     System_Exception,
     System_InvalidEnumException,
     System_Win32Exception,
+    System_ErrnoException,
+    System_DlErrorException,
 }
 
 impl CoreTypeId {
@@ -94,6 +96,8 @@ impl CoreTypeId {
             Self::System_Exception => "System::Exception",
             Self::System_InvalidEnumException => "System::InvalidEnumException",
             Self::System_Win32Exception => "System::Win32Exception",
+            Self::System_ErrnoException => "System::ErrnoException",
+            Self::System_DlErrorException => "System::DlErrorException",
         }
     }
 }

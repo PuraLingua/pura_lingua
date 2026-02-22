@@ -99,6 +99,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             CoreTypeId::System_Exception => None,
             CoreTypeId::System_InvalidEnumException => None,
             Self::System_Win32Exception => None,
+            Self::System_ErrnoException => None,
+            Self::System_DlErrorException => None,
         }
     }
 
@@ -141,6 +143,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             CoreTypeId::System_Exception => Layout::new::<ManagedReference<Class>>(),
             CoreTypeId::System_InvalidEnumException => Layout::new::<ManagedReference<Class>>(),
             CoreTypeId::System_Win32Exception => Layout::new::<ManagedReference<Class>>(),
+            CoreTypeId::System_ErrnoException => Layout::new::<ManagedReference<Class>>(),
+            CoreTypeId::System_DlErrorException => Layout::new::<ManagedReference<Class>>(),
         }
     }
 
@@ -191,6 +195,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             System_Exception
             System_InvalidEnumException
             System_Win32Exception
+            System_ErrnoException
+            System_DlErrorException
         )
     }
 }
@@ -243,6 +249,8 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_Exception => Some(Type::pointer()),
             Self::System_InvalidEnumException => Some(Type::pointer()),
             Self::System_Win32Exception => Some(Type::pointer()),
+            Self::System_ErrnoException => Some(Type::pointer()),
+            Self::System_DlErrorException => Some(Type::pointer()),
         }
     }
 }

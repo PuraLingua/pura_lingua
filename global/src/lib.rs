@@ -12,7 +12,6 @@
 #![feature(trait_alias)]
 #![feature(const_trait_impl)]
 #![feature(const_default)]
-#![feature(if_let_guard)]
 #![feature(const_option_ops)]
 #![feature(super_let)]
 #![feature(const_format_args)]

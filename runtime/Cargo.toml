@@ -26,6 +26,7 @@ widestring = { version = "1.2.1", features = ["debugger_visualizer"] }
 mem_leak_detector = { git = "https://github.com/ExPuritate/mem-leak-detector.git" }
 slab = "0.4.12"
 thiserror = "2.0.18"
+crossfig = "0.1.3"
 
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.62"

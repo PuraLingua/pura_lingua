@@ -1,3 +1,4 @@
+#[allow(unused)]
 use crate::{
     stdlib::System_Win32Exception_FieldId,
     type_system::{class::Class, method::Method},

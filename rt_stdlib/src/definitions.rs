@@ -613,8 +613,26 @@ define_core_class! {
     #[Private {}] Handle "_handle" => CoreTypeId::System_Pointer.static_type_ref().into();
 
     #methods of System_Object_MethodId:
-    [Constructor_String] [] with |mt| {
+    [
+        override Destructor
+        Constructor_String
+        GetSymbol
+    ] [] with |mt| {
         vec![
+            Box::new(
+                Method::native(
+                    Some(mt),
+                    "~".to_owned(),
+                    global::attr!(
+                        method override Some(System_Object_MethodId::Destructor as _) Public {}
+                    ),
+                    vec![],
+                    get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                    CallConvention::PlatformDefault,
+                    None,
+                    System::DynamicLibrary::Destructor as _,
+                ),
+            ),
             Box::new(
                 Method::native(
                     Some(mt),
@@ -634,6 +652,27 @@ define_core_class! {
                     CallConvention::PlatformDefault,
                     None,
                     System::DynamicLibrary::Constructor_String as _,
+                )
+            ),
+            Box::new(
+                Method::native(
+                    Some(mt),
+                    "GetSymbol".to_owned(),
+                    global::attr!(
+                        method Public {}
+                    ),
+                    vec![
+                        Parameter::new(
+                            CoreTypeId::System_String.static_type_ref().into(),
+                            global::attr!(
+                                parameter {}
+                            ),
+                        ),
+                    ],
+                    CoreTypeId::System_Pointer.static_type_ref().into(),
+                    CallConvention::PlatformDefault,
+                    None,
+                    System::DynamicLibrary::GetSymbol as _,
                 )
             ),
             // Statics
@@ -1037,6 +1076,68 @@ define_core_class! {
                 System::Win32Exception::Constructor_I32 as _,
             )
         ),
+        // Statics
+        Box::new(
+            Method::default_sctor(
+                Some(mt),
+                global::attr!(
+                    method Public {Static}
+                ),
+            ),
+        ),
+    ]
+}
+
+define_core_class! {
+    #[Public {}] assembly
+    System_ErrnoException "System::ErrnoException" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    #fields of System_Object_FieldId:
+    #[Public {}] Code "_Code" => CoreTypeId::System_Int32.static_type_ref().into();
+
+    #methods of System_Exception_MethodId:
+    [Constructor_I32] [] with
+    |mt| vec![
+        Box::new(
+            Method::native(
+                Some(mt),
+                ".ctor".to_owned(),
+                global::attr!(
+                    method Public {}
+                ),
+                vec![
+                    Parameter::new(
+                        get_core_class(CoreTypeId::System_Int32, assembly).into(),
+                        global::attr!(
+                            parameter {}
+                        )
+                    ),
+                ],
+                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                CallConvention::PlatformDefault,
+                None,
+                System::ErrnoException::Constructor_I32 as _,
+            )
+        ),
+        // Statics
+        Box::new(
+            Method::default_sctor(
+                Some(mt),
+                global::attr!(
+                    method Public {Static}
+                ),
+            ),
+        ),
+    ]
+}
+
+define_core_class! {
+    #[Public {}] assembly
+    System_DlErrorException "System::DlErrorException" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    #fields:
+
+    #methods of System_Exception_MethodId:
+    [] [] with
+    |mt| vec![
         // Statics
         Box::new(
             Method::default_sctor(

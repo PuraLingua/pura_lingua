@@ -517,6 +517,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
 }
 
 #[test]
+#[cfg(windows)]
 // cSpell:disable
 fn message_box() {
     windows::core::link!(
@@ -565,6 +566,7 @@ fn message_box() {
 // cSpell:enable
 
 #[test]
+#[cfg(windows)]
 // cSpell:disable
 fn dynamic_message_box() -> global::Result<()> {
     windows::core::link!(

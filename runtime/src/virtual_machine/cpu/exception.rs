@@ -94,6 +94,82 @@ impl ThrowHelper {
             .unwrap();
         true
     }
+
+    has_errno! {
+        pub fn current_errno(&self) -> bool {
+            let errno = unsafe { *errno_location() };
+            self.errno(errno)
+        }
+    }
+    pub fn errno(&self, mut code: i32) -> bool {
+        use crate::stdlib::System_ErrnoException_MethodId;
+
+        self.0
+            .throw_exception(
+                match self.0.new_object(
+                    &self
+                        .0
+                        .vm_ref()
+                        .assembly_manager()
+                        .get_core_type(CoreTypeId::System_Win32Exception)
+                        .into(),
+                    &MethodRef::Index(System_ErrnoException_MethodId::Constructor_I32 as _),
+                    &[(&raw mut code).cast()],
+                ) {
+                    None => return false,
+                    Some(exception) => exception,
+                },
+            )
+            .unwrap();
+        true
+    }
+
+    #[cfg(unix)]
+    // cSpell:disable-next-line
+    pub fn current_dlerror(&self) -> bool {
+        // cSpell:disable-next-line
+        unsafe { self.dlerror(libc::dlerror()) }
+    }
+    #[cfg(unix)]
+    // cSpell:disable-next-line
+    pub fn dlerror(&self, message: *mut libc::c_char) -> bool {
+        use crate::stdlib::System_Exception_MethodId;
+
+        let destroyer = |mut x: ManagedReference<Class>| {
+            x.destroy(&self.0);
+        };
+
+        let message = DropGuard::new(
+            ManagedReference::new_string(
+                &self.0,
+                &unsafe { std::ffi::CString::from_raw(message) }
+                    .into_string()
+                    .unwrap(),
+            ),
+            destroyer,
+        );
+
+        self.0
+            .throw_exception(
+                match self.0.new_object(
+                    &self
+                        .0
+                        .vm_ref()
+                        .assembly_manager()
+                        .get_core_type(CoreTypeId::System_DlErrorException)
+                        .into(),
+                    &MethodRef::Index(System_Exception_MethodId::Constructor_String as u32),
+                    &[(&*message as *const ManagedReference<Class>)
+                        .cast_mut()
+                        .cast()],
+                ) {
+                    None => return false,
+                    Some(exception) => exception,
+                },
+            )
+            .unwrap();
+        true
+    }
 }
 
 impl CPU {
@@ -141,3 +217,120 @@ mod helpers {
         }
     }
 }
+
+// cSpell:disable
+crossfig::alias! {
+    has_errno: {
+        #[cfg(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "tvos",
+            target_os = "watchos",
+            target_os = "visionos",
+            target_os = "freebsd",
+
+            target_os = "openbsd",
+            target_os = "netbsd",
+            target_os = "android",
+            target_os = "espidf",
+            target_os = "vxworks",
+            target_os = "cygwin",
+            target_env = "newlib",
+
+            target_os = "solaris", target_os = "illumos",
+
+            target_os = "haiku",
+
+            target_os = "linux",
+            target_os = "hurd",
+            target_os = "redox",
+            target_os = "dragonfly",
+            target_os = "emscripten",
+
+            target_os = "aix",
+
+            target_os = "nto",
+        ))]
+    }
+}
+
+// From https://github.com/lambda-fairy/rust-errno/blob/62ef494d8c089610404bcb67637810a46058bc10/src/unix.rs
+cfg_select! {
+    any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "visionos",
+        target_os = "freebsd"
+    ) => {
+        unsafe extern "C" {
+            #[link_name = "__error"]
+            fn errno_location() -> *mut libc::c_int;
+        }
+    }
+    any(
+        target_os = "openbsd",
+        target_os = "netbsd",
+        target_os = "android",
+        target_os = "espidf",
+        target_os = "vxworks",
+        target_os = "cygwin",
+        target_env = "newlib"
+    ) => {
+        unsafe extern "C" {
+            #[link_name = "__errno"]
+            fn errno_location() -> *mut libc::c_int;
+        }
+    }
+    any(target_os = "solaris", target_os = "illumos") => {
+        unsafe extern "C" {
+            #[link_name = "___errno"]
+            fn errno_location() -> *mut libc::c_int;
+        }
+    }
+    target_os = "haiku" => {
+        unsafe extern "C" {
+            #[link_name = "_errnop"]
+            fn errno_location() -> *mut libc::c_int;
+        }
+    }
+    any(
+        target_os = "linux",
+        target_os = "hurd",
+        target_os = "redox",
+        target_os = "dragonfly",
+        target_os = "emscripten",
+    ) => {
+
+        unsafe extern "C" {
+            #[link_name = "__errno_location"]
+            fn errno_location() -> *mut libc::c_int;
+        }
+    }
+    target_os = "aix" => {
+        unsafe extern "C" {
+            #[link_name = "_Errno"]
+            fn errno_location() -> *mut libc::c_int;
+        }
+    }
+    target_os = "nto" => {
+        unsafe extern "C" {
+            #[link_name = "__get_errno_ptr"]
+            fn errno_location() -> *mut libc::c_int;
+        }
+    }
+    _ => {
+        crossfig::switch! {
+            has_errno => {
+                compile_error!("Cfg conflict");
+            }
+            _ => {
+                unsafe fn errno_location() -> *mut libc::c_int {
+                    std::ptr::null_mut()
+                }
+            }
+        }
+    }
+}
+// cSpell:enable

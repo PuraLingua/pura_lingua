@@ -31,7 +31,6 @@
 #![feature(contracts)]
 #![feature(const_eval_select)]
 #![feature(ptr_as_uninit)]
-#![feature(assert_matches)]
 #![feature(iterator_try_collect)]
 #![feature(vec_from_fn)]
 #![feature(ptr_metadata)]

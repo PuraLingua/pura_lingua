@@ -212,14 +212,7 @@ impl<T> Method<T> {
 
 impl<T> Method<T> {
     pub const fn call_convention(&self) -> CallConvention {
-        match &self.call_convention {
-            CallConvention::PlatformDefault => cfg_select! {
-                all(windows, target_arch = "x86_64") => { CallConvention::Win64 }
-                all(windows, target_arch = "x86") => { CallConvention::Stdcall }
-            },
-
-            x => *x,
-        }
+        self.call_convention
     }
     const fn libffi_call_convention(&self) -> libffi::middle::FfiAbi {
         crate::libffi_utils::get_abi_by_call_convention(self.call_convention)
