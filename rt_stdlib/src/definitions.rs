@@ -1064,7 +1064,7 @@ define_core_class! {
                 ),
                 vec![
                     Parameter::new(
-                        get_core_class(CoreTypeId::System_Int32, assembly).into(),
+                        get_core_struct(CoreTypeId::System_Int32, assembly).into(),
                         global::attr!(
                             parameter {}
                         )
@@ -1106,7 +1106,7 @@ define_core_class! {
                 ),
                 vec![
                     Parameter::new(
-                        get_core_class(CoreTypeId::System_Int32, assembly).into(),
+                        get_core_struct(CoreTypeId::System_Int32, assembly).into(),
                         global::attr!(
                             parameter {}
                         )

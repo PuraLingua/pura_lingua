@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use proc_macro_utils::crate_name_resolution::PredefinedCrateName;
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, format_ident, quote};
@@ -36,37 +38,44 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
     let field_names = ast.fields.iter().map(|x| &x.name).collect::<Vec<_>>();
     let field_types = ast.fields.iter().map(|x| &x.ty).collect::<Vec<_>>();
 
-    let method_ids = ast.method_ids.iter().map(|x| &x.1).collect::<Vec<_>>();
-    let method_id_contents = ast
-        .method_ids
-        .iter()
-        .try_fold(Vec::new(), |mut out, (o, id)| {
-            if o.is_some() {
-                let parent = ast.method_parent.as_ref().ok_or(syn::Error::new(
-                    Span::call_site(),
-                    "Override field require field parents",
-                ))?;
+    let overriding_method_ids = &ast.overriding_method_ids;
+    let overriding_method_id_contents = {
+        let once_parent = OnceLock::new();
+        overriding_method_ids
+            .iter()
+            .try_fold(Vec::new(), |mut out, id| {
+                let parent = once_parent.get_or_try_init(|| {
+                    ast.method_parent.clone().ok_or(syn::Error::new(
+                        Span::call_site(),
+                        "Override methods require method parents",
+                    ))
+                })?;
                 out.push(quote! {
                     (#parent::#id as u32)
                 });
-
-                Ok(out)
-            } else {
-                if let Some(last) = out.last().cloned() {
-                    out.push(quote!(1u32 + #last));
-                } else {
-                    out.push(match ast.method_parent.as_ref() {
-                        Some(parent) => {
-                            quote!(#parent::__END as u32)
-                        }
-                        None => {
-                            quote!(0u32)
-                        }
-                    });
-                }
                 Ok::<_, syn::Error>(out)
-            }
-        })?;
+            })?
+    };
+
+    let method_ids = ast.method_ids.iter().collect::<Vec<_>>();
+    let method_id_contents = ast.method_ids.iter().try_fold(Vec::new(), |mut out, id| {
+        if overriding_method_ids.contains(id) {
+            return Ok(out);
+        }
+        if let Some(last) = out.last() {
+            out.push(quote!(1u32 + #last));
+        } else {
+            out.push(match ast.method_parent.as_ref() {
+                Some(parent) => {
+                    quote!(#parent::__END as u32)
+                }
+                None => {
+                    quote!(0u32)
+                }
+            });
+        }
+        Ok::<_, syn::Error>(out)
+    })?;
 
     let method_end_content = if method_id_contents.is_empty() {
         match ast.method_parent.as_ref() {
@@ -106,6 +115,9 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
 
         #[repr(u32)]
         pub enum #method_id_enum_ident {
+            #(
+                #overriding_method_ids = #overriding_method_id_contents,
+            )*
             #(
                 #method_ids = #method_id_contents,
             )*

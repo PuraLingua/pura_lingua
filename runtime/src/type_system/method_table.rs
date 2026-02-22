@@ -123,6 +123,11 @@ impl<T> MethodTable<T>
 where
     T: GetAssemblyRef + GetMethodTableRef + GetParent + 'static,
 {
+    pub fn wrap_as_method_generator<F: FnOnce(NonNull<Self>) -> Vec<Box<Method<T>>>>(
+        f: F,
+    ) -> impl FnOnce(NonNull<T>) -> NonNull<Self> {
+        move |ty| Self::new(ty, f).as_non_null_ptr()
+    }
     /// The NonNull passed to method_generator is always valid to be cast to &Self
     pub fn new<F: FnOnce(NonNull<Self>) -> Vec<Box<Method<T>>>>(
         ty: NonNull<T>,

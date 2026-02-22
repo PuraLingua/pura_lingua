@@ -48,6 +48,7 @@
 /* cSpell:disable-next-line */
 #![feature(macro_metavar_expr_concat)]
 #![feature(closure_track_caller)]
+#![feature(cstr_display)]
 //
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]

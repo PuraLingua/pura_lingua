@@ -31,8 +31,10 @@ pub struct DefineCoreClassAst {
     pub generic_bounds: Option<Expr>,
     pub field_parent: Option<Ident>,
     pub fields: Vec<FieldAst>,
+
     pub method_parent: Option<Ident>,
-    pub method_ids: Vec<(Option<Token![override]>, Ident)>,
+    pub method_ids: Vec<Ident>,
+    pub overriding_method_ids: Vec<Ident>,
     pub static_method_ids: Vec<Ident>,
     pub method_generator: Expr,
 }
@@ -78,14 +80,26 @@ impl Parse for DefineCoreClassAst {
             None
         };
         input.parse::<Token![:]>()?;
+
         let method_ids_buf;
         syn::bracketed!(method_ids_buf in input);
-        let mut method_ids = Vec::new();
+        let mut method_ids: Vec<(Option<Token![override]>, syn::Ident)> = Vec::new();
         while !method_ids_buf.is_empty() {
             let overridable = method_ids_buf.parse()?;
             let id = method_ids_buf.parse()?;
             method_ids.push((overridable, id));
         }
+        method_ids.sort_by(|(a, _), (b, _)| match (a, b) {
+            (None, None) => std::cmp::Ordering::Equal,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (Some(_), Some(_)) => std::cmp::Ordering::Equal,
+        });
+        let mid_index = method_ids
+            .iter()
+            .position(|x| x.0.is_none())
+            .unwrap_or(method_ids.len());
+
         let static_method_ids_buf;
         syn::bracketed!(static_method_ids_buf in input);
         let mut static_method_ids = Vec::new();
@@ -104,7 +118,16 @@ impl Parse for DefineCoreClassAst {
             field_parent,
             fields,
             method_parent,
-            method_ids,
+            method_ids: method_ids[mid_index..]
+                .iter()
+                .map(|x| &x.1)
+                .cloned()
+                .collect(),
+            overriding_method_ids: method_ids[..mid_index]
+                .iter()
+                .map(|x| &x.1)
+                .cloned()
+                .collect(),
             static_method_ids,
             method_generator,
         })

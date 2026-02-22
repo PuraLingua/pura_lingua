@@ -260,7 +260,6 @@ pub fn global_vm() -> &'static mut VirtualMachine {
 }
 
 #[unsafe(no_mangle)]
-#[cold]
 pub extern "C" fn EnsureVirtualMachineInitialized() {
     ENSURE_VM_INIT.call_once(|| unsafe {
         /* cSpell: disable */

@@ -8,6 +8,9 @@ use crate::{
     virtual_machine::cpu::CPU,
 };
 
+#[cfg(test)]
+mod tests;
+
 pub extern "system" fn Constructor_String(
     cpu: &CPU,
     _: &Method<Class>,
