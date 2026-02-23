@@ -78,9 +78,9 @@ fn simple_dynamic_lib_test() {
                                     },
                                     Instruction::NewObject {
                                         ty: g_core_type!(System_DynamicLibrary),
-                                        ctor_name: MethodRef::from(
-                                            System_DynamicLibrary_MethodId::Constructor_String,
-                                        ),
+                                        ctor_name:
+                                            System_DynamicLibrary_MethodId::Constructor_String
+                                                .into(),
                                         args: vec![0],
                                         register_addr: 1,
                                     },
@@ -129,10 +129,8 @@ fn simple_dynamic_lib_test() {
                     .typed_res_call::<libc::time_t>(&cpu, None, &[])
             };
             let mut buffer: [libc::c_char; 80] = [0; 80];
-            // cSpell:disable-next-line
             let time_info = unsafe { libc::localtime(&raw const result) };
             unsafe {
-                // cSpell:disable-next-line
                 let len = libc::strftime(buffer.as_mut_ptr(), buffer.len(), c"%Y-%m-%d %H:%M:%S".as_ptr(), time_info.cast_const());
                 if len == 0 {
                     panic!("CANNOT FORMAT");
@@ -144,12 +142,10 @@ fn simple_dynamic_lib_test() {
             let result = unsafe {
                 fn_to_invoke
                     .as_ref()
-                    // cSpell:disable-next-line
                     .typed_res_call::<windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT>(&cpu, None, &[])
             };
             println!(
                 "You clicked {}",
-                // cSpell:disable-next-line
                 if result == windows::Win32::UI::WindowsAndMessaging::IDOK {
                     "OK"
                 } else {

@@ -32,7 +32,7 @@ enum Termination {
     LoadFieldFailed(u32),
     NewObjectFailed,
     /// Failed to convert a puralingua object to rust
-    UnmarshalFailed,
+    UnmarshalFailed(global::Error),
 
     Returned,
     Terminated,
@@ -85,7 +85,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         let Some(ins) = method.instructions.get(*pc) else {
             return Some(Err(Termination::AllInstructionExecuted));
         };
-        dbg!(ins);
+        println!("{}", ins);
 
         let frame = call_frame(cpu);
 
@@ -420,8 +420,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     .map(|x| frame.get(*x).unwrap().ptr().cast::<c_void>().as_ptr())
                     .collect::<Vec<_>>();
                 drop(frame);
-                let Ok(cfg) = cpu.unmarshal_non_purus_configuration(config) else {
-                    return Some(Err(Termination::UnmarshalFailed));
+                let cfg = match cpu.unmarshal_non_purus_configuration(config) {
+                    Ok(x) => x,
+                    Err(err) => return Some(Err(Termination::UnmarshalFailed(err))),
                 };
                 let (ret_ptr, ret_layout) = cpu.non_purus_call(&cfg, f_pointer, args);
                 let frame = call_frame(cpu);
@@ -484,6 +485,48 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 };
                 unsafe {
                     out_var.copy_from(f_ptr.cast(), f_layout.size());
+                }
+            }
+            Instruction::LoadField {
+                container,
+                field,
+                register_addr,
+            } => {
+                let Some(container) = frame.get(*container) else {
+                    return Some(Err(Termination::LoadRegisterFailed(*container)));
+                };
+                let Some(register_var) = frame.get(*register_addr) else {
+                    return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
+                };
+                match container.ty {
+                    NonGenericTypeHandle::Class(_) => {
+                        let Some((field_ptr, field_layout)) = container
+                            .as_ref_typed::<ManagedReference<Class>>()
+                            .const_access::<FieldAccessor<Class>>()
+                            .field(*field, Default::default())
+                        else {
+                            return Some(Err(Termination::LoadFieldFailed(*field)));
+                        };
+                        debug_assert!(register_var.layout.size() >= field_layout.size());
+                        unsafe {
+                            register_var.copy_from(field_ptr, field_layout.size());
+                        }
+                    }
+                    NonGenericTypeHandle::Struct(s) => {
+                        let Some(field_info) = unsafe { s.as_ref() }
+                            .method_table_ref()
+                            .field_mem_info(*field, Default::default(), Default::default())
+                        else {
+                            return Some(Err(Termination::LoadFieldFailed(*field)));
+                        };
+                        debug_assert!(register_var.layout.size() >= field_info.layout.size());
+                        unsafe {
+                            register_var.copy_from(
+                                container.ptr.byte_add(field_info.offset),
+                                field_info.layout.size(),
+                            );
+                        }
+                    }
                 }
             }
             Instruction::SetThisField { val_addr, field } => {
@@ -645,8 +688,8 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                 Termination::NewObjectFailed => {
                     t_println!("NewObject failed");
                 }
-                Termination::UnmarshalFailed => {
-                    t_println!("Unmarshal failed");
+                Termination::UnmarshalFailed(err) => {
+                    t_println!("Unmarshal failed because:\n{err}");
                 }
 
                 Termination::Terminated => {}

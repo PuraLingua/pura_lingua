@@ -264,7 +264,7 @@ impl Class {
             self.method_table
                 .as_ref()
                 .find_last_method_by_name_ret_id(".sctor")
-                .unwrap()
+                .expect("Static constructor not found")
         });
     }
 }

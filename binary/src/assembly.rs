@@ -105,6 +105,14 @@ impl Assembly {
     pub fn add_string(&mut self, s: &str) -> StringRef {
         self.string_section.as_string_section_mut().add_string(s)
     }
+    pub fn add_type_ref(&mut self, tyr: TypeRef) -> u32 {
+        if let Some(pos) = self.type_refs.iter().position(|x| x == &tyr) {
+            pos as u32
+        } else {
+            self.type_refs.push(tyr);
+            (self.type_refs.len() - 1) as u32
+        }
+    }
     pub fn into_file(self) -> binary_core::BinaryResult<File> {
         let mut file = File::new();
         unsafe {

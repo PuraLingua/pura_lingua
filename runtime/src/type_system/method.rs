@@ -137,6 +137,7 @@ impl<T> Method<T> {
             entry_point: CodePtr::from_ptr(entry_point),
         }
     }
+    /// Creates a static method called `.sctor`
     pub fn default_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
         attr: MethodAttr<MaybeUnloadedTypeHandle>,
@@ -146,6 +147,7 @@ impl<T> Method<T> {
         }
         Self::create_sctor(mt, attr, sctor::<T>)
     }
+    /// Creates a static method called `.sctor`
     pub fn create_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
         mut attr: MethodAttr<MaybeUnloadedTypeHandle>,
@@ -273,6 +275,15 @@ pub enum MethodRef {
         index: u32,
         types: Vec<MaybeUnloadedTypeHandle>,
     },
+}
+
+impl std::fmt::Display for MethodRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MethodRef::Index(i) => write!(f, "INDEX({i})"),
+            MethodRef::Specific { index, types } => write!(f, "{index}<{types:?}>"),
+        }
+    }
 }
 
 #[cfg(test)]

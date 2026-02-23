@@ -123,7 +123,7 @@ impl<TType> MethodAttr<TType> {
     }
     pub fn try_map_types<_TType, E, F>(self, f: F) -> Result<MethodAttr<_TType>, E>
     where
-        F: Fn(TType) -> Result<_TType, E>,
+        F: FnMut(TType) -> Result<_TType, E>,
     {
         Ok(MethodAttr {
             vis: self.vis,
@@ -160,7 +160,16 @@ impl<TType> MethodAttr<Option<TType>> {
 }
 
 #[derive(
-    Clone, Copy, CopyGetters, Debug, ctor, Setters, Getters, ReadFromSection, WriteToSection,
+    Clone,
+    Copy,
+    CopyGetters,
+    Debug,
+    ctor,
+    Setters,
+    Getters,
+    MutGetters,
+    ReadFromSection,
+    WriteToSection,
 )]
 #[ctor(pub const new)]
 #[getset(set = "pub", get_mut = "pub")]

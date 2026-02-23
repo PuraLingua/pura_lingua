@@ -478,7 +478,13 @@ impl MaybeUnloadedTypeHandle {
                     .type_specs
                     .get(tt.index() as usize)
                     .ok_or(binary::binary_core::Error::IndexOutOfRange)?;
-                let ty = Self::from_token_for_type(assembly, assembly_id, b_assembly, tt, t_id)?;
+                let ty = Self::from_token_for_type(
+                    assembly,
+                    assembly_id,
+                    b_assembly,
+                    actual.ty(),
+                    t_id,
+                )?;
                 let types = actual
                     .generics()
                     .iter()

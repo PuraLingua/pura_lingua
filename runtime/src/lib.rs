@@ -68,3 +68,6 @@ pub mod virtual_machine;
 
 pub(crate) mod libffi_utils;
 pub(crate) mod llvm_utils;
+
+#[cfg(test)]
+mod global_tests;

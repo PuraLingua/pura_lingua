@@ -3,10 +3,8 @@ use std::mem::DropGuard;
 use stdlib_header::CoreTypeId;
 
 use crate::{
-    stdlib::System_InvalidEnumException_MethodId,
-    type_system::{class::Class, method::MethodRef},
-    value::managed_reference::ManagedReference,
-    virtual_machine::cpu::CPU,
+    stdlib::System_InvalidEnumException_MethodId, type_system::class::Class,
+    value::managed_reference::ManagedReference, virtual_machine::cpu::CPU,
 };
 
 pub struct ExceptionManager {
@@ -52,9 +50,7 @@ impl ThrowHelper {
                         .assembly_manager()
                         .get_core_type(CoreTypeId::System_InvalidEnumException)
                         .into(),
-                    &MethodRef::Index(
-                        System_InvalidEnumException_MethodId::Constructor_String_String as u32,
-                    ),
+                    &System_InvalidEnumException_MethodId::Constructor_String_String.into(),
                     &[
                         (&*enum_name as *const ManagedReference<Class>)
                             .cast_mut()
@@ -89,7 +85,7 @@ impl ThrowHelper {
                         .assembly_manager()
                         .get_core_type(CoreTypeId::System_Win32Exception)
                         .into(),
-                    &MethodRef::Index(System_Win32Exception_MethodId::Constructor_I32 as _),
+                    &System_Win32Exception_MethodId::Constructor_I32.into(),
                     &[(&raw mut code).cast()],
                 ) {
                     None => return false,
@@ -106,6 +102,7 @@ impl ThrowHelper {
             self.errno(errno)
         }
     }
+    #[cfg(unix)]
     pub fn errno(&self, mut code: i32) -> bool {
         use crate::stdlib::System_ErrnoException_MethodId;
 
@@ -116,9 +113,9 @@ impl ThrowHelper {
                         .0
                         .vm_ref()
                         .assembly_manager()
-                        .get_core_type(CoreTypeId::System_Win32Exception)
+                        .get_core_type(CoreTypeId::System_ErrnoException)
                         .into(),
-                    &MethodRef::Index(System_ErrnoException_MethodId::Constructor_I32 as _),
+                    &System_ErrnoException_MethodId::Constructor_I32.into(),
                     &[(&raw mut code).cast()],
                 ) {
                     None => return false,
@@ -163,7 +160,7 @@ impl ThrowHelper {
                         .assembly_manager()
                         .get_core_type(CoreTypeId::System_DlErrorException)
                         .into(),
-                    &MethodRef::Index(System_Exception_MethodId::Constructor_String as u32),
+                    System_Exception_MethodId::Constructor_String as u32,
                     &[(&*message as *const ManagedReference<Class>)
                         .cast_mut()
                         .cast()],

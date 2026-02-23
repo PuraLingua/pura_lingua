@@ -141,6 +141,12 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
         field: TFieldRef,
     },
 
+    LoadField {
+        container: u64,
+        field: TFieldRef,
+        register_addr: u64,
+    },
+
     SetThisField {
         val_addr: u64,
         field: TFieldRef,
@@ -194,7 +200,7 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
     }
 }
 
-macro match_helper(
+pub macro instruction_match_helper(
     $this:expr,
     $str_help:ident,
     $type_help:ident,
@@ -202,7 +208,7 @@ macro match_helper(
     $field_help:ident,
     $success:ident $(,)?
 ) {{
-    use Instruction::*;
+    use $crate::instruction::Instruction::*;
     match $this {
         LoadTrue { register_addr } => $success(LoadTrue { register_addr }),
         LoadFalse { register_addr } => $success(LoadFalse { register_addr }),
@@ -327,6 +333,15 @@ macro match_helper(
             ty: $type_help!(ty),
             field: $field_help!(field),
         }),
+        LoadField {
+            container,
+            field,
+            register_addr,
+        } => $success(LoadField {
+            container,
+            field: $field_help!(field),
+            register_addr,
+        }),
         SetThisField { val_addr, field } => $success(SetThisField {
             val_addr,
             field: $field_help!(field),
@@ -371,7 +386,7 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                 None => return None,
             }
         }
-        match_helper!(self, m_help, m_help, m_help, m_help, Some)
+        instruction_match_helper!(self, m_help, m_help, m_help, m_help, Some)
     }
 }
 
@@ -396,8 +411,13 @@ impl<TString, E1, TTypeRef, E2, TMethodRef, E3, TFieldRef, E4>
                 Err(e) => return Err(e.into()),
             }
         }
-        match_helper!(self, m_help, m_help, m_help, m_help, Ok)
+        instruction_match_helper!(self, m_help, m_help, m_help, m_help, Ok)
     }
+}
+
+#[inline(always)]
+const fn noop<T>(v: T) -> T {
+    v
 }
 
 impl<TString, TTypeRef, TMethodRef, TFieldRef>
@@ -414,16 +434,16 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
         FFieldRef,
     >(
         self,
-        f_string: FString,
-        f_type: FTypeRef,
-        f_method: FMethodRef,
-        f_field: FFieldRef,
+        mut f_string: FString,
+        mut f_type: FTypeRef,
+        mut f_method: FMethodRef,
+        mut f_field: FFieldRef,
     ) -> Instruction<_TString, _TTypeRef, _TMethodRef, _TFieldRef>
     where
-        FString: [const] Fn(TString) -> _TString + [const] Destruct,
-        FTypeRef: [const] Fn(TTypeRef) -> _TTypeRef + [const] Destruct,
-        FMethodRef: [const] Fn(TMethodRef) -> _TMethodRef + [const] Destruct,
-        FFieldRef: [const] Fn(TFieldRef) -> _TFieldRef + [const] Destruct,
+        FString: [const] FnMut(TString) -> _TString + [const] Destruct,
+        FTypeRef: [const] FnMut(TTypeRef) -> _TTypeRef + [const] Destruct,
+        FMethodRef: [const] FnMut(TMethodRef) -> _TMethodRef + [const] Destruct,
+        FFieldRef: [const] FnMut(TFieldRef) -> _TFieldRef + [const] Destruct,
         Self: [const] Destruct,
     {
         macro str_help($val:ident) {
@@ -438,11 +458,54 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
         macro field_help($val:ident) {
             (f_field)($val)
         }
-        #[inline(always)]
-        const fn success<T>(val: T) -> T {
-            val
-        }
-        match_helper!(self, str_help, type_help, method_help, field_help, success)
+        instruction_match_helper!(
+            self,
+            str_help,
+            type_help,
+            method_help,
+            field_help,
+            /* success */ noop
+        )
+    }
+    pub const fn map_string<_TString, FString>(
+        self,
+        f_string: FString,
+    ) -> Instruction<_TString, TTypeRef, TMethodRef, TFieldRef>
+    where
+        FString: [const] FnMut(TString) -> _TString + [const] Destruct,
+        Self: [const] Destruct,
+    {
+        self.map_types(f_string, noop, noop, noop)
+    }
+    pub const fn map_type_ref<_TTypeRef, FTypeRef>(
+        self,
+        f_type: FTypeRef,
+    ) -> Instruction<TString, _TTypeRef, TMethodRef, TFieldRef>
+    where
+        FTypeRef: [const] FnMut(TTypeRef) -> _TTypeRef + [const] Destruct,
+        Self: [const] Destruct,
+    {
+        self.map_types(noop, f_type, noop, noop)
+    }
+    pub const fn map_method_ref<_TMethodRef, FMethodRef>(
+        self,
+        f_method: FMethodRef,
+    ) -> Instruction<TString, TTypeRef, _TMethodRef, TFieldRef>
+    where
+        FMethodRef: [const] FnMut(TMethodRef) -> _TMethodRef + [const] Destruct,
+        Self: [const] Destruct,
+    {
+        self.map_types(noop, noop, f_method, noop)
+    }
+    pub const fn map_field_ref<_TFieldRef, FFieldRef>(
+        self,
+        f_field: FFieldRef,
+    ) -> Instruction<TString, TTypeRef, TMethodRef, _TFieldRef>
+    where
+        FFieldRef: [const] FnMut(TFieldRef) -> _TFieldRef + [const] Destruct,
+        Self: [const] Destruct,
+    {
+        self.map_types(noop, noop, noop, f_field)
     }
 }
 
@@ -602,6 +665,15 @@ where
                 ty,
                 field,
             } => write!(f, "{NAME}::LoadStatic {register_addr:#x} {ty} {field}"),
+
+            LoadField {
+                container,
+                field,
+                register_addr,
+            } => write!(
+                f,
+                "{NAME}::LoadField {container:#x} {field} {register_addr:#x}"
+            ),
 
             SetThisField { val_addr, field } => {
                 write!(f, "{NAME}::SetThisField {val_addr:#x} {field}")

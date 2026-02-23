@@ -171,7 +171,17 @@ proc_macros::define_core_struct! {
     [None]
     #fields:
     #methods:
-    [] [] with |_| vec![]
+    [] [] with |mt| vec![
+        // Statics
+        Box::new(
+            Method::default_sctor(
+                Some(mt),
+                global::attr!(
+                    method Public {Static}
+                ),
+            ),
+        ),
+    ]
 }
 
 mod integer {
@@ -232,7 +242,6 @@ mod integer {
                         None,
                         System::_Integers::ToString::<T> as _,
                     )),
-
                 ]
             }
         }
@@ -941,7 +950,12 @@ define_core_class! {
     System_Exception "System::Exception" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
     #fields of System_Object_FieldId:
     #[Public {}] Message "_message" => CoreTypeId::System_String.static_type_ref().into();
-    #[Public {}] Inner "_innerException" => CoreTypeId::System_Exception.static_type_ref().into();
+    #[Public {}] Inner "_innerException" => TypeRef::Specific {
+        assembly_and_index: Either::Left((AssemblyRef::CORE, CoreTypeId::System_Nullable_1 as _)),
+        types: vec![
+            CoreTypeId::System_Exception.static_type_ref().into(),
+        ]
+    }.into();
     #[Public {}] StackTrace "_stackTrace" => TypeRef::Specific {
         assembly_and_index: Either::Left((AssemblyRef::CORE, CoreTypeId::System_Array_1 as _)),
         types: vec![
@@ -1001,7 +1015,7 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_InvalidEnumException "System::InvalidEnumException" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_InvalidEnumException "System::InvalidEnumException" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
     #fields:
 
     #methods of System_Exception_MethodId:
@@ -1048,8 +1062,8 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_Win32Exception "System::Win32Exception" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
-    #fields of System_Object_FieldId:
+    System_Win32Exception "System::Win32Exception" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
+    #fields of System_Exception_FieldId:
     #[Public {}] Code "_Code" => CoreTypeId::System_Int32.static_type_ref().into();
 
     #methods of System_Exception_MethodId:
@@ -1090,8 +1104,8 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_ErrnoException "System::ErrnoException" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
-    #fields of System_Object_FieldId:
+    System_ErrnoException "System::ErrnoException" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
+    #fields of System_Exception_FieldId:
     #[Public {}] Code "_Code" => CoreTypeId::System_Int32.static_type_ref().into();
 
     #methods of System_Exception_MethodId:
@@ -1132,7 +1146,7 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_DlErrorException "System::DlErrorException" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_DlErrorException "System::DlErrorException" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
     #fields:
 
     #methods of System_Exception_MethodId:

@@ -9,7 +9,7 @@ use crate::{
         get_traits::{GetAssemblyRef, GetNonGenericTypeHandleKind, GetTypeVars},
         method::{Method, MethodDisplayOptions},
         r#struct::Struct,
-        type_handle::NonGenericTypeHandleKind,
+        type_handle::{NonGenericTypeHandle, NonGenericTypeHandleKind},
     },
     value::managed_reference::ManagedReference,
 };
@@ -197,14 +197,14 @@ impl NativeCallStackFrame {
 pub struct LocalVariableInfo {
     pub offset: usize,
     pub layout: Layout,
-    pub is_managed_reference: bool,
+    pub ty: NonGenericTypeHandle,
 }
 
 #[derive(Clone, Copy)]
 pub struct LocalVariable {
     pub ptr: NonNull<u8>,
     pub layout: Layout,
-    pub is_managed_reference: bool,
+    pub ty: NonGenericTypeHandle,
 }
 
 impl LocalVariable {
@@ -338,28 +338,20 @@ impl CommonCallStackFrame {
             let layout = ty.val_layout();
             let offset;
             (full_layout, offset) = full_layout.extend(layout).unwrap();
-            infos.push(LocalVariableInfo {
-                offset,
-                layout,
-                is_managed_reference: ty.is_managed_reference(),
-            });
+            infos.push(LocalVariableInfo { offset, layout, ty });
         }
 
         Self::new(method, full_layout, infos)
     }
 
     pub fn get(&self, i: u64) -> Option<LocalVariable> {
-        self.layouts.get(i as usize).map(
-            |&LocalVariableInfo {
-                 offset,
-                 layout,
-                 is_managed_reference,
-             }| LocalVariable {
+        self.layouts
+            .get(i as usize)
+            .map(|&LocalVariableInfo { offset, layout, ty }| LocalVariable {
                 ptr: unsafe { self.register_ptr.byte_add(offset) },
                 layout,
-                is_managed_reference,
-            },
-        )
+                ty,
+            })
     }
 
     pub fn get_typed<T>(&self, i: u64) -> Option<&T> {
@@ -412,7 +404,7 @@ impl CommonCallStackFrame {
     }
 
     pub fn mark_all(&mut self) {
-        for mut var in self.iter().filter(|x| x.is_managed_reference) {
+        for mut var in self.iter().filter(|x| x.ty.is_managed_reference()) {
             if let Some(header) = var.as_mut_typed::<ManagedReference<()>>().header_mut() {
                 header.set_is_marked(true);
             }

@@ -103,6 +103,9 @@ impl NonGenericTypeHandle {
 }
 
 impl NonGenericTypeHandle {
+    pub const fn get_tag(&self) -> NonGenericTypeHandleKind {
+        unsafe { std::mem::transmute::<_, NonGenericTypeHandleKind>(self.get_int_tag()) }
+    }
     pub const fn get_int_tag(&self) -> u8 {
         // SAFETY: Because `Self` is marked `repr(u8)`, its layout is a `repr(C)` `union`
         // between `repr(C)` structs, each of which has the `u8` discriminant as its first
@@ -275,6 +278,19 @@ pub enum MaybeUnloadedTypeHandle {
 }
 
 impl std::fmt::Debug for MaybeUnloadedTypeHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&match self {
+            Self::Loaded(type_handle) => {
+                format!("{type_handle:?}")
+            }
+            Self::Unloaded(type_ref) => {
+                format!("Unloaded({type_ref:?})")
+            }
+        })
+    }
+}
+
+impl std::fmt::Display for MaybeUnloadedTypeHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&match self {
             Self::Loaded(type_handle) => {

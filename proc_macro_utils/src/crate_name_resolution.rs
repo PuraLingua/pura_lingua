@@ -1,6 +1,5 @@
 use std::{collections::HashMap, str::FromStr};
 
-use proc_macro_crate::FoundCrate;
 use proc_macro2::{Ident, Span};
 
 pub fn get_crate_name_of(name: &str, span: Span) -> Ident {
@@ -8,8 +7,8 @@ pub fn get_crate_name_of(name: &str, span: Span) -> Ident {
         return Ident::new(name, span);
     };
     match crate_name {
-        FoundCrate::Itself => Ident::new("crate", Span::call_site()),
-        FoundCrate::Name(name) => Ident::new(&name, span),
+        proc_macro_crate::FoundCrate::Itself => Ident::new("crate", Span::call_site()),
+        proc_macro_crate::FoundCrate::Name(name) => Ident::new(&name, span),
     }
 }
 
