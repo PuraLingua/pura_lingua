@@ -1,5 +1,6 @@
 pub mod Array_1;
 pub mod DynamicLibrary;
+pub mod Environment;
 pub mod ErrnoException;
 pub mod Exception;
 pub mod InvalidEnumException;

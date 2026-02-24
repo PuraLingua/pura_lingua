@@ -977,10 +977,18 @@ define_core_class! {
     #[Public {}] assembly
     System_Environment "System::Environment" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
     #fields of System_Object_FieldId:
+    #[Public {}] NewLine "NewLine" => CoreTypeId::System_String.static_type_ref().into();
 
     #methods of System_Object_MethodId:
     [] [] with
-    |mt| vec![]
+    |mt| vec![
+        // Statics
+        Box::new(Method::create_sctor(
+            Some(mt),
+            global::attr!(method Public {Static}),
+            System::Environment::StaticConstructor,
+        )),
+    ]
 }
 
 define_core_class! {
