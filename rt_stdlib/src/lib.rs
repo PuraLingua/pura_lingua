@@ -49,6 +49,8 @@ pub enum CoreTypeId {
     System_String,
     System_LargeString,
 
+    System_Environment,
+
     System_Exception,
     System_InvalidEnumException,
     System_Win32Exception,
@@ -92,6 +94,8 @@ impl CoreTypeId {
 
             Self::System_String => "System::String",
             Self::System_LargeString => "System::LargeString",
+
+            Self::System_Environment => "System::Environment",
 
             Self::System_Exception => "System::Exception",
             Self::System_InvalidEnumException => "System::InvalidEnumException",

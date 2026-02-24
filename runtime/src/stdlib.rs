@@ -96,6 +96,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             CoreTypeId::System_String => Some(Layout::new::<u16>()),
             Self::System_LargeString => Some(Layout::new::<usize>()),
 
+            Self::System_Environment => None,
+
             CoreTypeId::System_Exception => None,
             CoreTypeId::System_InvalidEnumException => None,
             Self::System_Win32Exception => None,
@@ -139,6 +141,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             CoreTypeId::System_Array_1 => Layout::new::<ManagedReference<Class>>(),
             CoreTypeId::System_String => Layout::new::<ManagedReference<Class>>(),
             CoreTypeId::System_LargeString => Layout::new::<ManagedReference<Class>>(),
+
+            CoreTypeId::System_Environment => Layout::new::<ManagedReference<Class>>(),
 
             CoreTypeId::System_Exception => Layout::new::<ManagedReference<Class>>(),
             CoreTypeId::System_InvalidEnumException => Layout::new::<ManagedReference<Class>>(),
@@ -191,6 +195,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             System_Array_1
             System_String
             System_LargeString
+
+            System_Environment
 
             System_Exception
             System_InvalidEnumException
@@ -245,6 +251,8 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_Array_1 => Some(Type::pointer()),
             Self::System_String => Some(Type::pointer()),
             Self::System_LargeString => Some(Type::pointer()),
+
+            Self::System_Environment => Some(Type::pointer()),
 
             Self::System_Exception => Some(Type::pointer()),
             Self::System_InvalidEnumException => Some(Type::pointer()),

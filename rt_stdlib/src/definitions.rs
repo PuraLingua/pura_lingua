@@ -1,1 +1,1 @@
-../../runtime/src/stdlib/definitions.rs
+D:/pura_lingua/runtime/src/stdlib/definitions.rs
