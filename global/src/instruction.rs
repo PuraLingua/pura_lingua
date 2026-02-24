@@ -29,6 +29,8 @@ impl RegisterAddr {
 #[with_type(derive_const = (Clone, PartialEq, Eq))]
 #[with_type(derive = (Copy, IntoPrimitive, TryFromPrimitive, Debug, ReadFromSection, WriteToSection))]
 pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
+    /// Usually used for Jump*
+    Noop,
     LoadTrue {
         register_addr: u64,
     },
@@ -78,7 +80,7 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
         ptr: u64,
     },
 
-    IsNull {
+    IsAllZero {
         register_addr: u64,
         to_check: u64,
     },
@@ -175,11 +177,11 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
         target: JumpTarget,
     },
 
-    JumpIfNull {
+    JumpIfAllZero {
         to_check: u64,
         target: JumpTarget,
     },
-    JumpIfNotNull {
+    JumpIfNotAllZero {
         to_check: u64,
         target: JumpTarget,
     },
@@ -210,6 +212,7 @@ pub macro instruction_match_helper(
 ) {{
     use $crate::instruction::Instruction::*;
     match $this {
+        Noop => $success(Noop),
         LoadTrue { register_addr } => $success(LoadTrue { register_addr }),
         LoadFalse { register_addr } => $success(LoadFalse { register_addr }),
         Load_u8 { register_addr, val } => $success(Load_u8 { register_addr, val }),
@@ -236,10 +239,10 @@ pub macro instruction_match_helper(
         }),
         WritePointer { source, size, ptr } => $success(WritePointer { source, size, ptr }),
 
-        IsNull {
+        IsAllZero {
             register_addr,
             to_check,
-        } => $success(IsNull {
+        } => $success(IsAllZero {
             register_addr,
             to_check,
         }),
@@ -368,8 +371,8 @@ pub macro instruction_match_helper(
             target,
         }),
 
-        JumpIfNull { to_check, target } => $success(JumpIfNull { to_check, target }),
-        JumpIfNotNull { to_check, target } => $success(JumpIfNotNull { to_check, target }),
+        JumpIfAllZero { to_check, target } => $success(JumpIfAllZero { to_check, target }),
+        JumpIfNotAllZero { to_check, target } => $success(JumpIfNotAllZero { to_check, target }),
     }
 }}
 
@@ -521,6 +524,7 @@ where
         const NAME: &str = "Instruction";
         use Instruction::*;
         match self {
+            Noop => write!(f, "{NAME}::Noop"),
             LoadTrue { register_addr } => write!(f, "{NAME}::LoadTrue {register_addr:#x}"),
             LoadFalse { register_addr } => write!(f, "{NAME}::LoadFalse {register_addr:#x}"),
 
@@ -557,7 +561,7 @@ where
                 write!(f, "{NAME}::WritePointer {source:#x} {ptr:#x} {size:#x}")
             }
 
-            IsNull {
+            IsAllZero {
                 register_addr,
                 to_check,
             } => write!(f, "{NAME}::IsNull {register_addr:#x} {to_check:#x}"),
@@ -695,10 +699,10 @@ where
                 "{NAME}::JumpIf {register_addr:#x} {target}"
             )),
 
-            JumpIfNull { to_check, target } => {
+            JumpIfAllZero { to_check, target } => {
                 write!(f, "{NAME}::JumpIfNull {to_check:#x} {target}")
             }
-            JumpIfNotNull { to_check, target } => {
+            JumpIfNotAllZero { to_check, target } => {
                 write!(f, "{NAME}::JumpIfNotNull {to_check:#x} {target}")
             }
         }

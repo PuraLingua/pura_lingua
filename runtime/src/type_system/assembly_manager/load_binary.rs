@@ -32,7 +32,7 @@ impl AssemblyManager {
     ) -> binary::prelude::BinaryResult<()> {
         let mut loaded_ids = Vec::new();
         for b_assembly in binaries {
-            loaded_ids.push(self.load_binary(dbg!(b_assembly))?);
+            loaded_ids.push(self.load_binary(b_assembly)?);
         }
 
         for (b_assembly_id, loaded_id) in loaded_ids.into_iter().enumerate() {
@@ -116,7 +116,7 @@ impl AssemblyManager {
         class_id: u32,
     ) -> binary::prelude::BinaryResult<()> {
         let name = b_assembly.get_string(class_def.name)?;
-        let mut parent_loaded = false;
+        let mut parent_loaded = true;
         let result = Class::new_for_binary(
             NonNull::from_ref(assembly),
             name.to_owned(),
@@ -139,14 +139,14 @@ impl AssemblyManager {
                         MaybeUnloadedTypeHandle::Loaded(type_handle) => {
                             match type_handle.into_non_generic() {
                                 None => Err(binary::prelude::Error::InheritFromGeneric),
-                                Some(NonGenericTypeHandle::Class(class)) => {
-                                    parent_loaded = true;
-                                    Ok(Either::Left(class))
-                                }
+                                Some(NonGenericTypeHandle::Class(class)) => Ok(Either::Left(class)),
                                 Some(_) => Err(binary::prelude::Error::WrongParentType),
                             }
                         }
-                        MaybeUnloadedTypeHandle::Unloaded(type_ref) => Ok(Either::Right(type_ref)),
+                        MaybeUnloadedTypeHandle::Unloaded(type_ref) => {
+                            parent_loaded = false;
+                            Ok(Either::Right(type_ref))
+                        }
                     }
                 })
                 .transpose()?,
@@ -269,7 +269,6 @@ impl AssemblyManager {
         methods
             .iter()
             .map(|method| {
-                dbg!();
                 self.load_binary_method(assembly, assembly_id, b_assembly, t_id, mt, method)
             })
             .try_collect()

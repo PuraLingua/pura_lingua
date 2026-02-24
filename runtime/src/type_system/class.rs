@@ -3,17 +3,18 @@ use std::assert_matches;
 use std::cell::Cell;
 use std::mem::offset_of;
 use std::ptr::{NonNull, Unique};
-use std::sync::MappedRwLockReadGuard;
+use std::sync::{MappedRwLockReadGuard, RwLock};
 
 use either::Either;
 use global::attrs::TypeAttr;
 use global::getset::{Getters, MutGetters};
 
+use crate::memory::GetFieldOffsetOptions;
 use crate::type_system::{
     assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
     type_handle::MaybeUnloadedTypeHandle,
 };
-use crate::value::managed_reference::ManagedReference;
+use crate::value::managed_reference::{FieldAccessor, ManagedReference};
 
 use super::assembly_manager::TypeLoadState;
 use super::method::Method;
@@ -55,6 +56,8 @@ pub struct Class {
     generic_instances: Vec<NonNull<Class>>,
     generic_bounds: Option<NonNull<[GenericBounds]>>,
     type_vars: Option<Box<[MaybeUnloadedTypeHandle]>>,
+
+    static_instance: RwLock<Option<ManagedReference<Class>>>,
 }
 
 impl Class {
@@ -112,6 +115,8 @@ impl Class {
             generic_instances: Vec::new(),
             generic_bounds: None,
             type_vars: Some(Box::clone_from_ref(type_vars)),
+
+            static_instance: RwLock::new(None),
         });
 
         let instantiated = Box::into_non_null(instantiated);
@@ -172,6 +177,8 @@ impl Class {
                 .filter(|x| !x.is_empty())
                 .map(|x| Box::into_non_null(x.into_boxed_slice())),
             type_vars: None,
+
+            static_instance: RwLock::new(None),
         });
 
         let mut this = Box::into_non_null(this);
@@ -182,7 +189,7 @@ impl Class {
             this_m.sctor = sctor.unwrap_or_else(|| {
                 mt.as_ref()
                     .find_last_method_by_name_ret_id(".sctor")
-                    .unwrap()
+                    .expect("Static constructor not found")
             });
             this_m.method_table = mt;
         }
@@ -238,6 +245,8 @@ impl Class {
                 .filter(|x| !x.is_empty())
                 .map(|x| Box::into_non_null(x.into_boxed_slice())),
             type_vars: None,
+
+            static_instance: RwLock::new(None),
         });
 
         let mut this = Box::into_non_null(this);
@@ -249,7 +258,7 @@ impl Class {
                 this_m.sctor = sctor.unwrap_or_else(|| {
                     mt.as_ref()
                         .find_last_method_by_name_ret_id(".sctor")
-                        .unwrap()
+                        .expect("Static constructor not found")
                 });
             }
 
@@ -266,6 +275,40 @@ impl Class {
                 .find_last_method_by_name_ret_id(".sctor")
                 .expect("Static constructor not found")
         });
+    }
+}
+
+/// *Experimental* Storing static instance in type
+impl Class {
+    pub fn init_statics(&self) {
+        if self.static_instance.read().unwrap().is_some() {
+            return;
+        }
+        std::hint::cold_path();
+        let cpu = self.assembly_ref().manager_ref().vm_ref().cpu_for_static();
+        let mut instance = self.static_instance.write().unwrap();
+        *instance = Some(ManagedReference::common_alloc(
+            &cpu,
+            self.method_table,
+            true,
+        ));
+        let sctor = self.method_table_ref().get_static_constructor();
+        unsafe {
+            sctor.as_ref().typed_res_call::<()>(&cpu, None, &[]);
+        }
+    }
+    pub fn get_static_field(
+        &self,
+        i: u32,
+        options: GetFieldOffsetOptions,
+    ) -> Option<(NonNull<u8>, Layout)> {
+        self.init_statics();
+        let instance = self.static_instance.read().unwrap();
+        instance
+            .as_ref()
+            .unwrap()
+            .const_access::<FieldAccessor<Self>>()
+            .field(i, options)
     }
 }
 

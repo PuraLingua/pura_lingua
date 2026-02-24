@@ -25,7 +25,7 @@ use super::{Method, MethodRef};
 enum Termination {
     LoadRegisterFailed(u64),
     LoadArgFailed(u64),
-    NullReference,
+    NullReference(&'static core::panic::Location<'static>),
     AllInstructionExecuted,
     LoadTypeHandleFailed(MaybeUnloadedTypeHandle),
     LoadMethodFailed(MethodRef),
@@ -90,6 +90,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         let frame = call_frame(cpu);
 
         match ins {
+            Instruction::Noop => (),
             Instruction::LoadTrue { register_addr } => {
                 if !frame.write_typed(*register_addr, true) {
                     load_register_failed!(*register_addr);
@@ -126,7 +127,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 };
                 debug_assert!(local_var.layout.size() >= Layout::new::<*const ()>().size());
                 let Some(this) = this else {
-                    return Some(Err(Termination::NullReference));
+                    return Some(Err(Termination::NullReference(
+                        core::panic::Location::caller(),
+                    )));
                 };
                 unsafe {
                     local_var
@@ -159,7 +162,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     load_register_failed!(*ptr);
                 };
                 if ptr_var.is_null() {
-                    return Some(Err(Termination::NullReference));
+                    return Some(Err(Termination::NullReference(
+                        core::panic::Location::caller(),
+                    )));
                 }
                 let Some(size) = frame.get_typed(*size) else {
                     load_register_failed!(*size);
@@ -182,14 +187,16 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     load_register_failed!(*ptr);
                 };
                 let Some(ptr_var) = NonNull::new(ptr_var.cast_mut()) else {
-                    return Some(Err(Termination::NullReference));
+                    return Some(Err(Termination::NullReference(
+                        core::panic::Location::caller(),
+                    )));
                 };
                 unsafe {
                     source.copy_to(ptr_var, *size);
                 }
             }
 
-            Instruction::IsNull {
+            Instruction::IsAllZero {
                 register_addr,
                 to_check,
             } => {
@@ -299,7 +306,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     return Some(Err(Termination::LoadRegisterFailed(*val)));
                 };
                 if val.is_null() {
-                    return Some(Err(Termination::NullReference));
+                    return Some(Err(Termination::NullReference(
+                        core::panic::Location::caller(),
+                    )));
                 }
                 drop(frame);
                 let mt = val.method_table_ref().unwrap();
@@ -318,7 +327,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                         return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
                     };
                     unsafe {
-                        out_var.copy_from(ret_ptr, ret_layout.size());
+                        out_var.copy_from(ret_ptr, actual_layout.size());
                     }
                 }
                 unsafe {
@@ -371,7 +380,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                         return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
                     };
                     unsafe {
-                        out_var.copy_from(ret_ptr, ret_layout.size());
+                        out_var.copy_from(ret_ptr, actual_layout.size());
                     }
                 }
                 unsafe {
@@ -409,10 +418,10 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 args,
                 ret_at,
             } => {
-                let Some(&f_pointer) = frame.get_typed::<*const u8>(*f_pointer) else {
+                let Some(f_pointer) = frame.read_typed::<*const u8>(*f_pointer) else {
                     return Some(Err(Termination::LoadRegisterFailed(*f_pointer)));
                 };
-                let Some(&config) = frame.get_typed::<ManagedReference<Class>>(*config) else {
+                let Some(config) = frame.read_typed::<ManagedReference<Class>>(*config) else {
                     return Some(Err(Termination::LoadRegisterFailed(*config)));
                 };
                 let args = args
@@ -534,7 +543,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     return Some(Err(Termination::LoadRegisterFailed(*val_addr)));
                 };
                 let Some(this) = this else {
-                    return Some(Err(Termination::NullReference));
+                    return Some(Err(Termination::NullReference(
+                        core::panic::Location::caller(),
+                    )));
                 };
                 unsafe {
                     let this = this.cast::<ManagedReference<Class>>().as_ref();
@@ -604,7 +615,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 }
             }
 
-            &Instruction::JumpIfNull { to_check, target } => {
+            &Instruction::JumpIfAllZero { to_check, target } => {
                 let Some(to_check_var) = frame.get(to_check) else {
                     return Some(Err(Termination::LoadRegisterFailed(to_check)));
                 };
@@ -612,7 +623,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     do_jump(pc, target);
                 }
             }
-            &Instruction::JumpIfNotNull { to_check, target } => {
+            &Instruction::JumpIfNotAllZero { to_check, target } => {
                 let Some(to_check_var) = frame.get(to_check) else {
                     return Some(Err(Termination::LoadRegisterFailed(to_check)));
                 };
@@ -668,8 +679,8 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                 Termination::LoadArgFailed(a) => {
                     t_println!("Cannot load Arg {a}");
                 }
-                Termination::NullReference => {
-                    t_println!("NULL PTR");
+                Termination::NullReference(location) => {
+                    t_println!("NULL PTR at {location}");
                 }
                 Termination::AllInstructionExecuted => unsafe {
                     result_ptr

@@ -40,6 +40,10 @@ impl AssemblyManager {
     pub fn load_stdlib(&self) {
         crate::stdlib::load_stdlib(self);
     }
+
+    pub const fn vm_ref(&self) -> &VirtualMachine {
+        unsafe { self.vm.as_ref() }
+    }
 }
 
 type ReadAssembliesPoisonError<'a> = PoisonError<RwLockReadGuard<'a, Vec<Box<Assembly>>>>;

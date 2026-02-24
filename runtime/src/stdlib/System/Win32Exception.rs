@@ -7,6 +7,13 @@ use crate::{
 };
 
 #[cfg(windows)]
+pub fn Constructor(cpu: &CPU, method: &Method<Class>, this: &mut ManagedReference<Class>) {
+    Constructor_I32(cpu, method, this, unsafe {
+        windows::Win32::Foundation::GetLastError().0 as i32
+    });
+}
+
+#[cfg(windows)]
 pub fn Constructor_I32(
     cpu: &CPU,
     method: &Method<Class>,
@@ -28,6 +35,11 @@ pub fn Constructor_I32(
         this,
         ManagedReference::new_string(cpu, &windows::core::HRESULT(code).message()),
     );
+}
+
+#[cfg(not(windows))]
+pub fn Constructor(_: &CPU, _: &Method<Class>, _: &mut ManagedReference<Class>) {
+    panic!("Unsupported");
 }
 
 #[cfg(not(windows))]

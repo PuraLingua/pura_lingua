@@ -1,6 +1,8 @@
 use std::ffi::c_void;
 use std::ptr::NonNull;
 
+use global::t_println;
+
 use crate::{
     stdlib::System_DynamicLibrary_FieldId,
     type_system::{class::Class, method::Method},
@@ -17,6 +19,14 @@ pub extern "system" fn Constructor_String(
     this: &mut ManagedReference<Class>,
     file: ManagedReference<Class>,
 ) {
+    t_println!(
+        "Loading lib: {}",
+        file.access::<StringAccessor>()
+            .unwrap()
+            .get_str()
+            .unwrap()
+            .display()
+    );
     let handle_out = this
         .const_access_mut::<FieldAccessor<Class>>()
         .typed_field_mut::<*mut c_void>(
@@ -28,6 +38,7 @@ pub extern "system" fn Constructor_String(
         return;
     };
     *handle_out = handle.as_ptr();
+    println!("finish loading successfully");
 }
 
 pub extern "system" fn GetSymbol(
@@ -118,30 +129,13 @@ fn GetSymbolImpl(
     let hModule = windows::Win32::Foundation::HMODULE(handle);
 
     unsafe {
-        let name_wide = name.access::<StringAccessor>().unwrap().get_str().unwrap();
-        let len = WideCharToMultiByte(
-            windows::Win32::Globalization::CP_ACP,
-            0,
-            windows::core::PCWSTR::from_raw(name_wide.as_ptr()),
-            -1,
-            windows::core::PSTR::null(),
-            0,
-            windows::core::PCSTR::null(),
-            std::ptr::null_mut(),
-        ) as usize;
-        let mut name_out = vec![0u8; len];
-        let used_len = WideCharToMultiByte(
-            windows::Win32::Globalization::CP_ACP,
-            0,
-            windows::core::PCWSTR::from_raw(name_wide.as_ptr()),
-            -1,
-            windows::core::PSTR::from_raw(name_out.as_mut_ptr()),
-            len as _,
-            windows::core::PCSTR::null(),
-            std::ptr::null_mut(),
-        );
+        let (name_out, used_len) = name
+            .access::<StringAccessor>()
+            .unwrap()
+            .to_multi_byte()
+            .unwrap();
 
-        if used_len == 0 {
+        if used_len.is_none() {
             assert!(cpu.throw_helper().current_win32());
         }
         match windows::Win32::System::LibraryLoader::GetProcAddress(

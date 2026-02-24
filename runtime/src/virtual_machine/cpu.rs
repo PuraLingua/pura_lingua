@@ -29,7 +29,7 @@ mod gc;
 mod mem_record;
 
 pub use call_stack::{CallStack, CallStackFrame, CommonCallStackFrame, NativeCallStackFrame};
-pub use exception::{ExceptionManager, ThrowHelper};
+pub use exception::{ExceptionManager, ThrowHelper, errno_location};
 use global::{
     attrs::CallConvention,
     dt_println,
@@ -255,7 +255,7 @@ impl CPU {
     ) -> global::Result<NonPurusCallConfiguration> {
         let accessor = cfg.const_access::<FieldAccessor<Class>>();
 
-        let call_convention = CallConvention::try_from(
+        let call_convention: CallConvention = CallConvention::try_from(
             accessor
                 .read_typed_field::<u8>(
                     System_NonPurusCallConfiguration_FieldId::CallConvention as _,

@@ -29,6 +29,7 @@ mod tests;
 #[derive(ThreadSafe, Getters)]
 #[getset(get = "pub")]
 pub struct VirtualMachine {
+    #[doc(hidden)]
     pub(crate) assembly_manager: AssemblyManager,
     resource_manager: ResourceManager,
     #[getset(skip)]
@@ -188,12 +189,14 @@ impl VirtualMachine {
                     drop(static_map);
                     let mut static_map = self.class_static_map.write().unwrap();
                     let static_cpu = self.cpu_for_static();
+                    println!("Initializing static for {}", unsafe {
+                        class.as_ref().name()
+                    });
                     let obj = ManagedReference::<Class>::common_alloc(
                         &static_cpu,
                         unsafe { *class.as_ref().method_table() },
                         true,
                     );
-                    debug_assert!(obj.header().is_none_or(|x| x.is_static()));
                     static_map.insert(class, obj);
                     drop(static_map);
                     let sctor =

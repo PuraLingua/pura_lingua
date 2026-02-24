@@ -216,6 +216,12 @@ impl LocalVariable {
         debug_assert!(self.layout.size() >= size_of::<T>());
         unsafe { self.ptr.cast::<T>().as_mut() }
     }
+    #[inline]
+    pub fn read_typed<T>(self) -> T {
+        debug_assert!(self.layout.size() >= size_of::<T>());
+        unsafe { self.ptr.cast::<T>().read() }
+    }
+    #[inline]
     pub fn write_typed<T>(self, val: T) {
         debug_assert!(self.layout.size() >= size_of::<T>());
         unsafe {
@@ -238,8 +244,20 @@ impl LocalVariable {
     }
     /// # Safety
     /// See [`std::ptr::NonNull::copy_from`]
-    #[contracts::debug_requires(self.layout.size() >= count)]
     pub const unsafe fn copy_from(self, src: NonNull<u8>, count: usize) {
+        #[cfg(debug_assertions)]
+        fn check(this_size: usize, count: usize) {
+            assert!(
+                this_size >= count,
+                "Requirement {count} too large(maximum: {this_size})"
+            );
+        }
+        #[cfg(not(debug_assertions))]
+        fn check(this: &LocalVariable, count: usize) {}
+        const fn const_check(this_size: usize, count: usize) {
+            assert!(this_size >= count);
+        }
+        core::intrinsics::const_eval_select((self.layout.size(), count), const_check, check);
         unsafe {
             self.ptr.copy_from(src, count);
         }
@@ -307,9 +325,22 @@ impl CommonCallStackFrame {
         let register_ptr = if full_layout.size() == 0 {
             NonNull::dangling()
         } else {
-            std::alloc::Allocator::allocate(&std::alloc::Global, full_layout)
+            #[cfg(not(debug_assertions))]
+            const ALLOCATE_FN: fn(
+                &std::alloc::Global,
+                Layout,
+            ) -> Result<NonNull<[u8]>, std::alloc::AllocError> =
+                <_ as std::alloc::Allocator>::allocate;
+
+            #[cfg(debug_assertions)]
+            const ALLOCATE_FN: fn(
+                &std::alloc::Global,
+                Layout,
+            ) -> Result<NonNull<[u8]>, std::alloc::AllocError> =
+                <_ as std::alloc::Allocator>::allocate_zeroed;
+            ALLOCATE_FN(&std::alloc::Global, full_layout)
                 .unwrap()
-                .cast()
+                .as_non_null_ptr()
         };
 
         Self {
@@ -358,6 +389,9 @@ impl CommonCallStackFrame {
         self.get(i).map(|x| LocalVariable::as_ref_typed::<T>(&x))
     }
 
+    pub fn read_typed<T>(&self, i: u64) -> Option<T> {
+        self.get(i).map(LocalVariable::read_typed)
+    }
     /// Return false if i is not found
     pub fn write_typed<T>(&self, i: u64, val: T) -> bool {
         match self.get(i) {

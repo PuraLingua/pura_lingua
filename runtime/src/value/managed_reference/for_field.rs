@@ -82,9 +82,15 @@ where
 
 impl FieldAccessor<Class> {
     pub fn field(&self, i: u32, options: GetFieldOffsetOptions) -> Option<(NonNull<u8>, Layout)> {
+        let Some(is_static) = self.0.header().map(|x| x.is_static()) else {
+            return None;
+        };
         let mt = self.0.method_table_ref()?;
-        let FieldMemInfo { offset, layout, .. } =
-            mt.field_mem_info(i, Default::default(), options)?;
+        let FieldMemInfo { offset, layout, .. } = if is_static {
+            mt.static_field_mem_info(i, Default::default(), options)?
+        } else {
+            mt.field_mem_info(i, Default::default(), options)?
+        };
 
         Some((unsafe { self.0.data()?.byte_add(offset).cast() }, layout))
     }

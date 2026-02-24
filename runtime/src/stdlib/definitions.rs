@@ -881,7 +881,7 @@ define_core_class! {
     #fields:
 
     #methods of System_Object_MethodId:
-    [override ToString] [] with
+    [override ToString get_Length get_U32Length] [] with
     |mt| vec![
         Box::new(Method::native(
             Some(mt),
@@ -896,6 +896,34 @@ define_core_class! {
             CallConvention::PlatformDefault,
             None,
             System::String::ToString as _,
+        )),
+        Box::new(Method::native(
+            Some(mt),
+            "get_Length".to_owned(),
+            global::attr!(
+                method Public {}
+            ),
+            vec![],
+            MaybeUnloadedTypeHandle::Unloaded(
+                CoreTypeId::System_USize.static_type_ref(),
+            ),
+            CallConvention::PlatformDefault,
+            None,
+            System::String::get_Length as _,
+        )),
+        Box::new(Method::native(
+            Some(mt),
+            "get_U32Length".to_owned(),
+            global::attr!(
+                method Public {}
+            ),
+            vec![],
+            MaybeUnloadedTypeHandle::Unloaded(
+                CoreTypeId::System_UInt32.static_type_ref(),
+            ),
+            CallConvention::PlatformDefault,
+            None,
+            System::String::get_U32Length as _,
         )),
 
         // Statics
@@ -1067,8 +1095,22 @@ define_core_class! {
     #[Public {}] Code "_Code" => CoreTypeId::System_Int32.static_type_ref().into();
 
     #methods of System_Exception_MethodId:
-    [Constructor_I32] [] with
+    [Constructor Constructor_I32] [] with
     |mt| vec![
+        Box::new(
+            Method::native(
+                Some(mt),
+                ".ctor".to_owned(),
+                global::attr!(
+                    method Public {}
+                ),
+                vec![],
+                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                CallConvention::PlatformDefault,
+                None,
+                System::Win32Exception::Constructor as _,
+            )
+        ),
         Box::new(
             Method::native(
                 Some(mt),
@@ -1109,8 +1151,22 @@ define_core_class! {
     #[Public {}] Code "_Code" => CoreTypeId::System_Int32.static_type_ref().into();
 
     #methods of System_Exception_MethodId:
-    [Constructor_I32] [] with
+    [Constructor Constructor_I32] [] with
     |mt| vec![
+        Box::new(
+            Method::native(
+                Some(mt),
+                ".ctor".to_owned(),
+                global::attr!(
+                    method Public {}
+                ),
+                vec![],
+                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                CallConvention::PlatformDefault,
+                None,
+                System::ErrnoException::Constructor as _,
+            )
+        ),
         Box::new(
             Method::native(
                 Some(mt),

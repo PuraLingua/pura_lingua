@@ -18,3 +18,30 @@ pub extern "system" fn ToString(
             .unwrap(),
     )
 }
+
+/// Returns the length of the string as number of elements (**not** number of bytes)
+/// **not** including nul terminator.
+pub extern "system" fn get_Length(
+    _: &CPU,
+    _: &Method<Class>,
+    this: &ManagedReference<Class>,
+) -> usize {
+    this.access::<StringAccessor>()
+        .unwrap()
+        .get_str()
+        .unwrap()
+        .len()
+}
+
+/// see [`self::get_Length`]
+pub extern "system" fn get_U32Length(
+    _: &CPU,
+    _: &Method<Class>,
+    this: &ManagedReference<Class>,
+) -> u32 {
+    this.access::<StringAccessor>()
+        .unwrap()
+        .get_str()
+        .unwrap()
+        .len() as u32
+}

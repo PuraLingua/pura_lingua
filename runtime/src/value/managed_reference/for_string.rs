@@ -1,4 +1,4 @@
-use std::{alloc::Layout, mem::offset_of, ptr::NonNull};
+use std::{alloc::Layout, mem::offset_of, num::NonZero, ptr::NonNull};
 
 use widestring::U16CStr;
 
@@ -104,6 +104,63 @@ impl StringAccessor {
         self.0
             .data()
             .map(|p| unsafe { U16CStr::from_ptr_str(p.cast::<u16>().as_ptr().cast_const()) })
+    }
+
+    /// Convert to MultiByte by [WideCharToMultiByte]
+    ///
+    /// Return value
+    /// * Some((..., None)) if WideCharToMultiByte fails see [Return value]
+    /// * [`None`] if self is null(could be checked by [`ManagedReference::is_null`]).
+    ///
+    /// [WideCharToMultiByte]: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
+    /// [Return value]: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte#return-value
+    #[doc(cfg(windows))]
+    #[cfg(windows)]
+    pub fn to_multi_byte(&self) -> Option<(Vec<u8>, Option<NonZero<i32>>)> {
+        windows::core::link!(
+            "kernel32.dll" "system" fn WideCharToMultiByte(
+                CodePage: u32,
+                dwFlags: u32,
+                lpWideCharStr: windows::core::PCWSTR,
+                cchWideChar: i32,
+                lpMultiByteStr: windows::core::PSTR,
+                cbMultiByte: i32,
+                lpDefaultChar: windows::core::PCSTR,
+                lpUsedDefaultChar: *mut windows::core::BOOL
+            ) -> i32
+        );
+
+        let name_wide = self.get_str()?;
+
+        let len = unsafe {
+            WideCharToMultiByte(
+                windows::Win32::Globalization::CP_ACP,
+                0,
+                windows::core::PCWSTR::from_raw(name_wide.as_ptr()),
+                -1,
+                windows::core::PSTR::null(),
+                0,
+                windows::core::PCSTR::null(),
+                std::ptr::null_mut(),
+            ) as usize
+        };
+        let mut name_out = vec![0u8; len];
+        let used_len = unsafe {
+            WideCharToMultiByte(
+                windows::Win32::Globalization::CP_ACP,
+                0,
+                windows::core::PCWSTR::from_raw(name_wide.as_ptr()),
+                -1,
+                windows::core::PSTR::from_raw(name_out.as_mut_ptr()),
+                len as _,
+                windows::core::PCSTR::null(),
+                std::ptr::null_mut(),
+            )
+        };
+
+        let used_len_non_zero = NonZero::new(used_len);
+
+        Some((name_out, used_len_non_zero))
     }
     /// With '\0' terminator, len in element
     pub fn raw_len(&self) -> Option<usize> {

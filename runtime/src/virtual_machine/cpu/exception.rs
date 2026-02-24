@@ -268,7 +268,7 @@ cfg_select! {
     ) => {
         unsafe extern "C" {
             #[link_name = "__error"]
-            fn errno_location() -> *mut libc::c_int;
+            pub fn errno_location() -> *mut libc::c_int;
         }
     }
     any(
@@ -282,19 +282,19 @@ cfg_select! {
     ) => {
         unsafe extern "C" {
             #[link_name = "__errno"]
-            fn errno_location() -> *mut libc::c_int;
+            pub fn errno_location() -> *mut libc::c_int;
         }
     }
     any(target_os = "solaris", target_os = "illumos") => {
         unsafe extern "C" {
             #[link_name = "___errno"]
-            fn errno_location() -> *mut libc::c_int;
+            pub fn errno_location() -> *mut libc::c_int;
         }
     }
     target_os = "haiku" => {
         unsafe extern "C" {
             #[link_name = "_errnop"]
-            fn errno_location() -> *mut libc::c_int;
+            pub fn errno_location() -> *mut libc::c_int;
         }
     }
     any(
@@ -307,19 +307,19 @@ cfg_select! {
 
         unsafe extern "C" {
             #[link_name = "__errno_location"]
-            fn errno_location() -> *mut libc::c_int;
+            pub fn errno_location() -> *mut libc::c_int;
         }
     }
     target_os = "aix" => {
         unsafe extern "C" {
             #[link_name = "_Errno"]
-            fn errno_location() -> *mut libc::c_int;
+            pub fn errno_location() -> *mut libc::c_int;
         }
     }
     target_os = "nto" => {
         unsafe extern "C" {
             #[link_name = "__get_errno_ptr"]
-            fn errno_location() -> *mut libc::c_int;
+            pub fn errno_location() -> *mut libc::c_int;
         }
     }
     _ => {
@@ -329,7 +329,7 @@ cfg_select! {
             }
             _ => {
                 #[allow(unused)]
-                unsafe fn errno_location() -> *mut std::ffi::c_int {
+                pub unsafe fn errno_location() -> *mut std::ffi::c_int {
                     std::ptr::null_mut()
                 }
             }

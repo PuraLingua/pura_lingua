@@ -6,6 +6,13 @@ use crate::{
 };
 
 #[cfg(unix)]
+pub fn Constructor(cpu: &CPU, method: &Method<Class>, this: &mut ManagedReference<Class>) {
+    Constructor_I32(cpu, method, this, unsafe {
+        *crate::virtual_machine::cpu::errno_location()
+    });
+}
+
+#[cfg(unix)]
 pub fn Constructor_I32(
     cpu: &CPU,
     method: &Method<Class>,
@@ -37,6 +44,11 @@ pub fn Constructor_I32(
                 .unwrap(),
         ),
     );
+}
+
+#[cfg(not(unix))]
+pub fn Constructor(_: &CPU, _: &Method<Class>, _: &mut ManagedReference<Class>) {
+    panic!("Unsupported");
 }
 
 #[cfg(not(unix))]

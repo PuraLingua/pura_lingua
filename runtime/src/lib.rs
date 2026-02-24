@@ -49,6 +49,7 @@
 #![feature(macro_metavar_expr_concat)]
 #![feature(closure_track_caller)]
 #![feature(cstr_display)]
+#![feature(doc_cfg)]
 //
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]
