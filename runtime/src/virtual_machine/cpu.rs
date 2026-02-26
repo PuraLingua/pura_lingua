@@ -1,6 +1,6 @@
 use std::{
     alloc::Layout,
-    ffi::c_void,
+    ffi::{CString, c_char, c_void},
     mem::DropGuard,
     process::Termination,
     ptr::{NonNull, Unique},
@@ -18,7 +18,7 @@ use crate::{
         method::{Method, MethodRef},
         type_handle::{MaybeUnloadedTypeHandle, TypeHandle},
     },
-    value::managed_reference::{ArrayAccessor, FieldAccessor, ManagedReference},
+    value::managed_reference::{ArrayAccessor, FieldAccessor, ManagedReference, StringAccessor},
 };
 
 use super::VirtualMachine;
@@ -439,9 +439,41 @@ impl CPU {
             });
         let mut treat_string_as_object = false;
         match cfg.encoding {
-            global::non_purus_call_configuration::StringEncoding::Utf16 => todo!(),
-            global::non_purus_call_configuration::StringEncoding::Utf8 => todo!(),
-            global::non_purus_call_configuration::StringEncoding::C_Utf16 => {
+            global::non_purus_call_configuration::StringEncoding::Utf8 => {
+                for (i, (is_by_ref, ty)) in cfg.arguments.iter().enumerate() {
+                    if *is_by_ref {
+                        continue;
+                    }
+                    if *ty == NonPurusCallType::String {
+                        let data = Box::into_non_null(
+                            unsafe { args[i].cast::<ManagedReference<Class>>().as_ref_unchecked() }
+                                .access::<StringAccessor>()
+                                .unwrap()
+                                .to_string()
+                                .unwrap()
+                                .unwrap()
+                                .into_boxed_str(),
+                        );
+                        let layout = unsafe { Layout::for_value_raw(data.as_ptr().cast_const()) };
+                        should_drop_pointers.push((data.cast(), layout));
+                        let data_ptr = std::alloc::Allocator::allocate(
+                            &std::alloc::Global,
+                            Layout::new::<*const u8>(),
+                        )
+                        .unwrap()
+                        .as_non_null_ptr();
+                        unsafe {
+                            data_ptr
+                                .cast::<*const u8>()
+                                .write(data.as_ptr().cast_const().cast())
+                        }
+                        args[i] = data_ptr.cast().as_ptr();
+                        should_drop_pointers.push((data_ptr.cast(), Layout::new::<*const u8>()));
+                    }
+                }
+            }
+            global::non_purus_call_configuration::StringEncoding::C_Utf16
+            | global::non_purus_call_configuration::StringEncoding::Utf16 => {
                 for (i, (is_by_ref, ty)) in cfg.arguments.iter().enumerate() {
                     if *is_by_ref {
                         continue;
@@ -468,7 +500,45 @@ impl CPU {
                     }
                 }
             }
-            global::non_purus_call_configuration::StringEncoding::C_Utf8 => todo!(),
+            global::non_purus_call_configuration::StringEncoding::C_Utf8 => {
+                for (i, (is_by_ref, ty)) in cfg.arguments.iter().enumerate() {
+                    if *is_by_ref {
+                        continue;
+                    }
+                    if *ty == NonPurusCallType::String {
+                        let data = Box::into_non_null(
+                            CString::new(
+                                unsafe {
+                                    args[i].cast::<ManagedReference<Class>>().as_ref_unchecked()
+                                }
+                                .access::<StringAccessor>()
+                                .unwrap()
+                                .to_string()
+                                .unwrap()
+                                .unwrap(),
+                            )
+                            .unwrap()
+                            .into_boxed_c_str(),
+                        );
+                        let layout = unsafe { Layout::for_value_raw(data.as_ptr().cast_const()) };
+                        should_drop_pointers.push((data.cast(), layout));
+                        let data_ptr = std::alloc::Allocator::allocate(
+                            &std::alloc::Global,
+                            Layout::new::<*const c_char>(),
+                        )
+                        .unwrap()
+                        .as_non_null_ptr();
+                        unsafe {
+                            data_ptr
+                                .cast::<*const c_char>()
+                                .write(data.as_ptr().cast_const().cast())
+                        }
+                        args[i] = data_ptr.cast().as_ptr();
+                        should_drop_pointers
+                            .push((data_ptr.cast(), Layout::new::<*const c_char>()));
+                    }
+                }
+            }
             global::non_purus_call_configuration::StringEncoding::Remain => {
                 treat_string_as_object = true;
             }
