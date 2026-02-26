@@ -53,6 +53,9 @@ pub enum CpuID {
 }
 
 impl CpuID {
+    pub fn new_global() -> MappedRwLockReadGuard<'static, CPU> {
+        global_vm().add_cpu().as_global_cpu().unwrap()
+    }
     pub fn as_global_cpu(&self) -> Option<MappedRwLockReadGuard<'static, CPU>> {
         global_vm().get_cpu(*self)
     }

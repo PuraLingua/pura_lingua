@@ -1,6 +1,6 @@
 use std::{
     alloc::Layout,
-    ffi::{c_char, c_schar, c_uchar},
+    ffi::{c_char, c_int, c_schar, c_uchar, c_uint},
     ptr::NonNull,
 };
 
@@ -217,6 +217,8 @@ impl NonPurusCallType {
 
     pub const Pointer: Self = Self::USize;
 
+    pub const C_Int: Self = match_size_signed::<c_int>();
+    pub const C_UInt: Self = match_size_unsigned::<c_uint>();
     pub const C_Char: Self = if is_char_signed() {
         match_size_signed::<c_char>()
     } else {

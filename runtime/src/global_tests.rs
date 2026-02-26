@@ -1,8 +1,42 @@
 use crate::{
     type_system::class::Class,
     value::managed_reference::{ManagedReference, StringAccessor},
-    virtual_machine::global_vm,
+    virtual_machine::{CpuID, global_vm},
 };
+
+#[test]
+#[cfg(unix)]
+fn gtest_utf8() -> global::Result<()> {
+    use std::ffi::c_int;
+
+    use global::non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType};
+
+    let cpu = CpuID::new_global();
+
+    let cfg = NonPurusCallConfiguration {
+        call_convention: global::attrs::CallConvention::CDecl,
+        return_type: NonPurusCallType::C_Int,
+        encoding: global::non_purus_call_configuration::StringEncoding::C_Utf8,
+        object_strategy: global::non_purus_call_configuration::ObjectStrategy::PointToData,
+        arguments: vec![(false, NonPurusCallType::String)],
+    };
+
+    let s = ManagedReference::new_string(&cpu, "aaa");
+    let (res_ptr, _res_layout) = cpu.non_purus_call(
+        &cfg,
+        libc::puts as _,
+        vec![(&raw const s).cast_mut().cast()],
+    );
+
+    unsafe {
+        libc::puts(c"bbb".as_ptr());
+    }
+    if unsafe { res_ptr.cast::<c_int>().read() } == libc::EOF {
+        panic!("Failed to call puts");
+    }
+
+    Ok(())
+}
 
 #[test]
 fn gtest_test_fn() -> global::Result<()> {
