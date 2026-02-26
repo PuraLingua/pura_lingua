@@ -50,9 +50,11 @@ fn gtest_utf8() -> global::Result<()> {
 #[test]
 #[cfg(windows)]
 fn gtest_utf8() -> global::Result<()> {
-    use std::{ffi::c_int, os::raw::c_void};
+    use std::os::raw::c_void;
 
     use global::non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType};
+
+    use crate::test_utils::LEAK_DETECTOR;
 
     windows::core::link!("kernel32.dll" "system" fn WriteConsoleA(
         hConsoleOutput: windows::Win32::Foundation::HANDLE,
@@ -65,7 +67,7 @@ fn gtest_utf8() -> global::Result<()> {
     let cpu = CpuID::new_global();
 
     let cfg = NonPurusCallConfiguration {
-        call_convention: global::attrs::CallConvention::CDecl,
+        call_convention: global::attrs::CallConvention::PlatformDefault,
         return_type: NonPurusCallType::I32,
         encoding: global::non_purus_call_configuration::StringEncoding::C_Utf8,
         object_strategy: global::non_purus_call_configuration::ObjectStrategy::PointToData,
@@ -83,11 +85,14 @@ fn gtest_utf8() -> global::Result<()> {
             windows::Win32::System::Console::STD_OUTPUT_HANDLE,
         )?
     };
-    let s = ManagedReference::new_string(&cpu, "aaa");
-    let s_len = 3u32;
+    let s = ManagedReference::new_string(&cpu, "aaa\n");
+    let s_len = 4u32;
     let mut chars_written = 0;
     let reserved = std::ptr::null::<c_void>();
-    let (res_ptr, _res_layout) = cpu.non_purus_call(
+
+    let before = LEAK_DETECTOR.get_used();
+
+    let (res_ptr, res_layout) = cpu.non_purus_call(
         &cfg,
         WriteConsoleA as _,
         vec![
@@ -102,6 +107,13 @@ fn gtest_utf8() -> global::Result<()> {
     if let Err(e) = unsafe { res_ptr.cast::<windows::core::BOOL>().read() }.ok() {
         panic!("Failed to call WriteConsoleA: {e}");
     }
+
+    unsafe {
+        std::alloc::Allocator::deallocate(&std::alloc::Global, res_ptr, res_layout);
+    }
+
+    let after = LEAK_DETECTOR.get_used();
+    assert_eq!(before, after);
 
     Ok(())
 }
