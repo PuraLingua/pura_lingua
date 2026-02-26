@@ -1,6 +1,6 @@
 use std::{
     alloc::Layout,
-    ffi::{CString, c_char, c_void},
+    ffi::{CString, c_void},
     mem::DropGuard,
     process::Termination,
     ptr::{NonNull, Unique},
@@ -526,16 +526,17 @@ impl CPU {
                         {
                             let ptr = std::alloc::Allocator::allocate(
                                 &std::alloc::Global,
-                                Layout::new::<*const c_char>(),
+                                Layout::new::<*const std::ffi::c_char>(),
                             )
                             .unwrap()
                             .as_non_null_ptr();
                             unsafe {
-                                ptr.cast::<*const c_char>()
+                                ptr.cast::<*const std::ffi::c_char>()
                                     .write(data.as_ptr().cast_const().cast())
                             }
                             args[i] = ptr.cast().as_ptr();
-                            should_drop_pointers.push((ptr.cast(), Layout::new::<*const c_char>()));
+                            should_drop_pointers
+                                .push((ptr.cast(), Layout::new::<*const std::ffi::c_char>()));
                         }
                         #[cfg(not(windows))]
                         {

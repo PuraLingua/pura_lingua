@@ -11,6 +11,8 @@ fn gtest_utf8() -> global::Result<()> {
 
     use global::non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType};
 
+    use crate::test_utils::LEAK_DETECTOR;
+
     let cpu = CpuID::new_global();
 
     let cfg = NonPurusCallConfiguration {
@@ -22,18 +24,25 @@ fn gtest_utf8() -> global::Result<()> {
     };
 
     let s = ManagedReference::new_string(&cpu, "aaa");
-    let (res_ptr, _res_layout) = cpu.non_purus_call(
+
+    let before = LEAK_DETECTOR.get_used();
+
+    let (res_ptr, res_layout) = cpu.non_purus_call(
         &cfg,
         libc::puts as _,
         vec![(&raw const s).cast_mut().cast()],
     );
 
-    unsafe {
-        libc::puts(c"bbb".as_ptr());
-    }
     if unsafe { res_ptr.cast::<c_int>().read() } == libc::EOF {
         panic!("Failed to call puts");
     }
+
+    unsafe {
+        std::alloc::Allocator::deallocate(&std::alloc::Global, res_ptr, res_layout);
+    }
+
+    let after = LEAK_DETECTOR.get_used();
+    assert_eq!(before, after);
 
     Ok(())
 }
