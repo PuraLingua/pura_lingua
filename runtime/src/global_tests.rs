@@ -54,7 +54,7 @@ fn gtest_utf8() -> global::Result<()> {
 
     use global::non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType};
 
-    use crate::test_utils::LEAK_DETECTOR;
+    use crate::{test_utils::LEAK_DETECTOR, virtual_machine::cpu::CPU};
 
     windows::core::link!("kernel32.dll" "system" fn WriteConsoleA(
         hConsoleOutput: windows::Win32::Foundation::HANDLE,
@@ -90,30 +90,38 @@ fn gtest_utf8() -> global::Result<()> {
     let mut chars_written = 0;
     let reserved = std::ptr::null::<c_void>();
 
-    let before = LEAK_DETECTOR.get_used();
+    LEAK_DETECTOR.scope_with(
+        |cpu: &CPU, cfg, stdout_handle, s, s_len, chars_written, reserved| {
+            let (res_ptr, res_layout) = cpu.non_purus_call(
+                cfg,
+                WriteConsoleA as _,
+                vec![
+                    (&raw const stdout_handle).cast_mut().cast(),
+                    (&raw const s).cast_mut().cast(),
+                    (&raw const s_len).cast_mut().cast(),
+                    (&raw mut *chars_written).cast(),
+                    (&raw const reserved).cast_mut().cast(),
+                ],
+            );
 
-    let (res_ptr, res_layout) = cpu.non_purus_call(
-        &cfg,
-        WriteConsoleA as _,
-        vec![
-            (&raw const stdout_handle).cast_mut().cast(),
-            (&raw const s).cast_mut().cast(),
-            (&raw const s_len).cast_mut().cast(),
-            (&raw mut chars_written).cast(),
-            (&raw const reserved).cast_mut().cast(),
-        ],
+            if let Err(e) = unsafe { res_ptr.cast::<windows::core::BOOL>().read() }.ok() {
+                panic!("Failed to call WriteConsoleA: {e}");
+            }
+
+            unsafe {
+                std::alloc::Allocator::deallocate(&std::alloc::Global, res_ptr, res_layout);
+            }
+        },
+        (
+            &*cpu,
+            &cfg,
+            stdout_handle,
+            s,
+            s_len,
+            &mut chars_written,
+            reserved,
+        ),
     );
-
-    if let Err(e) = unsafe { res_ptr.cast::<windows::core::BOOL>().read() }.ok() {
-        panic!("Failed to call WriteConsoleA: {e}");
-    }
-
-    unsafe {
-        std::alloc::Allocator::deallocate(&std::alloc::Global, res_ptr, res_layout);
-    }
-
-    let after = LEAK_DETECTOR.get_used();
-    assert_eq!(before, after);
 
     Ok(())
 }
