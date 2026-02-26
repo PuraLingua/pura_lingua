@@ -116,7 +116,7 @@ impl StringAccessor {
     /// [Return value]: https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte#return-value
     #[doc(cfg(windows))]
     #[cfg(windows)]
-    pub fn to_multi_byte(&self) -> Option<(Vec<u8>, Option<NonZero<i32>>)> {
+    pub fn to_multi_byte(&self) -> Option<(Vec<u8>, Option<std::num::NonZero<i32>>)> {
         windows::core::link!(
             "kernel32.dll" "system" fn WideCharToMultiByte(
                 CodePage: u32,
@@ -158,7 +158,7 @@ impl StringAccessor {
             )
         };
 
-        let used_len_non_zero = NonZero::new(used_len);
+        let used_len_non_zero = std::num::NonZero::new(used_len);
 
         Some((name_out, used_len_non_zero))
     }
