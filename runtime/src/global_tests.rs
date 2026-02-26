@@ -39,6 +39,65 @@ fn gtest_utf8() -> global::Result<()> {
 }
 
 #[test]
+#[cfg(windows)]
+fn gtest_utf8() -> global::Result<()> {
+    use std::{ffi::c_int, os::raw::c_void};
+
+    use global::non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType};
+
+    windows::core::link!("kernel32.dll" "system" fn WriteConsoleA(
+        hConsoleOutput: windows::Win32::Foundation::HANDLE,
+        lpBuffer : windows::core::PCSTR,
+        nNumberOfCharsToWrite : u32,
+        lpNumberOfCharsWritten : *mut u32,
+        lpReserved : *const core::ffi::c_void
+    ) -> windows::core::BOOL);
+
+    let cpu = CpuID::new_global();
+
+    let cfg = NonPurusCallConfiguration {
+        call_convention: global::attrs::CallConvention::CDecl,
+        return_type: NonPurusCallType::I32,
+        encoding: global::non_purus_call_configuration::StringEncoding::C_Utf8,
+        object_strategy: global::non_purus_call_configuration::ObjectStrategy::PointToData,
+        arguments: vec![
+            (false, NonPurusCallType::Pointer),
+            (false, NonPurusCallType::String),
+            (false, NonPurusCallType::U32),
+            (true, NonPurusCallType::U32),
+            (false, NonPurusCallType::Pointer),
+        ],
+    };
+
+    let stdout_handle = unsafe {
+        windows::Win32::System::Console::GetStdHandle(
+            windows::Win32::System::Console::STD_OUTPUT_HANDLE,
+        )?
+    };
+    let s = ManagedReference::new_string(&cpu, "aaa");
+    let s_len = 3u32;
+    let mut chars_written = 0;
+    let reserved = std::ptr::null::<c_void>();
+    let (res_ptr, _res_layout) = cpu.non_purus_call(
+        &cfg,
+        WriteConsoleA as _,
+        vec![
+            (&raw const stdout_handle).cast_mut().cast(),
+            (&raw const s).cast_mut().cast(),
+            (&raw const s_len).cast_mut().cast(),
+            (&raw mut chars_written).cast(),
+            (&raw const reserved).cast_mut().cast(),
+        ],
+    );
+
+    if let Err(e) = unsafe { res_ptr.cast::<windows::core::BOOL>().read() }.ok() {
+        panic!("Failed to call WriteConsoleA: {e}");
+    }
+
+    Ok(())
+}
+
+#[test]
 fn gtest_test_fn() -> global::Result<()> {
     let vm = global_vm();
 

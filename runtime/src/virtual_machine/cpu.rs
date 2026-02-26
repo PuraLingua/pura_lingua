@@ -522,7 +522,25 @@ impl CPU {
                         );
                         let layout = unsafe { Layout::for_value_raw(data.as_ptr().cast_const()) };
                         should_drop_pointers.push((data.cast(), layout));
-                        args[i] = data.cast().as_ptr();
+                        #[cfg(windows)]
+                        {
+                            let ptr = std::alloc::Allocator::allocate(
+                                &std::alloc::Global,
+                                Layout::new::<*const c_char>(),
+                            )
+                            .unwrap()
+                            .as_non_null_ptr();
+                            unsafe {
+                                ptr.cast::<*const c_char>()
+                                    .write(data.as_ptr().cast_const().cast())
+                            }
+                            args[i] = ptr.cast().as_ptr();
+                            should_drop_pointers.push((ptr.cast(), Layout::new::<*const c_char>()));
+                        }
+                        #[cfg(not(windows))]
+                        {
+                            args[i] = data.cast().as_ptr();
+                        }
                     }
                 }
             }
