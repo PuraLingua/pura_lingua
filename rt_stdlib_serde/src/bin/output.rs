@@ -6,7 +6,13 @@ enum OutputKind {
 
 fn main() -> global::Result<()> {
     let mut file = cfg_select! {
-        windows => { unsafe { <File as std::os::windows::io::FromRawHandle>::from_raw_handle(std::io::stdout()) } }
+        windows => {
+            unsafe {
+                <File as std::os::windows::io::FromRawHandle>::from_raw_handle(
+                    <_ as std::os::windows::io::AsRawHandle>::as_raw_handle(&std::io::stdout())
+                )
+            }
+        }
         unix => { File::create("/dev/stdout")? }
     };
     let mut kind = OutputKind::Json;
