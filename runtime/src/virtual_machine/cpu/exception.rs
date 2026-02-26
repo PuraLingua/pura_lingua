@@ -160,7 +160,7 @@ impl ThrowHelper {
                         .assembly_manager()
                         .get_core_type(CoreTypeId::System_DlErrorException)
                         .into(),
-                    System_Exception_MethodId::Constructor_String as u32,
+                    &System_Exception_MethodId::Constructor_String.into(),
                     &[(&*message as *const ManagedReference<Class>)
                         .cast_mut()
                         .cast()],

@@ -29,7 +29,6 @@
 #![feature(try_trait_v2)]
 #![feature(try_trait_v2_residual)]
 #![feature(ptr_metadata)]
-#![feature(cfg_select)]
 #![feature(adt_const_params)]
 //
 #![allow(internal_features)]

@@ -1,4 +1,4 @@
-use std::{alloc::Layout, mem::offset_of, num::NonZero, ptr::NonNull};
+use std::{alloc::Layout, mem::offset_of, ptr::NonNull};
 
 use widestring::U16CStr;
 

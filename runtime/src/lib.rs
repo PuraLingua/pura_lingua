@@ -20,7 +20,6 @@
 #![feature(clone_from_ref)]
 #![feature(core_intrinsics)]
 #![feature(ptr_alignment_type)]
-#![feature(cfg_select)]
 #![feature(slice_ptr_get)]
 #![feature(specialization)]
 #![feature(lock_value_accessors)]

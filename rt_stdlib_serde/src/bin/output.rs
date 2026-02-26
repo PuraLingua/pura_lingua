@@ -1,9 +1,4 @@
-#![feature(cfg_select)]
-
-use std::{
-    fs::File,
-    os::windows::io::{AsRawHandle, FromRawHandle},
-};
+use std::fs::File;
 
 enum OutputKind {
     Json,
@@ -11,8 +6,8 @@ enum OutputKind {
 
 fn main() -> global::Result<()> {
     let mut file = cfg_select! {
-        windows => { unsafe { File::from_raw_handle(std::io::stdout().as_raw_handle()) } }
-        unix => { File::new("/dev/stdout")? }
+        windows => { unsafe { <File as std::os::windows::io::FromRawHandle>::from_raw_handle(std::io::stdout()) } }
+        unix => { File::create("/dev/stdout")? }
     };
     let mut kind = OutputKind::Json;
     let mut args = std::env::args().skip(1);
