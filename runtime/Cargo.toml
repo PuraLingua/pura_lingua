@@ -39,3 +39,9 @@ features = [
 
 [target.'cfg(unix)'.dependencies.libc]
 version = "1.0.0-alpha.3"
+
+[features]
+default = ["__when_impl"]
+__when_impl = []
+__when_not_impl = []
+__when_serialize = []

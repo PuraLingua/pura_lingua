@@ -5,6 +5,7 @@ use std::{
 };
 
 use enumflags2::BitFlags;
+use global::attrs::CallConvention;
 
 use crate::{
     type_system::get_traits::{GetAssemblyRef, GetNonGenericTypeHandleKind, GetTypeVars},
@@ -48,6 +49,11 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         if !self.attr.is_static() {
             let this = this.unwrap();
             complete_arg.push((&raw const *this).cast_mut().cast());
+        }
+
+        #[cfg(debug_assertions)]
+        if self.call_convention() != CallConvention::CDeclWithVararg {
+            assert_eq!(args.len(), self.args.len());
         }
 
         for (ind, a) in args.iter().enumerate() {

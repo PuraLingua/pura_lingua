@@ -1,13 +1,15 @@
 #![feature(decl_macro)]
+#![feature(const_trait_impl)]
+#![feature(const_convert)]
 #![allow(clippy::manual_non_exhaustive)]
 #![allow(nonstandard_style)]
 
-use global::{AllVariants, num_enum::TryFromPrimitive};
+use global::{AllVariants, AllVariantsName, num_enum::TryFromPrimitive};
 
 pub mod definitions;
 
 #[repr(u32)]
-#[derive(TryFromPrimitive, Clone, Copy, AllVariants, PartialEq, Eq)]
+#[derive(TryFromPrimitive, Clone, Copy, AllVariants, AllVariantsName, PartialEq, Eq)]
 #[num_enum(crate = ::global::num_enum)]
 pub enum CoreTypeId {
     System_Object,
@@ -58,7 +60,24 @@ pub enum CoreTypeId {
     System_DlErrorException,
 }
 
+#[derive(Clone, PartialEq, Eq)]
+pub enum CoreTypeRef {
+    Core(CoreTypeId),
+    WithGeneric(CoreTypeId, Vec<Self>),
+    Generic(u32),
+}
+
+impl const From<CoreTypeId> for CoreTypeRef {
+    #[inline(always)]
+    fn from(value: CoreTypeId) -> Self {
+        Self::Core(value)
+    }
+}
+
 impl CoreTypeId {
+    pub const fn raw_name(self) -> &'static str {
+        Self::ALL_VARIANTS_NAME[self as u32 as usize]
+    }
     pub const fn name(&self) -> &'static str {
         match self {
             Self::System_Object => "System::Object",

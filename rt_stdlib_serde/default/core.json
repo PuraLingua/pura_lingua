@@ -1,0 +1,2185 @@
+[
+    {
+        "id": "System_Object",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::Object",
+        "generic_count": null,
+        "parent": null,
+        "methods": [
+            {
+                "id": 0,
+                "name": "~",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 2,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_ValueType",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::ValueType",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Void",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Void",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Nullable_1",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Nullable`1",
+        "generic_count": {
+            "count": 1,
+            "is_infinite": false
+        },
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "Initialize",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "WithGeneric": [
+                                "System_Nullable_1",
+                                [
+                                    {
+                                        "Generic": 0
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Generic": 0
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "_Inner",
+                "attr": {
+                    "vis": "Private",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Generic": 0
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_Boolean",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Boolean",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_UInt8",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::UInt8",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_UInt8"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_UInt16",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::UInt16",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_UInt16"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_UInt32",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::UInt32",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_UInt32"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_UInt64",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::UInt64",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_UInt64"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_USize",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::USize",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_USize"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Int8",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Int8",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_Int8"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Int16",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Int16",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_Int16"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Int32",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Int32",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_Int32"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Int64",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Int64",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_Int64"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_ISize",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::ISize",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 1
+                        },
+                        "ty": {
+                            "Core": "System_ISize"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Char",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Char",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Pointer",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Pointer",
+        "generic_count": null,
+        "parent": null,
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "Null",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1
+                },
+                "ty": {
+                    "Core": "System_Pointer"
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_NonPurusCallConfiguration",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::NonPurusCallConfiguration",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [
+            {
+                "id": 2,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_UInt8"
+                        }
+                    },
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_NonPurusCallType"
+                        }
+                    },
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_UInt8"
+                        }
+                    },
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_UInt8"
+                        }
+                    },
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "WithGeneric": [
+                                "System_Array_1",
+                                [
+                                    {
+                                        "Core": "System_USize"
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "WithGeneric": [
+                                "System_Array_1",
+                                [
+                                    {
+                                        "Core": "System_NonPurusCallType"
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 3,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "CallConvention",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_UInt8"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ReturnType",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 2,
+                "name": "Encoding",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_UInt8"
+                }
+            },
+            {
+                "id": 3,
+                "name": "ObjectStrategy",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_UInt8"
+                }
+            },
+            {
+                "id": 4,
+                "name": "ByRefArguments",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "WithGeneric": [
+                        "System_Array_1",
+                        [
+                            {
+                                "Core": "System_USize"
+                            }
+                        ]
+                    ]
+                }
+            },
+            {
+                "id": 5,
+                "name": "Arguments",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "WithGeneric": [
+                        "System_Array_1",
+                        [
+                            {
+                                "Core": "System_NonPurusCallType"
+                            }
+                        ]
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_NonPurusCallType",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::NonPurusCallType",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 2,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 3,
+                "name": "CreateVoid",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 4,
+                "name": "CreateU8",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 5,
+                "name": "CreateI8",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 6,
+                "name": "CreateU16",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 7,
+                "name": "CreateI16",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 8,
+                "name": "CreateU32",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 9,
+                "name": "CreateI32",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 10,
+                "name": "CreateU64",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 11,
+                "name": "CreateI64",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 12,
+                "name": "CreatePointer",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 13,
+                "name": "CreateString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 14,
+                "name": "CreateObject",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            },
+            {
+                "id": 15,
+                "name": "CreateStructure",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "WithGeneric": [
+                                "System_Array_1",
+                                [
+                                    {
+                                        "Core": "System_NonPurusCallType"
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_NonPurusCallType"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "Discriminant",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_UInt8"
+                }
+            },
+            {
+                "id": 1,
+                "name": "Types",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "WithGeneric": [
+                        "System_Nullable_1",
+                        [
+                            {
+                                "WithGeneric": [
+                                    "System_Array_1",
+                                    [
+                                        {
+                                            "Core": "System_NonPurusCallType"
+                                        }
+                                    ]
+                                ]
+                            }
+                        ]
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_DynamicLibrary",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::DynamicLibrary",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [
+            {
+                "id": 0,
+                "name": "~",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": 0,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 2,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_String"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 3,
+                "name": "GetSymbol",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_String"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Pointer"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 4,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "_handle",
+                "attr": {
+                    "vis": "Private",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_Pointer"
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_Array_1",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::Array`1",
+        "generic_count": {
+            "count": 1,
+            "is_infinite": false
+        },
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [
+            {
+                "id": 0,
+                "name": "~",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": 0,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": 1,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            },
+            {
+                "id": 2,
+                "name": "GetPointerOfIndex",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Private",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Pointer"
+                }
+            },
+            {
+                "id": 3,
+                "name": "get_Index",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": [
+                        {
+                            "Core": "System_Object"
+                        },
+                        {
+                            "Core": "System_USize"
+                        },
+                        {
+                            "Core": "System_Pointer"
+                        },
+                        {
+                            "Core": "System_USize"
+                        },
+                        {
+                            "Generic": 0
+                        }
+                    ]
+                },
+                "args": [],
+                "return_type": {
+                    "Generic": 0
+                }
+            },
+            {
+                "id": 4,
+                "name": "set_Index",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": [
+                        {
+                            "Core": "System_Object"
+                        },
+                        {
+                            "Core": "System_USize"
+                        },
+                        {
+                            "Generic": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        },
+                        {
+                            "Core": "System_Pointer"
+                        }
+                    ]
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 5,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_String",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::String",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": 1,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            },
+            {
+                "id": 2,
+                "name": "get_Length",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_USize"
+                }
+            },
+            {
+                "id": 3,
+                "name": "get_U32Length",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_UInt32"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 4,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_LargeString",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::LargeString",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": 1,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 2,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Environment",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::Environment",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 2,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "NewLine",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_String"
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_Exception",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::Exception",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Object"
+        },
+        "methods": [
+            {
+                "id": 1,
+                "name": "ToString",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": 1,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_String"
+                }
+            },
+            {
+                "id": 2,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 4,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_String"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 3,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "_message",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_String"
+                }
+            },
+            {
+                "id": 1,
+                "name": "_innerException",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "WithGeneric": [
+                        "System_Nullable_1",
+                        [
+                            {
+                                "Core": "System_Exception"
+                            }
+                        ]
+                    ]
+                }
+            },
+            {
+                "id": 2,
+                "name": "_stackTrace",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "WithGeneric": [
+                        "System_Array_1",
+                        [
+                            {
+                                "Core": "System_String"
+                            }
+                        ]
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_InvalidEnumException",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::InvalidEnumException",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Exception"
+        },
+        "methods": [
+            {
+                "id": 3,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_String"
+                        }
+                    },
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_String"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 4,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
+        "id": "System_Win32Exception",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::Win32Exception",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Exception"
+        },
+        "methods": [
+            {
+                "id": 3,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 4,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_Int32"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 5,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 3,
+                "name": "_Code",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_Int32"
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_ErrnoException",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::ErrnoException",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Exception"
+        },
+        "methods": [
+            {
+                "id": 3,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 4,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    {
+                        "attr": {
+                            "impl_flags": 0
+                        },
+                        "ty": {
+                            "Core": "System_Int32"
+                        }
+                    }
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 5,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 3,
+                "name": "_Code",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_Int32"
+                }
+            }
+        ]
+    },
+    {
+        "id": "System_DlErrorException",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::DlErrorException",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Exception"
+        },
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 3,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    }
+]

@@ -18,6 +18,8 @@ members = [
 	"rt_proc_macros",
 	"rt_stdlib",
 	"rt_stdlib_proc_macros",
+	"rt_stdlib_serde",
+	"./rt_stdlib_serde_proc_macros",
 	"runtime",
 	"string_name",
 ]
@@ -30,6 +32,7 @@ global = { workspace = true, optional = true }
 binary = { path = "./binary", package = "pura_lingua_binary", optional = true }
 stdlib_header = { path = "./rt_stdlib", package = "pura_lingua_runtime_stdlib", optional = true }
 dynamic = { path = "./dynamic", package = "pura_lingua_dynamic", optional = true }
+stdlib_header_serde = { path = "./rt_stdlib_serde", package = "pura_lingua_runtime_stdlib_serde", optional = true }
 
 [workspace.dependencies]
 global = { package = "pura_lingua_global", path = "./global" }
@@ -51,7 +54,7 @@ konst = { version = "0.4", features = [
 	"const_panic_derive",
 ] }
 either = { version = "1.15" }
-enumflags2 = { version = "0.7.11", features = ["std"] }
+enumflags2 = { version = "0.7.11", features = ["std", "serde"] }
 derive_more = { version = "2.0.1", features = ["full", "std"] }
 paste = "1.0.15"
 const_format = "0.2.35"
@@ -72,5 +75,5 @@ indexmap = { version = "2.13" }
 default = []
 basic = ["dep:global"]
 binary = ["basic", "dep:binary"]
-stdlib_header = ["dep:stdlib_header"]
+stdlib_header = ["dep:stdlib_header", "dep:stdlib_header_serde"]
 dynamic = ["dep:dynamic"]

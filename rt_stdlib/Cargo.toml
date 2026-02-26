@@ -6,3 +6,11 @@ version.workspace = true
 [dependencies]
 global = { workspace = true }
 proc_macros = { package = "pura_lingua_runtime_stdlib_proc_macros", path = "../rt_stdlib_proc_macros" }
+
+serde = { version = "1.0", features = ["derive"] }
+
+[features]
+default = ["__when_not_impl"]
+__when_impl = []
+__when_not_impl = []
+__when_serialize = []

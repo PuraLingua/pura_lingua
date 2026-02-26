@@ -37,6 +37,7 @@ pub enum PredefinedCrateName {
 
     Runtime,
     RuntimeStdlib,
+    RuntimeStdlibSerde,
 }
 
 impl PredefinedCrateName {
@@ -51,6 +52,7 @@ impl PredefinedCrateName {
 
             Self::Runtime => "pura_lingua_runtime",
             Self::RuntimeStdlib => "pura_lingua_runtime_stdlib",
+            Self::RuntimeStdlibSerde => "pura_lingua_runtime_stdlib_serde",
         }
     }
     pub fn as_ident(&self, span: Span) -> Ident {

@@ -1,8 +1,13 @@
 use std::ptr::{NonNull, Unique};
 
+use either::Either;
 use global::traits::IUnwrap;
+use stdlib_header::CoreTypeRef;
 
-use crate::type_system::{class::Class, r#struct::Struct, type_ref::TypeRef};
+use crate::{
+    stdlib::CoreTypeIdConstExt,
+    type_system::{class::Class, r#struct::Struct, type_ref::TypeRef},
+};
 
 use super::{MaybeUnloadedTypeHandle, NonGenericTypeHandle, TypeHandle};
 
@@ -27,6 +32,19 @@ impl const From<Unique<Class>> for NonGenericTypeHandle {
 impl const From<Unique<Struct>> for NonGenericTypeHandle {
     fn from(value: Unique<Struct>) -> Self {
         Self::Struct(value.as_non_null_ptr())
+    }
+}
+
+impl From<CoreTypeRef> for MaybeUnloadedTypeHandle {
+    fn from(value: CoreTypeRef) -> Self {
+        match value {
+            CoreTypeRef::Core(core_type_id) => core_type_id.static_type_ref().into(),
+            CoreTypeRef::WithGeneric(main, generics) => Self::Unloaded(TypeRef::Specific {
+                assembly_and_index: Either::Right(Box::new(main.static_type_ref().into())),
+                types: generics.into_iter().map(Self::from).collect(),
+            }),
+            CoreTypeRef::Generic(g) => Self::Loaded(TypeHandle::Generic(g)),
+        }
     }
 }
 

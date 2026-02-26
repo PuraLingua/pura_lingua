@@ -1,3 +1,4 @@
+// cSpell:disable
 #![feature(proc_macro_totokens)]
 #![feature(extend_one)]
 #![feature(decl_macro)]
@@ -6,6 +7,7 @@
 #![feature(const_default)]
 #![feature(const_try)]
 #![allow(static_mut_refs)]
+// cSpell:enable
 
 mod all_variants;
 mod attr;
@@ -21,7 +23,7 @@ use proc_macro_utils::macro_definitions::{define_derive_macros, define_macros};
 use with_type::*;
 
 use crate::{
-    all_variants::derive_all_variants_impl,
+    all_variants::{derive_all_variants_impl, derive_all_variants_name_impl},
     attr::{CreateAttrAst, create_attr_impl},
     custom_partial_eq::derive_custom_partial_eq_impl,
     define_instruction::{DefineInstructionAst, define_instruction_impl},
@@ -30,6 +32,7 @@ use crate::{
 
 define_derive_macros! {
     AllVariants[] => derive_all_variants_impl;
+    AllVariantsName[] => derive_all_variants_name_impl;
     WithType[with_type] => derive_with_type_impl;
     ThreadSafe[] => derive_thread_safe_impl;
     CustomPartialEq[custom_eq, fully_eq] => derive_custom_partial_eq_impl;

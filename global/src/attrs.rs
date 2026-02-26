@@ -15,7 +15,17 @@ pub enum FieldImplementationFlags {
 }
 
 #[derive(
-    Clone, Copy, Debug, ctor, CopyGetters, Setters, MutGetters, ReadFromSection, WriteToSection,
+    Clone,
+    Copy,
+    Debug,
+    ctor,
+    CopyGetters,
+    Setters,
+    MutGetters,
+    ReadFromSection,
+    WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[ctor(pub new)]
 #[getset(set = "pub", get_mut = "pub")]
@@ -81,20 +91,31 @@ impl std::fmt::Display for CallConvention {
 }
 
 #[derive(
-    Clone, CopyGetters, Debug, ctor, Setters, MutGetters, Getters, ReadFromSection, WriteToSection,
+    Clone,
+    CopyGetters,
+    Debug,
+    ctor,
+    Setters,
+    MutGetters,
+    Getters,
+    ReadFromSection,
+    WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[ctor(pub new)]
 #[getset(set = "pub", get_mut = "pub")]
 #[get_copy = "pub"]
+#[serde(deny_unknown_fields)]
 pub struct MethodAttr<TType> {
-    vis: Visibility,
-    impl_flags: BitFlags<MethodImplementationFlags>,
+    pub vis: Visibility,
+    pub impl_flags: BitFlags<MethodImplementationFlags>,
     #[getset(skip)]
     #[getset(get = "pub", get_mut = "pub")]
-    overrides: Option<u32>,
+    pub overrides: Option<u32>,
     #[getset(skip)]
     #[get = "pub"]
-    local_variable_types: Vec<TType>,
+    pub local_variable_types: Vec<TType>,
 }
 
 impl<TType> MethodAttr<TType> {
@@ -170,6 +191,8 @@ impl<TType> MethodAttr<Option<TType>> {
     MutGetters,
     ReadFromSection,
     WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[ctor(pub const new)]
 #[getset(set = "pub", get_mut = "pub")]
@@ -202,6 +225,8 @@ pub enum ParameterImplementationFlags {
     PartialEq,
     ReadFromSection,
     WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[repr(u8)]
 pub enum Visibility {
@@ -212,11 +237,21 @@ pub enum Visibility {
 
 #[repr(u8)]
 #[derive(
-    Clone, Copy, Debug, UnwrapEnum, WithType, Eq, PartialEq, ReadFromSection, WriteToSection,
+    Clone,
+    Copy,
+    Debug,
+    UnwrapEnum,
+    WithType,
+    Eq,
+    PartialEq,
+    ReadFromSection,
+    WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[with_type(derive = (TryFromPrimitive, IntoPrimitive, Clone, Copy, ReadFromSection,
     WriteToSection,))]
-#[unwrap_enum(ref, ref_mut)]
+#[unwrap_enum(ref, ref_mut, owned)]
 pub enum TypeSpecificAttr {
     Class(BitFlags<ClassImplementationFlags>),
     Struct(BitFlags<StructImplementationFlags>),
@@ -228,9 +263,7 @@ impl TypeSpecificAttr {
         match self {
             TypeSpecificAttr::Class(flags) => flags.contains(ClassImplementationFlags::Partial),
             TypeSpecificAttr::Struct(flags) => flags.contains(StructImplementationFlags::Partial),
-            TypeSpecificAttr::Interface(flags) => {
-                flags.contains(InterfaceImplementationFlags::Partial)
-            }
+            TypeSpecificAttr::Interface(_flags) => false,
         }
     }
 }
@@ -255,7 +288,7 @@ pub enum ClassImplementationFlags {
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum InterfaceImplementationFlags {
-    Partial,
+    __,
 }
 
 #[repr(C)]
@@ -271,6 +304,8 @@ pub enum InterfaceImplementationFlags {
     PartialEq,
     ReadFromSection,
     WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[ctor(pub new)]
 #[getset(set = "pub", get_mut = "pub")]

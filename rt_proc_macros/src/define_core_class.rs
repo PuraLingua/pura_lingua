@@ -1,96 +1,118 @@
-use std::sync::OnceLock;
-
 use proc_macro_utils::crate_name_resolution::PredefinedCrateName;
 use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, format_ident, quote};
+use quote::{ToTokens, quote};
 
 use shared::define_core_class::*;
 
 pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
     let runtime_crate = PredefinedCrateName::Runtime.as_ident(Span::call_site());
+    let global_crate = PredefinedCrateName::Global.as_ident(Span::call_site());
+    let stdlib_header_crate = PredefinedCrateName::RuntimeStdlib.as_ident(Span::call_site());
 
-    let field_id_enum_ident = format_ident!("{}_FieldId", ast.id);
-    let method_id_enum_ident = format_ident!("{}_MethodId", ast.id);
-    let static_method_id_enum_ident = format_ident!("{}_StaticMethodId", ast.id);
+    let field_id_enum_ident = ast.field_id_enum_ident();
+    let method_id_enum_ident = ast.method_id_enum_ident();
+    let static_method_id_enum_ident = ast.static_method_id_enum_ident();
     let assembly_name = &ast.assembly_name;
     let attr = &ast.attr.inner;
     let id = &ast.id;
     let name = &ast.name;
     let method_generator = &ast.method_generator;
 
+    let field_definition = ast.define_fields(&[]);
+
     let field_ids = ast.fields.iter().map(|x| &x.id).collect::<Vec<_>>();
-    let field_id_contents = ast.fields.iter().fold(Vec::new(), |mut out, _| {
-        if let Some(last) = out.last().cloned() {
-            out.push(quote!(1u32 + #last));
-        } else {
-            out.push(match ast.field_parent.as_ref() {
-                Some(parent) => {
-                    quote!(#parent::__END as u32)
-                }
-                None => {
-                    quote!(0u32)
-                }
-            });
-        }
-        out
-    });
     let field_attrs = ast.fields.iter().map(|x| &x.attr.inner).collect::<Vec<_>>();
     let field_names = ast.fields.iter().map(|x| &x.name).collect::<Vec<_>>();
     let field_types = ast.fields.iter().map(|x| &x.ty).collect::<Vec<_>>();
 
-    let overriding_method_ids = &ast.overriding_method_ids;
-    let overriding_method_id_contents = {
-        let once_parent = OnceLock::new();
-        overriding_method_ids
-            .iter()
-            .try_fold(Vec::new(), |mut out, id| {
-                let parent = once_parent.get_or_try_init(|| {
-                    ast.method_parent.clone().ok_or(syn::Error::new(
-                        Span::call_site(),
-                        "Override methods require method parents",
-                    ))
-                })?;
-                out.push(quote! {
-                    (#parent::#id as u32)
-                });
-                Ok::<_, syn::Error>(out)
-            })?
-    };
+    let method_definition = ast.define_methods(&[])?;
 
-    let method_ids = ast.method_ids.iter().collect::<Vec<_>>();
-    let method_id_contents = ast.method_ids.iter().try_fold(Vec::new(), |mut out, id| {
-        if overriding_method_ids.contains(id) {
-            return Ok(out);
-        }
-        if let Some(last) = out.last() {
-            out.push(quote!(1u32 + #last));
-        } else {
-            out.push(match ast.method_parent.as_ref() {
-                Some(parent) => {
-                    quote!(#parent::__END as u32)
-                }
-                None => {
-                    quote!(0u32)
-                }
-            });
-        }
-        Ok::<_, syn::Error>(out)
-    })?;
+    let overriding_method_ids = ast
+        .overriding_method_ids
+        .iter()
+        .map(|x| &x.id)
+        .collect::<Vec<_>>();
+    let overriding_method_names = ast
+        .overriding_method_ids
+        .iter()
+        .map(|x| &x.name)
+        .collect::<Vec<_>>();
+    let overriding_method_attrs = ast
+        .overriding_method_ids
+        .iter()
+        .map(|x| &x.attr.inner)
+        .collect::<Vec<_>>();
+    let overriding_method_parameters = ast
+        .overriding_method_ids
+        .iter()
+        .map(|x| {
+            x.parameters
+                .iter()
+                .map(crate::parameter2token_stream)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let overriding_method_return_types = ast
+        .overriding_method_ids
+        .iter()
+        .map(|x| &x.return_type)
+        .collect::<Vec<_>>();
 
-    let method_end_content = if method_id_contents.is_empty() {
-        match ast.method_parent.as_ref() {
-            Some(parent) => {
-                quote!(= #parent::__END as u32)
-            }
-            None => {
-                quote!(= 0u32)
-            }
-        }
-    } else {
-        quote!()
-    };
+    let method_ids = ast.method_ids.iter().map(|x| &x.id).collect::<Vec<_>>();
+    let method_names = ast.method_ids.iter().map(|x| &x.name).collect::<Vec<_>>();
+    let method_attrs = ast
+        .method_ids
+        .iter()
+        .map(|x| &x.attr.inner)
+        .collect::<Vec<_>>();
+    let method_parameters = ast
+        .method_ids
+        .iter()
+        .map(|x| {
+            x.parameters
+                .iter()
+                .map(crate::parameter2token_stream)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let method_return_types = ast
+        .method_ids
+        .iter()
+        .map(|x| &x.return_type)
+        .collect::<Vec<_>>();
 
-    let static_method_ids = &ast.static_method_ids;
+    let static_method_definition = ast.define_static_methods(&[]);
+
+    let static_method_ids = ast
+        .static_method_ids
+        .iter()
+        .map(|x| &x.id)
+        .collect::<Vec<_>>();
+    let static_method_names = ast
+        .static_method_ids
+        .iter()
+        .map(|x| &x.name)
+        .collect::<Vec<_>>();
+    let static_method_attrs = ast
+        .static_method_ids
+        .iter()
+        .map(|x| &x.attr.inner)
+        .collect::<Vec<_>>();
+    let static_method_parameters = ast
+        .static_method_ids
+        .iter()
+        .map(|x| {
+            x.parameters
+                .iter()
+                .map(crate::parameter2token_stream)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let static_method_return_types = ast
+        .static_method_ids
+        .iter()
+        .map(|x| &x.return_type)
+        .collect::<Vec<_>>();
 
     let generic_bounds = match &ast.generic_bounds {
         Some(e) => e.to_token_stream(),
@@ -103,38 +125,155 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
     };
 
     Ok(quote! {
-        #[repr(u32)]
-        pub enum #field_id_enum_ident {
-            #(
-                #field_ids = #field_id_contents,
-            )*
+        #field_definition
 
-            #[doc(hidden)]
-            __END,
+        impl #field_id_enum_ident {
+            pub fn get_attr(&self) -> #global_crate::attrs::FieldAttr {
+                match self {
+                    #(
+                        Self::#field_ids => #global_crate::attr!(
+                            field #field_attrs
+                        ),
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
         }
 
-        #[repr(u32)]
-        pub enum #method_id_enum_ident {
-            #(
-                #overriding_method_ids = #overriding_method_id_contents,
-            )*
-            #(
-                #method_ids = #method_id_contents,
-            )*
+        #method_definition
 
-            #[doc(hidden)]
-            __END #method_end_content,
+        impl #method_id_enum_ident {
+            pub fn get_attr(&self) -> #global_crate::attrs::MethodAttr<#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle> {
+                match self {
+                    #(
+                        Self::#overriding_method_ids => {
+                            let x: #global_crate::attrs::MethodAttr<
+                                #stdlib_header_crate::CoreTypeRef,
+                            > = #global_crate::attr!(
+                                method #overriding_method_attrs
+                            );
+                            x.map_types(#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle::from)
+                        }
+                    )*
+                    #(
+                        Self::#method_ids => {
+                            let x: #global_crate::attrs::MethodAttr<
+                                #stdlib_header_crate::CoreTypeRef,
+                            > = #global_crate::attr!(
+                                method #method_attrs
+                            );
+                            x.map_types(#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle::from)
+                        }
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
+            pub fn get_parameters(&self) -> Vec<#runtime_crate::type_system::method::Parameter> {
+                match self {
+                    #(
+                        Self::#overriding_method_ids => vec![
+                            #(
+                                #overriding_method_parameters,
+                            )*
+                        ],
+                    )*
+                    #(
+                        Self::#method_ids => vec![
+                            #(
+                                #method_parameters,
+                            )*
+                        ],
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
+            pub fn get_return_type(&self) -> #runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle {
+                match self {
+                    #(
+                        Self::#overriding_method_ids =>
+                            <#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle
+                            as From<#stdlib_header_crate::CoreTypeRef>>::from(#overriding_method_return_types),
+                    )*
+                    #(
+                        Self::#method_ids =>
+                            <#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle
+                            as From<#stdlib_header_crate::CoreTypeRef>>::from(#method_return_types),
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
+            pub const fn get_name(&self) -> &'static str {
+                match self {
+                    #(
+                        Self::#overriding_method_ids => #overriding_method_names,
+                    )*
+                    #(
+                        Self::#method_ids => #method_names,
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
         }
 
-        #[repr(u32)]
-        pub enum #static_method_id_enum_ident {
-            StaticConstructor = #method_id_enum_ident::__END as u32,
-            #(
-                #static_method_ids,
-            )*
+        #static_method_definition
 
-            #[doc(hidden)]
-            __END,
+        impl #static_method_id_enum_ident {
+            pub fn get_attr(&self) -> #global_crate::attrs::MethodAttr<#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle> {
+                match self {
+                    Self::StaticConstructor => #global_crate::attr!(
+                        method Public {Static}
+                    ),
+                    #(
+                        Self::#static_method_ids => {
+                            let x: #global_crate::attrs::MethodAttr<
+                                #stdlib_header_crate::CoreTypeRef,
+                            > = #global_crate::attr!(
+                                method #static_method_attrs
+                            );
+                            x.map_types(#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle::from)
+                        }
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
+            pub fn get_parameters(&self) -> Vec<#runtime_crate::type_system::method::Parameter> {
+                match self {
+                    Self::StaticConstructor => vec![],
+                    #(
+                        Self::#static_method_ids => vec![
+                            #(
+                                #static_method_parameters,
+                            )*
+                        ],
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
+            pub fn get_return_type(&self) -> #runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle {
+                match self {
+                    Self::StaticConstructor =>
+                    #runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle::from(
+                        #stdlib_header_crate::CoreTypeRef::Core(
+                            #stdlib_header_crate::CoreTypeId::System_Void,
+                        ),
+                    ),
+                    #(
+                        Self::#static_method_ids =>
+                            <#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle
+                            as From<#stdlib_header_crate::CoreTypeRef>>::from(#static_method_return_types),
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
+            pub const fn get_name(&self) -> &'static str {
+                match self {
+                    Self::StaticConstructor => ".sctor",
+                    #(
+                        Self::#static_method_ids => #static_method_names,
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
         }
 
         impl const From<#method_id_enum_ident> for #runtime_crate::type_system::method::MethodRef {
@@ -158,17 +297,22 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
             use ::std::ptr::NonNull;
 
             use #runtime_crate::type_system::{
-                type_handle::NonGenericTypeHandle,
+                type_handle::{NonGenericTypeHandle, MaybeUnloadedTypeHandle},
                 class::Class,
                 method_table::MethodTable,
                 field::Field,
             };
 
+            type TFieldId = #field_id_enum_ident;
+            type TMethodId = #method_id_enum_ident;
+            type TStaticMethodId = #static_method_id_enum_ident;
+
             NonGenericTypeHandle::Class(Class::new(
                 NonNull::from_ref(#assembly_name),
                 #name.to_owned(),
                 ::global::attr!(class #attr),
-                #parent,
+                (#parent).map(<MaybeUnloadedTypeHandle as From<#stdlib_header_crate::CoreTypeRef>>::from)
+                    .map(|x| x.load(#assembly_name.manager_ref()).unwrap().into_non_generic().unwrap().unwrap_class()),
                 |class| {
                     MethodTable::new(class, #method_generator).as_non_null_ptr()
                 },
@@ -176,7 +320,7 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
                     Field::new(
                         #field_names.to_owned(),
                         ::global::attr!(field #field_attrs),
-                        #field_types,
+                        <MaybeUnloadedTypeHandle as From<#stdlib_header_crate::CoreTypeRef>>::from(#field_types),
                     ),
                 )*],
                 Some(#static_method_id_enum_ident::StaticConstructor as _),

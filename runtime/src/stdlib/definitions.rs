@@ -3,27 +3,121 @@ use std::ptr::NonNull;
 
 use global::attrs::CallConvention;
 
-use proc_macros::{define_core_class, define_core_struct, when_impl, when_not_impl};
+use proc_macros::{define_core_class, define_core_struct};
 
-when_impl! {
-    use either::Either;
+#[cfg(feature = "__when_impl")]
+use either::Either;
 
-    use stdlib_header::CoreTypeId;
+#[cfg(feature = "__when_impl")]
+use stdlib_header::CoreTypeId;
+#[cfg(any(feature = "__when_impl"))]
+use stdlib_header::CoreTypeRef;
 
-    use crate::type_system::{
-        assembly_manager::AssemblyRef,
-        method::{Method, Parameter},
-        type_handle::{MaybeUnloadedTypeHandle, TypeHandle},
-        type_ref::TypeRef,
-        method_table::MethodTable,
-        r#struct::Struct,
-    };
-    use super::{System, CoreTypeIdConstExt, get_core_class, get_core_struct};
+#[cfg(feature = "__when_impl")]
+use super::{CoreTypeIdConstExt, System, get_core_class, get_core_struct};
+
+#[cfg(feature = "__when_impl")]
+use crate::type_system::{
+    assembly_manager::AssemblyRef,
+    method::{Method, Parameter},
+    method_table::MethodTable,
+    r#struct::Struct,
+    type_handle::{MaybeUnloadedTypeHandle, TypeHandle},
+    type_ref::TypeRef,
+};
+
+#[cfg(feature = "__when_not_impl")]
+#[allow(unused)]
+use crate::CoreTypeId;
+
+#[cfg(feature = "__when_serialize")]
+use stdlib_header::{CoreTypeId, CoreTypeRef};
+
+#[cfg(feature = "__when_serialize")]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CoreTypeInfo {
+    #[serde(with = "crate::core_type_id_serde")]
+    pub id: CoreTypeId,
+    pub kind: crate::CoreTypeKind,
+    pub attr: global::attrs::TypeAttr,
+    pub name: String,
+    pub generic_count: Option<crate::GenericCount>,
+    #[serde(with = "crate::option_core_type_ref_serde")]
+    pub parent: Option<CoreTypeRef>,
+    pub methods: Vec<MethodInfo>,
+    pub static_methods: Vec<MethodInfo>,
+    pub fields: Vec<FieldInfo>,
 }
 
-when_not_impl! {
-    #[allow(unused)]
-    use crate::CoreTypeId;
+#[cfg(feature = "__when_serialize")]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MethodInfo {
+    pub id: u32,
+    pub name: String,
+    pub generic_count: Option<crate::GenericCount>,
+    pub attr: InfoMethodAttr,
+    pub args: Vec<MethodArg>,
+    #[serde(with = "crate::core_type_ref_serde")]
+    pub return_type: CoreTypeRef,
+}
+
+#[cfg(feature = "__when_serialize")]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct InfoMethodAttr {
+    pub vis: global::attrs::Visibility,
+    pub impl_flags: enumflags2::BitFlags<global::attrs::MethodImplementationFlags>,
+    pub overrides: Option<u32>,
+    #[serde(with = "crate::vec_core_type_ref_serde")]
+    pub local_variable_types: Vec<CoreTypeRef>,
+}
+
+#[cfg(feature = "__when_serialize")]
+impl From<global::attrs::MethodAttr<CoreTypeRef>> for InfoMethodAttr {
+    #[inline(always)]
+    fn from(
+        global::attrs::MethodAttr {
+            vis,
+            impl_flags,
+            overrides,
+            local_variable_types,
+        }: global::attrs::MethodAttr<CoreTypeRef>,
+    ) -> Self {
+        Self {
+            vis,
+            impl_flags,
+            overrides,
+            local_variable_types,
+        }
+    }
+}
+
+#[cfg(feature = "__when_serialize")]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MethodArg {
+    pub attr: global::attrs::ParameterAttr,
+    #[serde(with = "crate::core_type_ref_serde")]
+    pub ty: CoreTypeRef,
+}
+
+#[cfg(feature = "__when_serialize")]
+impl From<(global::attrs::ParameterAttr, CoreTypeRef)> for MethodArg {
+    fn from((attr, ty): (global::attrs::ParameterAttr, CoreTypeRef)) -> Self {
+        Self { attr, ty }
+    }
+}
+
+#[cfg(feature = "__when_serialize")]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FieldInfo {
+    pub id: u32,
+    pub name: String,
+    pub attr: global::attrs::FieldAttr,
+    #[serde(with = "crate::core_type_ref_serde")]
+    pub ty: CoreTypeRef,
 }
 
 define_core_class! {
@@ -32,32 +126,27 @@ define_core_class! {
     #fields:
 
     #methods:
-    [Destructor ToString] [] with
+    [
+        #[Public {}] Destructor "~" () -> CoreTypeRef::Core(CoreTypeId::System_Void);
+        #[Public {}] ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
+    ] [] with
     |mt| vec![
         Box::new(Method::native(
             Some(mt),
-            "~".to_owned(),
-            global::attr!(
-                method Public {}
-            ),
-            vec![],
-            MaybeUnloadedTypeHandle::Unloaded(
-                CoreTypeId::System_Void.static_type_ref(),
-            ),
+            TMethodId::Destructor.get_name().to_owned(),
+            TMethodId::Destructor.get_attr(),
+            TMethodId::Destructor.get_parameters(),
+            TMethodId::Destructor.get_return_type(),
             CallConvention::PlatformDefault,
             None,
             System::Object::Destructor as _,
         )),
         Box::new(Method::native(
             Some(mt),
-            "ToString".to_owned(),
-            global::attr!(
-                method Public {}
-            ),
-            vec![],
-            MaybeUnloadedTypeHandle::Unloaded(
-                CoreTypeId::System_String.static_type_ref(),
-            ),
+            TMethodId::ToString.get_name().to_owned(),
+            TMethodId::ToString.get_attr(),
+            TMethodId::ToString.get_parameters(),
+            TMethodId::ToString.get_return_type(),
             CallConvention::PlatformDefault,
             None,
             System::Object::ToString as _,
@@ -67,9 +156,7 @@ define_core_class! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -83,14 +170,11 @@ define_core_struct! {
     #methods:
     [] [] with
     |mt| vec![
-
         // Statics
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -104,14 +188,11 @@ define_core_struct! {
     #methods:
     [] [] with
     |mt| vec![
-
         // Statics
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -119,43 +200,34 @@ define_core_struct! {
 
 define_core_struct! {
     #[Public {}] assembly
-    System_Nullable_1 "System::Nullable`1" =>
+    System_Nullable_1 1 "System::Nullable`1" =>
     #fields:
-    #[Private {}] Inner "_Inner" => MaybeUnloadedTypeHandle::Loaded(TypeHandle::Generic(0));
+    #[Private {}] Inner "_Inner" => stdlib_header::CoreTypeRef::Generic(0);
 
     #methods:
-    [] [Initialize] with
+    [] [
+        #[Public {Static}] Initialize (
+            #[{ByRef}] CoreTypeRef::WithGeneric(
+                CoreTypeId::System_Nullable_1,
+                vec![CoreTypeRef::Generic(0)],
+            )
+            #[{}] CoreTypeRef::Generic(0)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
+    ] with
     |mt| vec![
         // Statics
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
         Box::new(
             Method::native(
                 Some(mt),
                 "Initialize".to_owned(),
-                global::attr!(
-                    method Public {Static}
-                ),
-                vec![
-                    Parameter::new(
-                        CoreTypeId::System_Nullable_1.static_type_ref().into(),
-                        global::attr!(
-                            parameter {ByRef}
-                        )
-                    ),
-                    Parameter::new(
-                        MaybeUnloadedTypeHandle::Loaded(TypeHandle::Generic(0)),
-                        global::attr!(
-                            parameter {}
-                        )
-                    ),
-                ],
+                TStaticMethodId::Initialize.get_attr(),
+                TStaticMethodId::Initialize.get_parameters(),
                 CoreTypeId::System_Void.static_type_ref().into(),
                 CallConvention::PlatformDefault,
                 None,
@@ -176,74 +248,70 @@ proc_macros::define_core_struct! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
 }
 
 mod integer {
-    use proc_macros::{when_impl, when_not_impl};
+    #[cfg(feature = "__when_not_impl")]
+    use crate::CoreTypeId;
 
-    when_not_impl!(
-        use crate::CoreTypeId;
-    );
+    #[cfg(feature = "__when_impl")]
+    use std::ptr::NonNull;
 
-    when_impl! {
-        use std::ptr::NonNull;
+    #[cfg(feature = "__when_impl")]
+    use stdlib_header::{CoreTypeId, CoreTypeRef};
 
-        use stdlib_header::CoreTypeId;
+    #[cfg(feature = "__when_impl")]
+    use crate::stdlib::CoreTypeIdConstExt;
+    #[cfg(feature = "__when_impl")]
+    use crate::type_system::{
+        method::Method, method_table::MethodTable, r#struct::Struct,
+        type_handle::MaybeUnloadedTypeHandle,
+    };
 
-        use crate::type_system::{
-            method_table::MethodTable,
-            r#struct::Struct,
-            method::Method,
-            type_handle::MaybeUnloadedTypeHandle,
-        };
-        use crate::stdlib::CoreTypeIdConstExt;
+    #[cfg(feature = "__when_impl")]
+    use super::System;
 
-        use super::System;
+    #[cfg(feature = "__when_serialize")]
+    use stdlib_header::{CoreTypeId, CoreTypeRef};
 
-        fn get_int_initializer<T: 'static + std::fmt::Display>(id: CoreTypeId)
-            -> impl Fn(NonNull<MethodTable<Struct>>) -> Vec<Box<Method<Struct>>> {
-            move |mt| {
-                use crate::type_system::method::{Method, Parameter};
+    #[cfg(feature = "__when_serialize")]
+    use super::{CoreTypeInfo, FieldInfo, MethodArg, MethodInfo};
 
-                vec![
-                    // Statics
-                    Box::new(
-                        Method::default_sctor(
-                            Some(mt),
-                            global::attr!(
-                                method Public {Static}
-                            ),
-                        ),
+    #[cfg(feature = "__when_impl")]
+    fn get_int_initializer<T: 'static + std::fmt::Display>(
+        id: CoreTypeId,
+    ) -> impl Fn(NonNull<MethodTable<Struct>>) -> Vec<Box<Method<Struct>>> {
+        move |mt| {
+            use crate::type_system::method::{Method, Parameter};
+
+            vec![
+                // Statics
+                Box::new(Method::default_sctor(
+                    Some(mt),
+                    global::attr!(
+                        method Public {Static}
                     ),
-                    Box::new(Method::native(
-                        Some(mt),
-                        "ToString".to_owned(),
-                        global::attr!(
-                            method Public {Static}
-                        ),
-                        vec![
-                            Parameter::new(
-                                MaybeUnloadedTypeHandle::Unloaded(id.static_type_ref()),
-                                global::attr!(
-                                    parameter {ByRef}
-                                ),
-                            )
-                        ],
-                        MaybeUnloadedTypeHandle::Unloaded(
-                            CoreTypeId::System_String.static_type_ref(),
-                        ),
-                        global::attrs::CallConvention::PlatformDefault,
-                        None,
-                        System::_Integers::ToString::<T> as _,
-                    )),
-                ]
-            }
+                )),
+                Box::new(Method::native(
+                    Some(mt),
+                    "ToString".to_owned(),
+                    global::attr!(
+                        method Public {Static}
+                    ),
+                    vec![Parameter::new(
+                        MaybeUnloadedTypeHandle::Unloaded(id.static_type_ref()),
+                        global::attr!(parameter { ByRef }),
+                    )],
+                    MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_String.static_type_ref()),
+                    global::attrs::CallConvention::PlatformDefault,
+                    None,
+                    System::_Integers::ToString::<T> as _,
+                )),
+            ]
         }
     }
 
@@ -253,7 +321,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<u8>(CoreTypeId::System_UInt8)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_UInt8)
+            ) -> stdlib_header::CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<u8>(CoreTypeId::System_UInt8)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -261,7 +333,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<u16>(CoreTypeId::System_UInt16)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_UInt16)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<u16>(CoreTypeId::System_UInt16)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -269,7 +345,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<u32>(CoreTypeId::System_UInt32)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_UInt32)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<u32>(CoreTypeId::System_UInt32)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -277,7 +357,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<u64>(CoreTypeId::System_UInt64)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_UInt64)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<u64>(CoreTypeId::System_UInt64)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -285,7 +369,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<usize>(CoreTypeId::System_USize)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_USize)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<usize>(CoreTypeId::System_USize)
     }
 
     proc_macros::define_core_struct! {
@@ -294,7 +382,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<i8>(CoreTypeId::System_Int8)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_Int8)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<i8>(CoreTypeId::System_Int8)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -302,7 +394,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<i16>(CoreTypeId::System_Int16)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_Int16)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<i16>(CoreTypeId::System_Int16)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -310,7 +406,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<i32>(CoreTypeId::System_Int32)
+        [] [
+            #[Public {Static}] ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_Int32)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<i32>(CoreTypeId::System_Int32)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -318,7 +418,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<i64>(CoreTypeId::System_Int64)
+        [] [
+            #[Public {Static}]ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_Int64)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<i64>(CoreTypeId::System_Int64)
     }
     proc_macros::define_core_struct! {
         #[Public {}] assembly
@@ -326,7 +430,11 @@ mod integer {
         [None]
         #fields:
         #methods:
-        [] [ToString] with get_int_initializer::<isize>(CoreTypeId::System_ISize)
+        [] [
+            #[Public {Static}]ToString (
+                #[{ByRef}] CoreTypeRef::Core(CoreTypeId::System_ISize)
+            ) -> CoreTypeRef::Core(CoreTypeId::System_String);
+        ] with get_int_initializer::<isize>(CoreTypeId::System_ISize)
     }
 }
 
@@ -344,9 +452,7 @@ define_core_struct! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -357,7 +463,7 @@ define_core_struct! {
     System_Pointer "System::Pointer" =>
     #fields:
     #[Public {Static}]
-    Null "Null" => CoreTypeId::System_Pointer.static_type_ref().into();
+    Null "Null" => CoreTypeId::System_Pointer.into();
 
     #methods:
     [] [] with
@@ -366,9 +472,7 @@ define_core_struct! {
         Box::new(
             Method::create_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
                 System::Pointer::StaticConstructor,
             ),
         ),
@@ -378,88 +482,56 @@ define_core_struct! {
 define_core_class! {
     #[Public {}] assembly
     System_NonPurusCallConfiguration "System::NonPurusCallConfiguration"
-    Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    Some(CoreTypeId::System_Object.into()) =>
     #fields:
     #[Public {}]
-    CallConvention "CallConvention" => CoreTypeId::System_UInt8.static_type_ref().into();
+    CallConvention "CallConvention" => CoreTypeRef::Core(CoreTypeId::System_UInt8);
     #[Public {}]
-    ReturnType "ReturnType" => CoreTypeId::System_NonPurusCallType.static_type_ref().into();
+    ReturnType "ReturnType" => CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
     #[Public {}]
-    Encoding "Encoding" => CoreTypeId::System_UInt8.static_type_ref().into();
+    Encoding "Encoding" => CoreTypeRef::Core(CoreTypeId::System_UInt8);
     #[Public {}]
-    ObjectStrategy "ObjectStrategy" => CoreTypeId::System_UInt8.static_type_ref().into();
+    ObjectStrategy "ObjectStrategy" => CoreTypeRef::Core(CoreTypeId::System_UInt8);
     #[Public {}]
-    ByRefArguments "ByRefArguments" => MaybeUnloadedTypeHandle::Unloaded(
-        TypeRef::Specific {
-            assembly_and_index: Either::Right(Box::new(CoreTypeId::System_Array_1.static_type_ref().into())),
-            types: vec![
-                CoreTypeId::System_USize.static_type_ref().into(),
-            ],
-        },
+    ByRefArguments "ByRefArguments" => CoreTypeRef::WithGeneric(
+        CoreTypeId::System_Array_1,
+        vec![
+            CoreTypeRef::Core(CoreTypeId::System_USize),
+        ],
     );
     #[Public {}]
-    Arguments "Arguments" => MaybeUnloadedTypeHandle::Unloaded(
-        TypeRef::Specific {
-            assembly_and_index: Either::Right(Box::new(CoreTypeId::System_Array_1.static_type_ref().into())),
-            types: vec![
-                CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-            ],
-        },
+    Arguments "Arguments" => CoreTypeRef::WithGeneric(
+        CoreTypeId::System_Array_1,
+        vec![
+            CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType),
+        ],
     );
 
     #methods of System_Object_MethodId:
-    [Constructor] [] with
+    [
+        #[Public {}] Constructor ".ctor" (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_UInt8)
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType)
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_UInt8)
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_UInt8)
+            #[{}] CoreTypeRef::WithGeneric(
+                CoreTypeId::System_Array_1,
+                vec![CoreTypeId::System_USize.into()],
+            )
+            #[{}] CoreTypeRef::WithGeneric(
+                CoreTypeId::System_Array_1,
+                vec![CoreTypeId::System_NonPurusCallType.into()],
+            )
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
+    ] [] with
     |mt| vec![
         Box::new(
             Method::native(
                 Some(mt),
-                ".ctor".to_owned(),
-                global::attr!(
-                    method Public {}
-                ),
-                vec![
-                    Parameter::new(
-                        CoreTypeId::System_UInt8.static_type_ref().into(),
-                        global::attr!(parameter {}),
-                    ),
-                    Parameter::new(
-                        CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                        global::attr!(parameter {}),
-                    ),
-                    Parameter::new(
-                        CoreTypeId::System_UInt8.static_type_ref().into(),
-                        global::attr!(parameter {}),
-                    ),
-                    Parameter::new(
-                        CoreTypeId::System_UInt8.static_type_ref().into(),
-                        global::attr!(parameter {}),
-                    ),
-                    Parameter::new(
-                        MaybeUnloadedTypeHandle::Unloaded(
-                            TypeRef::Specific {
-                                assembly_and_index: Either::Right(Box::new(CoreTypeId::System_Array_1.static_type_ref().into())),
-                                types: vec![
-                                    CoreTypeId::System_USize.static_type_ref().into(),
-                                ],
-                            },
-                        ),
-                        global::attr!(parameter {}),
-                    ),
-                    Parameter::new(
-                        MaybeUnloadedTypeHandle::Unloaded(
-                            TypeRef::Specific {
-                                assembly_and_index: Either::Right(Box::new(
-                                    CoreTypeId::System_Array_1.static_type_ref().into(),
-                                )),
-                                types: vec![
-                                    CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                                ],
-                            },
-                        ),
-                        global::attr!(parameter {}),
-                    ),
-                ],
-                CoreTypeId::System_Void.static_type_ref().into(),
+                TMethodId::Constructor.get_name().to_owned(),
+                TMethodId::Constructor.get_attr(),
+                TMethodId::Constructor.get_parameters(),
+                TMethodId::Constructor.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::NonPurusCallConfiguration::Constructor as _,
@@ -469,9 +541,7 @@ define_core_class! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -479,68 +549,61 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_NonPurusCallType "System::NonPurusCallType" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_NonPurusCallType "System::NonPurusCallType" Some(CoreTypeId::System_Object.into()) =>
     #fields of System_Object_FieldId:
     #[Public {}]
-    Discriminant "Discriminant" => CoreTypeId::System_UInt8.static_type_ref().into();
+    Discriminant "Discriminant" => CoreTypeId::System_UInt8.into();
     #[Public {}]
-    Types "Types" => MaybeUnloadedTypeHandle::Unloaded(
-        TypeRef::Specific {
-            assembly_and_index: Either::Right(Box::new(
-                CoreTypeId::System_Nullable_1.static_type_ref().into()
-            )),
-            types: vec![
-                MaybeUnloadedTypeHandle::Unloaded(
-                    TypeRef::Specific {
-                        assembly_and_index: Either::Right(
-                            Box::new(
-                                CoreTypeId::System_Array_1.static_type_ref().into(),
-                            ),
-                        ),
-                        types: vec![
-                            CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                        ]
-                    },
-                )
-            ],
-        },
+    Types "Types" => CoreTypeRef::WithGeneric(
+        CoreTypeId::System_Nullable_1,
+        vec![
+            CoreTypeRef::WithGeneric(
+                CoreTypeId::System_Array_1,
+                vec![
+                    CoreTypeId::System_NonPurusCallType.into(),
+                ],
+            )
+        ],
     );
 
     #methods of System_Object_MethodId:
     [] [
-        CreateVoid
+        #[Public {Static}] CreateVoid () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
 
-        CreateU8
-        CreateI8
+        #[Public {Static}] CreateU8 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
+        #[Public {Static}] CreateI8 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
 
-        CreateU16
-        CreateI16
+        #[Public {Static}] CreateU16 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
+        #[Public {Static}] CreateI16 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
 
-        CreateU32
-        CreateI32
+        #[Public {Static}] CreateU32 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
+        #[Public {Static}] CreateI32 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
 
-        CreateU64
-        CreateI64
+        #[Public {Static}] CreateU64 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
+        #[Public {Static}] CreateI64 () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
 
-        CreatePointer
+        #[Public {Static}] CreatePointer () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
 
-        CreateString
-        CreateObject
+        #[Public {Static}] CreateString () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
+        #[Public {Static}] CreateObject () -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
 
-        CreateStructure
+        #[Public {Static}] CreateStructure (
+            #[{}] CoreTypeRef::WithGeneric(
+                CoreTypeId::System_Array_1,
+                vec![
+                    CoreTypeId::System_NonPurusCallType.into(),
+                ],
+            )
+        ) -> CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType);
     ] with
     |mt| {
         macro def($x:ident) {
             Box::new(Method::native(
                 Some(mt),
                 concat!("Create", stringify!($x)).to_owned(),
-                global::attr!(
-                    method Public {Static}
-                ),
-                vec![],
-                CoreTypeId::System_NonPurusCallType
-                    .static_type_ref()
-                    .into(),
+                TStaticMethodId::${concat(Create, $x)}.get_attr(),
+                TStaticMethodId::${concat(Create, $x)}.get_parameters(),
+                TStaticMethodId::${concat(Create, $x)}.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::NonPurusCallType::${concat(Create, $x)} as _,
@@ -551,9 +614,7 @@ define_core_class! {
             Box::new(
                 Method::default_sctor(
                     Some(mt),
-                    global::attr!(
-                        method Public {Static}
-                    ),
+                    TStaticMethodId::StaticConstructor.get_attr(),
                 ),
             ),
             def!(Void),
@@ -577,36 +638,10 @@ define_core_class! {
 
             Box::new(Method::native(
                 Some(mt),
-                "CreateStructure".to_owned(),
-                global::attr!(
-                    method Public {Static}
-                ),
-                vec![
-                    Parameter::new(
-                        MaybeUnloadedTypeHandle::Unloaded(
-                            TypeRef::Specific {
-                                assembly_and_index: Either::Right(
-                                    Box::new(
-                                        CoreTypeId::System_Array_1
-                                            .static_type_ref()
-                                            .into(),
-                                        ),
-                                    ),
-                                types: vec![
-                                    CoreTypeId::System_NonPurusCallType
-                                        .static_type_ref()
-                                        .into()
-                                ],
-                            },
-                        ),
-                        global::attr!(
-                            parameter {}
-                        )
-                    ),
-                ],
-                CoreTypeId::System_NonPurusCallType
-                    .static_type_ref()
-                    .into(),
+                TStaticMethodId::CreateStructure.get_name().to_owned(),
+                TStaticMethodId::CreateStructure.get_attr(),
+                TStaticMethodId::CreateStructure.get_parameters(),
+                TStaticMethodId::CreateStructure.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::NonPurusCallType::CreateStructure as _,
@@ -617,26 +652,29 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_DynamicLibrary "System::DynamicLibrary" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_DynamicLibrary "System::DynamicLibrary" Some(CoreTypeId::System_Object.into()) =>
     #fields of System_Object_FieldId:
-    #[Private {}] Handle "_handle" => CoreTypeId::System_Pointer.static_type_ref().into();
+    #[Private {}] Handle "_handle" => CoreTypeId::System_Pointer.into();
 
     #methods of System_Object_MethodId:
     [
-        override Destructor
-        Constructor_String
-        GetSymbol
+        #[override Some(System_Object_MethodId::Destructor as _) Public {}]
+        Destructor "~" () -> CoreTypeRef::Core(CoreTypeId::System_Void);
+        #[Public {}] Constructor_String ".ctor" (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_String)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
+        #[Public {}] GetSymbol "GetSymbol" (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_String)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Pointer);
     ] [] with |mt| {
         vec![
             Box::new(
                 Method::native(
                     Some(mt),
-                    "~".to_owned(),
-                    global::attr!(
-                        method override Some(System_Object_MethodId::Destructor as _) Public {}
-                    ),
-                    vec![],
-                    get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                    TMethodId::Destructor.get_name().to_owned(),
+                    TMethodId::Destructor.get_attr(),
+                    TMethodId::Destructor.get_parameters(),
+                    TMethodId::Destructor.get_return_type(),
                     CallConvention::PlatformDefault,
                     None,
                     System::DynamicLibrary::Destructor as _,
@@ -645,19 +683,10 @@ define_core_class! {
             Box::new(
                 Method::native(
                     Some(mt),
-                    ".ctor".to_owned(),
-                    global::attr!(
-                        method Public {}
-                    ),
-                    vec![
-                        Parameter::new(
-                            CoreTypeId::System_String.static_type_ref().into(),
-                            global::attr!(
-                                parameter {}
-                            ),
-                        ),
-                    ],
-                    get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                    TMethodId::Constructor_String.get_name().to_owned(),
+                    TMethodId::Constructor_String.get_attr(),
+                    TMethodId::Constructor_String.get_parameters(),
+                    TMethodId::Constructor_String.get_return_type(),
                     CallConvention::PlatformDefault,
                     None,
                     System::DynamicLibrary::Constructor_String as _,
@@ -666,19 +695,10 @@ define_core_class! {
             Box::new(
                 Method::native(
                     Some(mt),
-                    "GetSymbol".to_owned(),
-                    global::attr!(
-                        method Public {}
-                    ),
-                    vec![
-                        Parameter::new(
-                            CoreTypeId::System_String.static_type_ref().into(),
-                            global::attr!(
-                                parameter {}
-                            ),
-                        ),
-                    ],
-                    CoreTypeId::System_Pointer.static_type_ref().into(),
+                    TMethodId::GetSymbol.get_name().to_owned(),
+                    TMethodId::GetSymbol.get_attr(),
+                    TMethodId::GetSymbol.get_parameters(),
+                    TMethodId::GetSymbol.get_return_type(),
                     CallConvention::PlatformDefault,
                     None,
                     System::DynamicLibrary::GetSymbol as _,
@@ -688,9 +708,7 @@ define_core_class! {
             Box::new(
                 Method::default_sctor(
                     Some(mt),
-                    global::attr!(
-                        method Public {Static}
-                    ),
+                    TStaticMethodId::StaticConstructor.get_attr(),
                 ),
             ),
         ]
@@ -699,27 +717,48 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_Array_1 "System::Array`1" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_Array_1 1 "System::Array`1" Some(CoreTypeId::System_Object.into()) =>
     #fields:
 
     #methods of System_Object_MethodId:
     [
-        override Destructor
-        override ToString
-        GetPointerOfIndex
-        get_Index
-        set_Index
+        #[override Some(System_Object_MethodId::Destructor as _) Public {}]
+        Destructor "~" () -> CoreTypeRef::Core(CoreTypeId::System_Void);
+        #[override Some(System_Object_MethodId::ToString as _) Public {}]
+        ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
+        #[Private {}] GetPointerOfIndex (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_USize)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Pointer);
+        #[
+            Public {}
+            CoreTypeRef::Core(CoreTypeId::System_Object),
+            CoreTypeRef::Core(CoreTypeId::System_USize), // arg 0
+            CoreTypeRef::Core(CoreTypeId::System_Pointer),
+            CoreTypeRef::Core(CoreTypeId::System_USize), // Size of T
+            CoreTypeRef::Generic(0),
+        ] get_Index (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_USize)
+        ) -> CoreTypeRef::Generic(0);
+        #[
+            Public {}
+            CoreTypeRef::Core(CoreTypeId::System_Object), // this
+            CoreTypeRef::Core(CoreTypeId::System_USize), // arg 0
+            CoreTypeRef::Generic(0), // arg 1
+            CoreTypeRef::Core(CoreTypeId::System_USize), // size of T
+            CoreTypeRef::Core(CoreTypeId::System_Pointer), // pointer of result
+        ] set_Index (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_USize)
+            #[{}] CoreTypeRef::Generic(0)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] [] with
     |mt| vec![
         Box::new(
             Method::native(
                 Some(mt),
-                "~".to_owned(),
-                global::attr!(
-                    method override Some(System_Object_MethodId::Destructor as _) Public {}
-                ),
-                vec![],
-                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                TMethodId::Destructor.get_name().to_owned(),
+                TMethodId::Destructor.get_attr(),
+                TMethodId::Destructor.get_parameters(),
+                TMethodId::Destructor.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::Array_1::Destructor as _,
@@ -728,12 +767,10 @@ define_core_class! {
         Box::new(
             Method::native(
                 Some(mt),
-                "ToString".to_owned(),
-                global::attr!(
-                    method override Some(System_Object_MethodId::ToString as _) Public {}
-                ),
-                vec![],
-                CoreTypeId::System_String.static_type_ref().into(),
+                TMethodId::ToString.get_name().to_owned(),
+                TMethodId::ToString.get_attr(),
+                TMethodId::ToString.get_parameters(),
+                TMethodId::ToString.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::Array_1::ToString as _,
@@ -742,16 +779,10 @@ define_core_class! {
         Box::new(
             Method::native(
                 Some(mt),
-                "GetPointerOfIndex".to_owned(),
-                global::attr!(
-                    method Private {}
-                ),
-                vec![
-                    Parameter::with_core_type(
-                        CoreTypeId::System_USize,
-                    ),
-                ],
-                CoreTypeId::System_Pointer.static_type_ref().into(),
+                TMethodId::GetPointerOfIndex.get_name().to_owned(),
+                TMethodId::GetPointerOfIndex.get_attr(),
+                TMethodId::GetPointerOfIndex.get_parameters(),
+                TMethodId::GetPointerOfIndex.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::Array_1::GetPointerOfIndex as _,
@@ -760,21 +791,10 @@ define_core_class! {
         Box::new(
             Method::new(
                 mt,
-                "get_Index".to_owned(),
-                global::attr!(
-                    method Public {}
-                    CoreTypeId::System_Object.static_type_ref().into(),
-                    CoreTypeId::System_USize.static_type_ref().into(), // arg 0
-                    CoreTypeId::System_Pointer.static_type_ref().into(),
-                    CoreTypeId::System_USize.static_type_ref().into(), // Size of T
-                    TypeHandle::Generic(0).into(),
-                ),
-                vec![
-                    Parameter::with_core_type(
-                        CoreTypeId::System_USize,
-                    ),
-                ],
-                TypeHandle::Generic(0).into(),
+                TMethodId::get_Index.get_name().to_owned(),
+                TMethodId::get_Index.get_attr(),
+                TMethodId::get_Index.get_parameters(),
+                TMethodId::get_Index.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 {
@@ -810,27 +830,10 @@ define_core_class! {
         Box::new(
             Method::new(
                 mt,
-                "set_Index".to_owned(),
-                global::attr!(
-                    method Public {}
-                    CoreTypeId::System_Object.static_type_ref().into(), // this
-                    CoreTypeId::System_USize.static_type_ref().into(), // arg 0
-                    TypeHandle::Generic(0).into(), // arg 1
-                    CoreTypeId::System_USize.static_type_ref().into(), // size of T
-                    CoreTypeId::System_Pointer.static_type_ref().into(), // pointer of result
-                ),
-                vec![
-                    Parameter::with_core_type(
-                        CoreTypeId::System_USize,
-                    ),
-                    Parameter::new(
-                        TypeHandle::Generic(0).into(),
-                        global::attr!(
-                            parameter {}
-                        )
-                    ),
-                ],
-                CoreTypeId::System_Void.static_type_ref().into(),
+                TMethodId::set_Index.get_name().to_owned(),
+                TMethodId::set_Index.get_attr(),
+                TMethodId::set_Index.get_parameters(),
+                TMethodId::set_Index.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 {
@@ -867,9 +870,7 @@ define_core_class! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -877,50 +878,43 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_String "System::String" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_String "System::String" Some(CoreTypeId::System_Object.into()) =>
     #fields:
 
     #methods of System_Object_MethodId:
-    [override ToString get_Length get_U32Length] [] with
+    [
+        #[override Some(System_Object_MethodId::ToString as _) Public {}]
+        ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
+        #[Public {}] get_Length () -> CoreTypeRef::Core(CoreTypeId::System_USize);
+        #[Public {}] get_U32Length () -> CoreTypeRef::Core(CoreTypeId::System_UInt32);
+    ] [] with
     |mt| vec![
         Box::new(Method::native(
             Some(mt),
-            "ToString".to_owned(),
-            global::attr!(
-                method override Some(System_Object_MethodId::ToString as _) Public {}
-            ),
-            vec![],
-            MaybeUnloadedTypeHandle::Unloaded(
-                CoreTypeId::System_String.static_type_ref(),
-            ),
+            TMethodId::ToString.get_name().to_owned(),
+            TMethodId::ToString.get_attr(),
+            TMethodId::ToString.get_parameters(),
+            TMethodId::ToString.get_return_type(),
             CallConvention::PlatformDefault,
             None,
             System::String::ToString as _,
         )),
         Box::new(Method::native(
             Some(mt),
-            "get_Length".to_owned(),
-            global::attr!(
-                method Public {}
-            ),
-            vec![],
-            MaybeUnloadedTypeHandle::Unloaded(
-                CoreTypeId::System_USize.static_type_ref(),
-            ),
+            TMethodId::get_Length.get_name().to_owned(),
+            TMethodId::get_Length.get_attr(),
+            TMethodId::get_Length.get_parameters(),
+            TMethodId::get_Length.get_return_type(),
             CallConvention::PlatformDefault,
             None,
             System::String::get_Length as _,
         )),
         Box::new(Method::native(
             Some(mt),
-            "get_U32Length".to_owned(),
-            global::attr!(
-                method Public {}
-            ),
-            vec![],
-            MaybeUnloadedTypeHandle::Unloaded(
-                CoreTypeId::System_UInt32.static_type_ref(),
-            ),
+            TMethodId::get_U32Length.get_name().to_owned(),
+            TMethodId::get_U32Length.get_attr(),
+            TMethodId::get_U32Length.get_parameters(),
+            TMethodId::get_U32Length.get_return_type(),
             CallConvention::PlatformDefault,
             None,
             System::String::get_U32Length as _,
@@ -930,9 +924,7 @@ define_core_class! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -940,22 +932,21 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_LargeString "System::LargeString" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_LargeString "System::LargeString" Some(CoreTypeId::System_Object.into()) =>
     #fields:
 
     #methods of System_Object_MethodId:
-    [override ToString] [] with
+    [
+        #[override Some(System_Object_MethodId::ToString as _) Public {}]
+        ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
+    ] [] with
     |mt| vec![
         Box::new(Method::native(
             Some(mt),
-            "ToString".to_owned(),
-            global::attr!(
-                method override Some(System_Object_MethodId::ToString as _) Public {}
-            ),
-            vec![],
-            MaybeUnloadedTypeHandle::Unloaded(
-                CoreTypeId::System_String.static_type_ref(),
-            ),
+            TMethodId::ToString.get_name().to_owned(),
+            TMethodId::ToString.get_attr(),
+            TMethodId::ToString.get_parameters(),
+            TMethodId::ToString.get_return_type(),
             CallConvention::PlatformDefault,
             None,
             System::LargeString::ToString as _,
@@ -965,9 +956,7 @@ define_core_class! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -975,9 +964,9 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_Environment "System::Environment" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_Environment "System::Environment" Some(CoreTypeId::System_Object.into()) =>
     #fields of System_Object_FieldId:
-    #[Public {}] NewLine "NewLine" => CoreTypeId::System_String.static_type_ref().into();
+    #[Public {}] NewLine "NewLine" => CoreTypeId::System_String.into();
 
     #methods of System_Object_MethodId:
     [] [] with
@@ -985,7 +974,7 @@ define_core_class! {
         // Statics
         Box::new(Method::create_sctor(
             Some(mt),
-            global::attr!(method Public {Static}),
+            TStaticMethodId::StaticConstructor.get_attr(),
             System::Environment::StaticConstructor,
         )),
     ]
@@ -993,34 +982,38 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_Exception "System::Exception" Some(get_core_class(CoreTypeId::System_Object, assembly)) =>
+    System_Exception "System::Exception" Some(CoreTypeId::System_Object.into()) =>
     #fields of System_Object_FieldId:
-    #[Public {}] Message "_message" => CoreTypeId::System_String.static_type_ref().into();
-    #[Public {}] Inner "_innerException" => TypeRef::Specific {
-        assembly_and_index: Either::Left((AssemblyRef::CORE, CoreTypeId::System_Nullable_1 as _)),
-        types: vec![
-            CoreTypeId::System_Exception.static_type_ref().into(),
-        ]
-    }.into();
-    #[Public {}] StackTrace "_stackTrace" => TypeRef::Specific {
-        assembly_and_index: Either::Left((AssemblyRef::CORE, CoreTypeId::System_Array_1 as _)),
-        types: vec![
-            CoreTypeId::System_String.static_type_ref().into(),
+    #[Public {}] Message "_message" => CoreTypeId::System_String.into();
+    #[Public {}] Inner "_innerException" => CoreTypeRef::WithGeneric(
+        CoreTypeId::System_Nullable_1,
+        vec![
+            CoreTypeId::System_Exception.into(),
         ],
-    }.into();
+    );
+    #[Public {}] StackTrace "_stackTrace" => CoreTypeRef::WithGeneric(
+        CoreTypeId::System_Array_1,
+        vec![
+            CoreTypeId::System_String.into(),
+        ],
+    );
 
     #methods of System_Object_MethodId:
-    [override ToString Constructor_String] [] with
+    [
+        #[override Some(System_Object_MethodId::ToString as _) Public {}]
+        ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
+        #[Public {HideWhenCapturing}] Constructor_String ".ctor" (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_String)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
+    ] [] with
     |mt| vec![
         Box::new(
             Method::native(
                 Some(mt),
-                "ToString".to_owned(),
-                global::attr!(
-                    method override Some(System_Object_MethodId::ToString as _) Public {}
-                ),
-                vec![],
-                get_core_class(CoreTypeId::System_String, assembly).into(),
+                TMethodId::ToString.get_name().to_owned(),
+                TMethodId::ToString.get_attr(),
+                TMethodId::ToString.get_parameters(),
+                TMethodId::ToString.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::Exception::ToString as _,
@@ -1029,19 +1022,10 @@ define_core_class! {
         Box::new(
             Method::native(
                 Some(mt),
-                ".ctor".to_owned(),
-                global::attr!(
-                    method Public {HideWhenCapturing}
-                ),
-                vec![
-                    Parameter::new(
-                        CoreTypeId::System_String.static_type_ref().into(),
-                        global::attr!(
-                            parameter {}
-                        ),
-                    ),
-                ],
-                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                TMethodId::Constructor_String.get_name().to_owned(),
+                TMethodId::Constructor_String.get_attr(),
+                TMethodId::Constructor_String.get_parameters(),
+                TMethodId::Constructor_String.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::Exception::Construct_String as _,
@@ -1051,9 +1035,7 @@ define_core_class! {
         Box::new(
             Method::default_sctor(
                 Some(mt),
-                global::attr!(
-                    method Public {Static}
-                ),
+                TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
     ]
@@ -1061,34 +1043,24 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_InvalidEnumException "System::InvalidEnumException" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
+    System_InvalidEnumException "System::InvalidEnumException" Some(CoreTypeId::System_Exception.into()) =>
     #fields:
 
     #methods of System_Exception_MethodId:
-    [Constructor_String_String] [] with
+    [
+        #[Public {}] Constructor_String_String ".ctor" (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_String)
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_String)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
+    ] [] with
     |mt| vec![
         Box::new(
             Method::native(
                 Some(mt),
-                ".ctor".to_owned(),
-                global::attr!(
-                    method Public {}
-                ),
-                vec![
-                    Parameter::new(
-                        get_core_class(CoreTypeId::System_String, assembly).into(),
-                        global::attr!(
-                            parameter {}
-                        )
-                    ),
-                    Parameter::new(
-                        get_core_class(CoreTypeId::System_String, assembly).into(),
-                        global::attr!(
-                            parameter {}
-                        )
-                    ),
-                ],
-                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                TMethodId::Constructor_String_String.get_name().to_owned(),
+                TMethodId::Constructor_String_String.get_attr(),
+                TMethodId::Constructor_String_String.get_parameters(),
+                TMethodId::Constructor_String_String.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::InvalidEnumException::Constructor_String_String as _,
@@ -1108,22 +1080,25 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_Win32Exception "System::Win32Exception" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
+    System_Win32Exception "System::Win32Exception" Some(CoreTypeId::System_Exception.into()) =>
     #fields of System_Exception_FieldId:
-    #[Public {}] Code "_Code" => CoreTypeId::System_Int32.static_type_ref().into();
+    #[Public {}] Code "_Code" => CoreTypeId::System_Int32.into();
 
     #methods of System_Exception_MethodId:
-    [Constructor Constructor_I32] [] with
+    [
+        #[Public {}] Constructor ".ctor" () -> CoreTypeRef::Core(CoreTypeId::System_Void);
+        #[Public {}] Constructor_I32 ".ctor" (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_Int32)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
+    ] [] with
     |mt| vec![
         Box::new(
             Method::native(
                 Some(mt),
-                ".ctor".to_owned(),
-                global::attr!(
-                    method Public {}
-                ),
-                vec![],
-                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                TMethodId::Constructor.get_name().to_owned(),
+                TMethodId::Constructor.get_attr(),
+                TMethodId::Constructor.get_parameters(),
+                TMethodId::Constructor.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::Win32Exception::Constructor as _,
@@ -1132,19 +1107,10 @@ define_core_class! {
         Box::new(
             Method::native(
                 Some(mt),
-                ".ctor".to_owned(),
-                global::attr!(
-                    method Public {}
-                ),
-                vec![
-                    Parameter::new(
-                        get_core_struct(CoreTypeId::System_Int32, assembly).into(),
-                        global::attr!(
-                            parameter {}
-                        )
-                    ),
-                ],
-                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                TMethodId::Constructor_I32.get_name().to_owned(),
+                TMethodId::Constructor_I32.get_attr(),
+                TMethodId::Constructor_I32.get_parameters(),
+                TMethodId::Constructor_I32.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::Win32Exception::Constructor_I32 as _,
@@ -1164,22 +1130,25 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_ErrnoException "System::ErrnoException" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
+    System_ErrnoException "System::ErrnoException" Some(CoreTypeId::System_Exception.into()) =>
     #fields of System_Exception_FieldId:
-    #[Public {}] Code "_Code" => CoreTypeId::System_Int32.static_type_ref().into();
+    #[Public {}] Code "_Code" => CoreTypeId::System_Int32.into();
 
     #methods of System_Exception_MethodId:
-    [Constructor Constructor_I32] [] with
+    [
+        #[Public {}] Constructor ".ctor" () -> CoreTypeRef::Core(CoreTypeId::System_Void);
+        #[Public {}] Constructor_I32 ".ctor" (
+            #[{}] CoreTypeRef::Core(CoreTypeId::System_Int32)
+        ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
+    ] [] with
     |mt| vec![
         Box::new(
             Method::native(
                 Some(mt),
-                ".ctor".to_owned(),
-                global::attr!(
-                    method Public {}
-                ),
-                vec![],
-                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                TMethodId::Constructor.get_name().to_owned(),
+                TMethodId::Constructor.get_attr(),
+                TMethodId::Constructor.get_parameters(),
+                TMethodId::Constructor.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::ErrnoException::Constructor as _,
@@ -1188,19 +1157,10 @@ define_core_class! {
         Box::new(
             Method::native(
                 Some(mt),
-                ".ctor".to_owned(),
-                global::attr!(
-                    method Public {}
-                ),
-                vec![
-                    Parameter::new(
-                        get_core_struct(CoreTypeId::System_Int32, assembly).into(),
-                        global::attr!(
-                            parameter {}
-                        )
-                    ),
-                ],
-                get_core_struct(CoreTypeId::System_Void, assembly).into(),
+                TMethodId::Constructor_I32.get_name().to_owned(),
+                TMethodId::Constructor_I32.get_attr(),
+                TMethodId::Constructor_I32.get_parameters(),
+                TMethodId::Constructor_I32.get_return_type(),
                 CallConvention::PlatformDefault,
                 None,
                 System::ErrnoException::Constructor_I32 as _,
@@ -1220,7 +1180,7 @@ define_core_class! {
 
 define_core_class! {
     #[Public {}] assembly
-    System_DlErrorException "System::DlErrorException" Some(get_core_class(CoreTypeId::System_Exception, assembly)) =>
+    System_DlErrorException "System::DlErrorException" Some(CoreTypeId::System_Exception.into()) =>
     #fields:
 
     #methods of System_Exception_MethodId:

@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use syn::{Token, parse::Parse};
+use syn::{Expr, LitInt, Token, parse::Parse};
 
 pub(crate) mod keywords {
     use syn::custom_keyword;
@@ -11,6 +11,7 @@ pub(crate) mod keywords {
 }
 
 #[allow(unused)]
+#[derive(Clone)]
 pub struct Attr {
     pub pound: Token![#],
     pub bracket: syn::token::Bracket,
@@ -28,5 +29,41 @@ impl Parse for Attr {
             bracket,
             inner: inner.parse()?,
         })
+    }
+}
+
+#[allow(unused)]
+#[derive(Clone)]
+pub struct Parameter {
+    pub attr: Attr,
+    pub ty: Expr,
+}
+
+impl Parse for Parameter {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let attr = input.parse()?;
+        let ty = input.parse()?;
+
+        Ok(Self { attr, ty })
+    }
+}
+
+#[derive(Clone)]
+pub struct GenericCount {
+    pub count: LitInt,
+    pub is_infinite: Option<Token![+]>,
+}
+
+impl GenericCount {
+    pub fn is_possible(input: &syn::parse::ParseStream) -> bool {
+        input.peek(LitInt)
+    }
+}
+
+impl Parse for GenericCount {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let count = input.parse()?;
+        let is_infinite = input.parse().ok();
+        Ok(Self { count, is_infinite })
     }
 }

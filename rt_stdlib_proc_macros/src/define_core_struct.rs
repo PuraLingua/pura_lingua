@@ -1,45 +1,20 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::quote;
 
 use shared::define_core_struct::*;
 
 pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
-    let field_id_enum_ident = format_ident!("{}_FieldId", ast.id);
-    let method_id_enum_ident = format_ident!("{}_MethodId", ast.id);
-    let static_method_id_enum_ident = format_ident!("{}_StaticMethodId", ast.id);
+    let field_definition = ast.define_fields(&[]);
 
-    let field_ids = ast.fields.iter().map(|x| &x.id).collect::<Vec<_>>();
+    let method_definition = ast.define_methods(&[]);
 
-    let method_ids = &ast.method_ids;
-    let static_method_ids = &ast.static_method_ids;
+    let static_method_definition = ast.define_static_methods(&[]);
 
     Ok(quote! {
-        #[repr(u32)]
-        pub enum #field_id_enum_ident {
-            #(
-                #field_ids,
-            )*
+        #field_definition
 
-            #[doc(hidden)]
-            __END,
-        }
+        #method_definition
 
-        #[repr(u32)]
-        pub enum #method_id_enum_ident {
-            #(
-                #method_ids,
-            )*
-
-            #[doc(hidden)]
-            __END,
-        }
-
-        #[repr(u32)]
-        pub enum #static_method_id_enum_ident {
-            StaticConstructor = #method_id_enum_ident::__END as u32,
-            #(
-                #static_method_ids,
-            )*
-        }
+        #static_method_definition
     })
 }

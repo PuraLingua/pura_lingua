@@ -6,3 +6,5 @@ pub extern crate dynamic;
 pub extern crate global;
 #[cfg(feature = "stdlib_header")]
 pub extern crate stdlib_header;
+#[cfg(feature = "stdlib_header")]
+pub extern crate stdlib_header_serde;
