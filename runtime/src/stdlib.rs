@@ -39,7 +39,7 @@ pub trait CoreTypeIdExt: Sized {
 pub const trait CoreTypeIdConstExt: Sized {
     fn static_type_ref(self) -> TypeRef;
     fn mem_layout(self) -> Option<Layout>;
-    fn val_layout(self) -> Layout;
+    fn val_layout(self) -> Option<Layout>;
     fn get_loader(self) -> fn(&Assembly) -> NonGenericTypeHandle;
 }
 pub use stdlib_header::CoreTypeId;
@@ -92,6 +92,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
 
             Self::System_DynamicLibrary => None,
 
+            Self::System_Tuple => None,
+
             CoreTypeId::System_Array_1 => Some(Layout::new::<usize>()),
             CoreTypeId::System_String => Some(Layout::new::<u16>()),
             Self::System_LargeString => Some(Layout::new::<usize>()),
@@ -106,49 +108,55 @@ impl const CoreTypeIdConstExt for CoreTypeId {
         }
     }
 
-    fn val_layout(self) -> Layout {
+    fn val_layout(self) -> Option<Layout> {
         match self {
-            CoreTypeId::System_Object => Layout::new::<ManagedReference<Class>>(),
-            CoreTypeId::System_ValueType => Layout::new::<()>(),
+            CoreTypeId::System_Object => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_ValueType => Some(Layout::new::<()>()),
 
-            CoreTypeId::System_Void => Layout::new::<()>(),
+            CoreTypeId::System_Void => Some(Layout::new::<()>()),
 
             // Even it's a struct, it has the same layout as an object
-            CoreTypeId::System_Nullable_1 => Layout::new::<ManagedReference<Class>>(),
+            CoreTypeId::System_Nullable_1 => Some(Layout::new::<ManagedReference<Class>>()),
 
-            Self::System_Boolean => Layout::new::<u8>(),
+            Self::System_Boolean => Some(Layout::new::<u8>()),
 
-            CoreTypeId::System_UInt8 => Layout::new::<u8>(),
-            CoreTypeId::System_UInt16 => Layout::new::<u16>(),
-            CoreTypeId::System_UInt32 => Layout::new::<u32>(),
-            CoreTypeId::System_UInt64 => Layout::new::<u64>(),
-            CoreTypeId::System_USize => Layout::new::<usize>(),
+            CoreTypeId::System_UInt8 => Some(Layout::new::<u8>()),
+            CoreTypeId::System_UInt16 => Some(Layout::new::<u16>()),
+            CoreTypeId::System_UInt32 => Some(Layout::new::<u32>()),
+            CoreTypeId::System_UInt64 => Some(Layout::new::<u64>()),
+            CoreTypeId::System_USize => Some(Layout::new::<usize>()),
 
-            CoreTypeId::System_Int8 => Layout::new::<i8>(),
-            CoreTypeId::System_Int16 => Layout::new::<i16>(),
-            CoreTypeId::System_Int32 => Layout::new::<i32>(),
-            CoreTypeId::System_Int64 => Layout::new::<i64>(),
-            CoreTypeId::System_ISize => Layout::new::<isize>(),
+            CoreTypeId::System_Int8 => Some(Layout::new::<i8>()),
+            CoreTypeId::System_Int16 => Some(Layout::new::<i16>()),
+            CoreTypeId::System_Int32 => Some(Layout::new::<i32>()),
+            CoreTypeId::System_Int64 => Some(Layout::new::<i64>()),
+            CoreTypeId::System_ISize => Some(Layout::new::<isize>()),
 
-            CoreTypeId::System_Char => Layout::new::<u16>(),
+            CoreTypeId::System_Char => Some(Layout::new::<u16>()),
 
-            Self::System_Pointer => Layout::new::<*const u8>(),
+            Self::System_Pointer => Some(Layout::new::<*const u8>()),
 
-            Self::System_NonPurusCallConfiguration => Layout::new::<ManagedReference<Class>>(),
-            Self::System_NonPurusCallType => Layout::new::<ManagedReference<Class>>(),
-            Self::System_DynamicLibrary => Layout::new::<ManagedReference<Class>>(),
+            Self::System_NonPurusCallConfiguration => {
+                Some(Layout::new::<ManagedReference<Class>>())
+            }
+            Self::System_NonPurusCallType => Some(Layout::new::<ManagedReference<Class>>()),
+            Self::System_DynamicLibrary => Some(Layout::new::<ManagedReference<Class>>()),
 
-            CoreTypeId::System_Array_1 => Layout::new::<ManagedReference<Class>>(),
-            CoreTypeId::System_String => Layout::new::<ManagedReference<Class>>(),
-            CoreTypeId::System_LargeString => Layout::new::<ManagedReference<Class>>(),
+            CoreTypeId::System_Tuple => None,
 
-            CoreTypeId::System_Environment => Layout::new::<ManagedReference<Class>>(),
+            CoreTypeId::System_Array_1 => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_String => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_LargeString => Some(Layout::new::<ManagedReference<Class>>()),
 
-            CoreTypeId::System_Exception => Layout::new::<ManagedReference<Class>>(),
-            CoreTypeId::System_InvalidEnumException => Layout::new::<ManagedReference<Class>>(),
-            CoreTypeId::System_Win32Exception => Layout::new::<ManagedReference<Class>>(),
-            CoreTypeId::System_ErrnoException => Layout::new::<ManagedReference<Class>>(),
-            CoreTypeId::System_DlErrorException => Layout::new::<ManagedReference<Class>>(),
+            CoreTypeId::System_Environment => Some(Layout::new::<ManagedReference<Class>>()),
+
+            CoreTypeId::System_Exception => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_InvalidEnumException => {
+                Some(Layout::new::<ManagedReference<Class>>())
+            }
+            CoreTypeId::System_Win32Exception => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_ErrnoException => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_DlErrorException => Some(Layout::new::<ManagedReference<Class>>()),
         }
     }
 
@@ -191,6 +199,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             System_NonPurusCallType
 
             System_DynamicLibrary
+
+            System_Tuple
 
             System_Array_1
             System_String
@@ -247,6 +257,8 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_NonPurusCallType => Some(Type::pointer()),
 
             Self::System_DynamicLibrary => Some(Type::pointer()),
+
+            Self::System_Tuple => None,
 
             Self::System_Array_1 => Some(Type::pointer()),
             Self::System_String => Some(Type::pointer()),

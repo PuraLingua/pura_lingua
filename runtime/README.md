@@ -6,6 +6,7 @@
 cargo test --workspace
 ```
 tests might fail:
+* global_tests::gtest_test_fn <!-- may caused by file not found error -->
 * stdlib::System::DynamicLibrary::tests::simple_dynamic_lib_test
 * type_system::method::tests::test_normal_f
 * virtual_machine::cpu::tests::dynamic_message_box

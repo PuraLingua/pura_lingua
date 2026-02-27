@@ -10,6 +10,7 @@ use global::{
     attrs::TypeAttr,
     getset::{Getters, MutGetters},
 };
+use stdlib_header::CoreTypeId;
 
 use crate::{
     memory::GetLayoutOptions,
@@ -100,6 +101,48 @@ impl Struct {
                 return *has_instantiated;
             }
         }
+        if self
+            .method_table_ref()
+            .get_core_type_id()
+            .is_some_and(|x| x == CoreTypeId::System_Tuple)
+        {
+            let mut this = Self::new(
+                self.assembly,
+                self.name.clone().into_string(),
+                self.attr,
+                |x| {
+                    let mut mt = MethodTable::dup(self.method_table);
+                    unsafe {
+                        mt.as_mut().ty = x;
+                    }
+                    mt
+                },
+                type_vars
+                    .iter()
+                    .enumerate()
+                    .map(|(index, ty)| {
+                        Field::new(
+                            index.to_string(),
+                            global::attr!(field Public {}),
+                            ty.clone(),
+                        )
+                    })
+                    .collect(),
+                Some(self.sctor),
+                None,
+            )
+            .as_non_null_ptr();
+            unsafe {
+                this.as_mut().type_vars = Some(Box::clone_from_ref(type_vars));
+
+                NonNull::from_ref(self)
+                    .byte_add(offset_of!(Self, generic_instances))
+                    .cast::<Vec<NonNull<Self>>>()
+                    .as_mut()
+                    .push(this);
+            }
+            return this;
+        }
         let instantiated = Box::new(Self {
             assembly: self.assembly,
             generic: Some(NonNull::from_ref(self)),
@@ -162,8 +205,10 @@ impl Struct {
     }
 
     pub fn val_libffi_type(&self) -> libffi::middle::Type {
-        if let Some(core_type_id) = self.method_table_ref().get_core_type_id() {
-            return core_type_id.val_libffi_type().unwrap();
+        if let Some(core_type_id) = self.method_table_ref().get_core_type_id()
+            && let Some(gotten_ty) = core_type_id.val_libffi_type()
+        {
+            return gotten_ty;
         }
 
         let mut builder = Vec::with_capacity(self.fields.len());

@@ -47,6 +47,8 @@ pub enum CoreTypeId {
 
     System_DynamicLibrary,
 
+    System_Tuple,
+
     System_Array_1,
     System_String,
     System_LargeString,
@@ -108,6 +110,8 @@ impl CoreTypeId {
             Self::System_NonPurusCallType => "System::NonPurusCallType",
 
             Self::System_DynamicLibrary => "System::DynamicLibrary",
+
+            Self::System_Tuple => "System::Tuple",
 
             Self::System_Array_1 => "System::Array`1",
 

@@ -263,6 +263,8 @@ impl GetCoreTypeInfo for CoreTypeId {
 
             System_DynamicLibrary
 
+            System_Tuple
+
             System_Array_1
             System_String
             System_LargeString

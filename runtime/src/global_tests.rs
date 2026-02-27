@@ -211,7 +211,7 @@ fn gtest_simple_console() -> global::Result<()> {
 
     vm.assembly_manager()
         .load_binaries(&[binary::assembly::Assembly::from_path(
-            "../TestData/System_SimpleConsole.plb",
+            "../TestData/SimpleIR_SimpleConsole.plb",
         )?])?;
 
     let cpu_id = vm.add_cpu();
@@ -219,7 +219,7 @@ fn gtest_simple_console() -> global::Result<()> {
 
     let assembly = vm
         .assembly_manager()
-        .get_assembly_by_name("System_SimpleConsole")
+        .get_assembly_by_name("SimpleIR::SimpleConsole")
         .unwrap()
         .unwrap();
 

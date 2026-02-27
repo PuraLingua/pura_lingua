@@ -715,6 +715,26 @@ define_core_class! {
     }
 }
 
+define_core_struct! {
+    #[Public {}] assembly
+    System_Tuple 0+ "System::Tuple`0+" =>
+    #fields:
+
+    #methods:
+    [] [] with
+    |mt| {
+        vec![
+            // Statics
+            Box::new(
+                Method::default_sctor(
+                    Some(mt),
+                    TStaticMethodId::StaticConstructor.get_attr(),
+                ),
+            ),
+        ]
+    }
+}
+
 define_core_class! {
     #[Public {}] assembly
     System_Array_1 1 "System::Array`1" Some(CoreTypeId::System_Object.into()) =>

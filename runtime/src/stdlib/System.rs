@@ -11,5 +11,6 @@ pub mod Nullable;
 pub mod Object;
 pub mod Pointer;
 pub mod String;
+pub mod Tuple;
 pub mod Win32Exception;
 pub mod _Integers;

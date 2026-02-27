@@ -28,7 +28,7 @@ mod display;
 #[repr(C)]
 pub struct MethodTable<T> {
     pub(crate) ty: NonNull<T>,
-    methods: RwLock<Vec<NonNull<Method<T>>>>,
+    pub(super) methods: RwLock<Vec<NonNull<Method<T>>>>,
     __override_methods: Vec<usize>,
 
     cached_layout: Cell<Option<Layout>>,
@@ -268,11 +268,7 @@ where
             })
             .unwrap_or_else(Layout::new::<()>);
 
-        // Little hack for casting immutable to mutable
-        for f in unsafe { NonNull::from_ref(self).as_mut() }
-            .ty_mut()
-            .__get_fields_mut()
-        {
+        for f in self.ty_ref().__get_fields() {
             if !check(f) {
                 continue;
             }
@@ -281,6 +277,8 @@ where
                 .extend(f.layout_with_type(self.ty_ref(), GetLayoutOptions::default()))
                 .unwrap();
         }
+
+        total = total.pad_to_align();
 
         total
     }
