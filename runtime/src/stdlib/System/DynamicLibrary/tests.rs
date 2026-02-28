@@ -427,26 +427,26 @@ fn gen_simple_dynamic_lib_to_invoke(
         vec![
             // LoadLibrary
             Instruction::LoadStatic {
-                register_addr: 0,
+                register_addr: RegisterAddr::new(0),
                 ty: TEST_CLASS_REF.into(),
                 field: 0,
             },
             // LoadMethod
             Instruction::Load_String {
-                register_addr: 1,
+                register_addr: RegisterAddr::new(1),
                 val: "time".to_owned(),
             },
             Instruction::InstanceCall {
-                val: 0,
+                val: RegisterAddr::new(0),
                 method: MethodRef::from(System_DynamicLibrary_MethodId::GetSymbol),
-                args: vec![1],
-                ret_at: 2,
+                args: vec![RegisterAddr::new(1)],
+                ret_at: RegisterAddr::new(2),
             },
             // Prepare Config
 
             // CallConvention
             Instruction::Load_u8 {
-                register_addr: 4,
+                register_addr: RegisterAddr::new(4),
                 val: CallConvention::PlatformDefault as u8,
             },
             // ReturnType
@@ -456,16 +456,16 @@ fn gen_simple_dynamic_lib_to_invoke(
                     .into(),
                 method: System_NonPurusCallType_StaticMethodId::CreateI64.into(),
                 args: vec![],
-                ret_at: 5,
+                ret_at: RegisterAddr::new(5),
             },
             // Encoding
             Instruction::Load_u8 {
-                register_addr: 6,
+                register_addr: RegisterAddr::new(6),
                 val: non_purus_call_configuration::StringEncoding::C_Utf16 as _,
             },
             // ObjectStrategy
             Instruction::Load_u8 {
-                register_addr: 7,
+                register_addr: RegisterAddr::new(7),
                 val: non_purus_call_configuration::ObjectStrategy::PointToData as _,
             },
             // ByRefArguments
@@ -474,7 +474,7 @@ fn gen_simple_dynamic_lib_to_invoke(
                     .get_core_type(CoreTypeId::System_USize)
                     .into(),
                 len: 0,
-                register_addr: 8,
+                register_addr: RegisterAddr::new(8),
             },
             // Arguments
             Instruction::NewArray {
@@ -482,11 +482,11 @@ fn gen_simple_dynamic_lib_to_invoke(
                     .get_core_type(CoreTypeId::System_USize)
                     .into(),
                 len: 1,
-                register_addr: 9,
+                register_addr: RegisterAddr::new(9),
             },
             // IndexToSet
             Instruction::Load_u64 {
-                register_addr: 10,
+                register_addr: RegisterAddr::new(10),
                 val: 0,
             },
             // Arg0
@@ -496,13 +496,13 @@ fn gen_simple_dynamic_lib_to_invoke(
                     .into(),
                 method: System_NonPurusCallType_StaticMethodId::CreatePointer.into(),
                 args: vec![],
-                ret_at: 11,
+                ret_at: RegisterAddr::new(11),
             },
             Instruction::InstanceCall {
-                val: 9,
+                val: RegisterAddr::new(9),
                 method: System_Array_1_MethodId::set_Index.into(),
-                args: vec![10, 11],
-                ret_at: 0,
+                args: vec![RegisterAddr::new(10), RegisterAddr::new(11)],
+                ret_at: RegisterAddr::new(0),
             },
             // Construct
             Instruction::NewObject {
@@ -510,21 +510,30 @@ fn gen_simple_dynamic_lib_to_invoke(
                     .get_core_type(CoreTypeId::System_NonPurusCallConfiguration)
                     .into(),
                 ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
-                args: vec![4, 5, 6, 7, 8, 9],
-                register_addr: 3,
+                args: vec![
+                    RegisterAddr::new(4),
+                    RegisterAddr::new(5),
+                    RegisterAddr::new(6),
+                    RegisterAddr::new(7),
+                    RegisterAddr::new(8),
+                    RegisterAddr::new(9),
+                ],
+                register_addr: RegisterAddr::new(3),
             },
             // Call
             Instruction::Load_u64 {
-                register_addr: 12,
+                register_addr: RegisterAddr::new(12),
                 val: 0,
             },
             Instruction::DynamicNonPurusCall {
-                f_pointer: 2,
-                config: 3,
-                args: vec![12],
-                ret_at: 13,
+                f_pointer: RegisterAddr::new(2),
+                config: RegisterAddr::new(3),
+                args: vec![RegisterAddr::new(12)],
+                ret_at: RegisterAddr::new(13),
             },
-            Instruction::ReturnVal { register_addr: 13 },
+            Instruction::ReturnVal {
+                register_addr: RegisterAddr::new(13),
+            },
         ],
     ))
 }
