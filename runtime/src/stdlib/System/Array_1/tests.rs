@@ -1,4 +1,7 @@
-use global::{attrs::CallConvention, instruction::Instruction};
+use global::{
+    attrs::CallConvention,
+    instruction::{Instruction, RegisterAddr},
+};
 
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _, System_Array_1_MethodId},
@@ -111,34 +114,42 @@ fn array_get_set() -> global::Result<()> {
                                                 .static_type_ref()
                                                 .into(),
                                             len: 2,
-                                            register_addr: 0,
+                                            register_addr: RegisterAddr::new(0),
                                         },
                                         Instruction::Load_String {
-                                            register_addr: 1,
+                                            register_addr: RegisterAddr::new(1),
                                             val: "aaa".to_owned(),
                                         },
                                         Instruction::Load_String {
-                                            register_addr: 2,
+                                            register_addr: RegisterAddr::new(2),
                                             val: "bbb".to_owned(),
                                         },
 
-										Instruction::Load_u64 { register_addr: 3, val: 0 },
+										Instruction::Load_u64 {
+                                            register_addr: RegisterAddr::new(3),
+                                            val: 0,
+                                        },
 										Instruction::InstanceCall {
-											val: 0,
+											val: RegisterAddr::new(0),
 											method: System_Array_1_MethodId::set_Index.into(),
-											args: vec![3, 1],
-											ret_at: 4,
+											args: vec![RegisterAddr::new(3), RegisterAddr::new(1)],
+											ret_at: RegisterAddr::new(4),
 										},
 
-										Instruction::Load_u64 { register_addr: 3, val: 1 },
+										Instruction::Load_u64 {
+                                            register_addr: RegisterAddr::new(3),
+                                            val: 1,
+                                        },
 										Instruction::InstanceCall {
-											val: 0,
+											val: RegisterAddr::new(0),
 											method: System_Array_1_MethodId::set_Index.into(),
-											args: vec![3, 2],
-											ret_at: 4,
+											args: vec![RegisterAddr::new(3), RegisterAddr::new(2)],
+											ret_at: RegisterAddr::new(4),
 										},
 
-										Instruction::ReturnVal { register_addr: 0 }
+										Instruction::ReturnVal {
+                                            register_addr: RegisterAddr::new(0),
+                                        }
                                     ],
                                     )),
                                     //statics

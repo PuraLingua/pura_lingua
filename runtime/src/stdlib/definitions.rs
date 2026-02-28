@@ -1,7 +1,7 @@
 #![allow(unused)]
 use std::ptr::NonNull;
 
-use global::attrs::CallConvention;
+use global::{attrs::CallConvention, instruction::RegisterAddr};
 
 use proc_macros::{define_core_class, define_core_struct};
 
@@ -821,28 +821,30 @@ define_core_class! {
                     use global::instruction::Instruction;
                     vec![
                         Instruction::LoadThis {
-                            register_addr: 0,
+                            register_addr: RegisterAddr::new(0),
                         },
                         Instruction::LoadArg {
-                            register_addr: 1,
+                            register_addr: RegisterAddr::new(1),
                             arg: 0,
                         },
                         Instruction::InstanceCall {
-                            val: 0,
+                            val: RegisterAddr::new(0),
                             method: System_Array_1_MethodId::GetPointerOfIndex.into(),
-                            args: vec![1],
-                            ret_at: 2,
+                            args: vec![RegisterAddr::new(1)],
+                            ret_at: RegisterAddr::new(2),
                         },
                         Instruction::LoadTypeValueSize {
-                            register_addr: 3,
+                            register_addr: RegisterAddr::new(3),
                             ty: TypeHandle::Generic(0).into(),
                         },
                         Instruction::ReadPointerTo {
-                            ptr: 2,
-                            size: 3,
-                            destination: 4,
+                            ptr: RegisterAddr::new(2),
+                            size: RegisterAddr::new(3),
+                            destination: RegisterAddr::new(4),
                         },
-                        Instruction::ReturnVal { register_addr: 4 },
+                        Instruction::ReturnVal {
+                            register_addr: RegisterAddr::new(4),
+                        },
                     ]
                 },
             )
@@ -860,28 +862,32 @@ define_core_class! {
                     use global::instruction::Instruction;
                     vec![
                         Instruction::LoadThis {
-                            register_addr: 0,
+                            register_addr: RegisterAddr::new(0),
                         },
                         Instruction::LoadArg {
-                            register_addr: 1,
+                            register_addr: RegisterAddr::new(1),
                             arg: 0,
                         },
                         Instruction::LoadArg {
-                            register_addr: 2,
+                            register_addr: RegisterAddr::new(2),
                             arg: 1,
                         },
 
                         Instruction::LoadTypeValueSize {
-                            register_addr: 3,
+                            register_addr: RegisterAddr::new(3),
                             ty: TypeHandle::Generic(0).into(),
                         },
                         Instruction::InstanceCall {
-                            val: 0,
+                            val: RegisterAddr::new(0),
                             method: System_Array_1_MethodId::GetPointerOfIndex.into(),
-                            args: vec![1],
-                            ret_at: 4,
+                            args: vec![RegisterAddr::new(1)],
+                            ret_at: RegisterAddr::new(4),
                         },
-                        Instruction::WritePointer { source: 2, size: 3, ptr: 4 }
+                        Instruction::WritePointer {
+                            source: RegisterAddr::new(2),
+                            size: RegisterAddr::new(3),
+                            ptr: RegisterAddr::new(4),
+                        }
                     ]
                 },
             )

@@ -5,7 +5,7 @@ use std::{
 };
 
 use global::{
-    instruction::{Instruction, JumpTarget, JumpTargetType},
+    instruction::{Instruction, JumpTarget, JumpTargetType, RegisterAddr},
     t_println,
 };
 
@@ -23,7 +23,7 @@ use super::{Method, MethodRef};
 
 #[allow(dead_code)]
 enum Termination {
-    LoadRegisterFailed(u64),
+    LoadRegisterFailed(RegisterAddr),
     LoadArgFailed(u64),
     NullReference(&'static core::panic::Location<'static>),
     AllInstructionExecuted,
@@ -121,6 +121,28 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     load_register_failed!(*register_addr);
                 }
             }
+
+            Instruction::Load_i8 { register_addr, val } => {
+                if !frame.write_typed(*register_addr, *val) {
+                    load_register_failed!(*register_addr);
+                }
+            }
+            Instruction::Load_i16 { register_addr, val } => {
+                if !frame.write_typed(*register_addr, *val) {
+                    load_register_failed!(*register_addr);
+                }
+            }
+            Instruction::Load_i32 { register_addr, val } => {
+                if !frame.write_typed(*register_addr, *val) {
+                    load_register_failed!(*register_addr);
+                }
+            }
+            Instruction::Load_i64 { register_addr, val } => {
+                if !frame.write_typed(*register_addr, *val) {
+                    load_register_failed!(*register_addr);
+                }
+            }
+
             Instruction::LoadThis { register_addr } => {
                 let Some(local_var) = frame.get(*register_addr) else {
                     load_register_failed!(*register_addr);
@@ -302,7 +324,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     .map(|x| frame.get(*x).unwrap().ptr.cast::<c_void>().as_ptr())
                     .collect::<Vec<_>>();
 
-                let Some(val) = frame.get_typed::<ManagedReference<Class>>(*val).copied() else {
+                let Some(val) = frame.read_typed::<ManagedReference<Class>>(*val) else {
                     return Some(Err(Termination::LoadRegisterFailed(*val)));
                 };
                 if val.is_null() {

@@ -1,4 +1,8 @@
-use global::{attrs::CallConvention, instruction::Instruction, string_name};
+use global::{
+    attrs::CallConvention,
+    instruction::{Instruction, RegisterAddr},
+    string_name,
+};
 
 use crate::{
     test_utils::{g_core_class, g_core_type},
@@ -47,11 +51,11 @@ fn test_static() {
                                     None,
                                     vec![
                                         Instruction::Load_u64 {
-                                            register_addr: 0,
+                                            register_addr: RegisterAddr::new(0),
                                             val: 10,
                                         },
                                         Instruction::SetStaticField {
-                                            val_addr: 0,
+                                            val_addr: RegisterAddr::new(0),
                                             ty: TypeRef::Index {
                                                 assembly: AssemblyRef::Name(string_name!("Test")),
                                                 ind: 0,

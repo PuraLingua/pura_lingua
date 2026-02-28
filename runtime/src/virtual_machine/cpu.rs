@@ -1,7 +1,6 @@
 use std::{
     alloc::Layout,
     ffi::{CString, c_void},
-    mem::DropGuard,
     process::Termination,
     ptr::{NonNull, Unique},
     sync::{LockResult, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard},
@@ -9,6 +8,7 @@ use std::{
 
 use crate::{
     error::RuntimeError,
+    memory::{AllocateGuard, GuardedBox},
     stdlib::{
         CoreTypeId, System_NonPurusCallConfiguration_FieldId, System_NonPurusCallType_FieldId,
     },
@@ -29,7 +29,7 @@ mod gc;
 mod mem_record;
 
 pub use call_stack::{CallStack, CallStackFrame, CommonCallStackFrame, NativeCallStackFrame};
-pub use exception::{ExceptionManager, ThrowHelper, errno_location};
+pub use exception::{ExceptionManager, ThrowHelper};
 use global::{
     attrs::CallConvention,
     dt_println,
@@ -392,23 +392,9 @@ impl CPU {
         ) -> libffi::middle::Type {
             use libffi::middle::Type as LibffiType;
             if *is_by_ref {
-                return LibffiType::pointer();
-            }
-            match ty {
-                NonPurusCallType::Void => LibffiType::void(),
-                NonPurusCallType::U8 => LibffiType::u8(),
-                NonPurusCallType::I8 => LibffiType::i8(),
-                NonPurusCallType::U16 => LibffiType::u16(),
-                NonPurusCallType::I16 => LibffiType::i16(),
-                NonPurusCallType::U32 => LibffiType::u32(),
-                NonPurusCallType::I32 => LibffiType::i32(),
-                NonPurusCallType::U64 => LibffiType::u64(),
-                NonPurusCallType::I64 => LibffiType::i64(),
-                NonPurusCallType::String => LibffiType::pointer(),
-                NonPurusCallType::Object => LibffiType::pointer(),
-                NonPurusCallType::Structure(types) => {
-                    LibffiType::structure(types.iter().map(non_purus_type_to_libffi_type))
-                }
+                LibffiType::pointer()
+            } else {
+                non_purus_type_to_libffi_type(ty)
             }
         }
         let abi = crate::libffi_utils::get_abi_by_call_convention(cfg.call_convention);
@@ -429,14 +415,7 @@ impl CPU {
                 abi,
             ),
         };
-        let mut should_drop_pointers: DropGuard<Vec<(NonNull<c_void>, Layout)>, _> =
-            DropGuard::new(Vec::new(), |x| {
-                for (a, b) in x {
-                    unsafe {
-                        std::alloc::Allocator::deallocate(&std::alloc::Global, a.cast(), b);
-                    }
-                }
-            });
+        let allocate_guard = AllocateGuard::global();
         let mut treat_string_as_object = false;
         match cfg.encoding {
             global::non_purus_call_configuration::StringEncoding::Utf8 => {
@@ -445,30 +424,23 @@ impl CPU {
                         continue;
                     }
                     if *ty == NonPurusCallType::String {
-                        let data = Box::into_non_null(
+                        let data =
                             unsafe { args[i].cast::<ManagedReference<Class>>().as_ref_unchecked() }
                                 .access::<StringAccessor>()
                                 .unwrap()
                                 .to_string()
                                 .unwrap()
                                 .unwrap()
-                                .into_boxed_str(),
-                        );
-                        let layout = unsafe { Layout::for_value_raw(data.as_ptr().cast_const()) };
-                        should_drop_pointers.push((data.cast(), layout));
-                        let data_ptr = std::alloc::Allocator::allocate(
-                            &std::alloc::Global,
-                            Layout::new::<*const u8>(),
-                        )
-                        .unwrap()
-                        .as_non_null_ptr();
-                        unsafe {
-                            data_ptr
-                                .cast::<*const u8>()
-                                .write(data.as_ptr().cast_const().cast())
-                        }
+                                .into_boxed_str();
+                        let data = GuardedBox::as_non_null(GuardedBox::clone_from_ref(
+                            &*data,
+                            &allocate_guard,
+                        ));
+                        let data_ptr = GuardedBox::as_non_null(GuardedBox::new(
+                            data.as_ptr().cast_const().cast::<u8>(),
+                            &allocate_guard,
+                        ));
                         args[i] = data_ptr.cast().as_ptr();
-                        should_drop_pointers.push((data_ptr.cast(), Layout::new::<*const u8>()));
                     }
                 }
             }
@@ -479,24 +451,18 @@ impl CPU {
                         continue;
                     }
                     if *ty == NonPurusCallType::String {
-                        let ptr = std::alloc::Allocator::allocate(
-                            &std::alloc::Global,
-                            Layout::new::<*const u16>(),
-                        )
-                        .unwrap()
-                        .as_non_null_ptr();
-                        unsafe {
-                            ptr.cast::<*const u16>().write(
+                        let ptr = GuardedBox::as_non_null(GuardedBox::new(
+                            unsafe {
                                 args[i]
                                     .cast::<ManagedReference<Class>>()
                                     .as_ref_unchecked()
                                     .data_ptr()
                                     .cast_const()
-                                    .cast(),
-                            )
-                        }
+                                    .cast::<u16>()
+                            },
+                            &allocate_guard,
+                        ));
                         args[i] = ptr.cast().as_ptr();
-                        should_drop_pointers.push((ptr.cast(), Layout::new::<*const u16>()));
                     }
                 }
             }
@@ -506,37 +472,27 @@ impl CPU {
                         continue;
                     }
                     if *ty == NonPurusCallType::String {
-                        let data = Box::into_non_null(
-                            CString::new(
-                                unsafe {
-                                    args[i].cast::<ManagedReference<Class>>().as_ref_unchecked()
-                                }
+                        let data = CString::new(
+                            unsafe { args[i].cast::<ManagedReference<Class>>().as_ref_unchecked() }
                                 .access::<StringAccessor>()
                                 .unwrap()
                                 .to_string()
                                 .unwrap()
                                 .unwrap(),
-                            )
-                            .unwrap()
-                            .into_boxed_c_str(),
-                        );
-                        let layout = unsafe { Layout::for_value_raw(data.as_ptr().cast_const()) };
-                        should_drop_pointers.push((data.cast(), layout));
+                        )
+                        .unwrap()
+                        .into_boxed_c_str();
+                        let data = GuardedBox::as_non_null(GuardedBox::clone_from_ref(
+                            &*data,
+                            &allocate_guard,
+                        ));
                         #[cfg(windows)]
                         {
-                            let ptr = std::alloc::Allocator::allocate(
-                                &std::alloc::Global,
-                                Layout::new::<*const std::ffi::c_char>(),
-                            )
-                            .unwrap()
-                            .as_non_null_ptr();
-                            unsafe {
-                                ptr.cast::<*const std::ffi::c_char>()
-                                    .write(data.as_ptr().cast_const().cast())
-                            }
+                            let ptr = GuardedBox::as_non_null(GuardedBox::new(
+                                data.as_ptr().cast_const().cast::<std::ffi::c_char>(),
+                                &allocate_guard,
+                            ));
                             args[i] = ptr.cast().as_ptr();
-                            should_drop_pointers
-                                .push((ptr.cast(), Layout::new::<*const std::ffi::c_char>()));
                         }
                         #[cfg(not(windows))]
                         {
@@ -559,30 +515,18 @@ impl CPU {
                     if (*ty == NonPurusCallType::Object)
                         || ((*ty == NonPurusCallType::String) && treat_string_as_object)
                     {
-                        let ptr = std::alloc::Allocator::allocate(
-                            &std::alloc::Global,
-                            Layout::new::<*mut u8>(),
-                        )
-                        .unwrap()
-                        .as_non_null_ptr();
-                        unsafe {
-                            ptr.cast::<*mut u8>().write(
-                                args[i]
-                                    .cast::<ManagedReference<Class>>()
-                                    .read()
-                                    .data_ptr()
-                                    .cast(),
-                            )
-                        }
-                        should_drop_pointers.push((ptr.cast(), Layout::new::<*mut u8>()));
+                        let ptr = GuardedBox::as_non_null(GuardedBox::new(
+                            unsafe { args[i].cast::<ManagedReference<Class>>().read().data_ptr() },
+                            &allocate_guard,
+                        ));
+                        args[i] = ptr.as_ptr().cast();
                     }
                 }
             }
         }
         for (i, (is_by_ref, _)) in cfg.arguments.iter().enumerate() {
             if *is_by_ref {
-                let p = Box::into_non_null(Box::new(args[i]));
-                should_drop_pointers.push((p.cast(), Layout::new::<*mut c_void>()));
+                let p = GuardedBox::as_non_null(GuardedBox::new(args[i], &allocate_guard));
                 args[i] = p.as_ptr().cast();
             }
         }

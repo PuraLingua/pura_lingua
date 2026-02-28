@@ -2,7 +2,7 @@ use std::alloc::{Allocator, Layout};
 
 use global::{
     attrs::CallConvention,
-    instruction::Instruction,
+    instruction::{Instruction, RegisterAddr},
     non_purus_call_configuration::{ObjectStrategy, StringEncoding},
 };
 use widestring::U16CStr;
@@ -113,10 +113,10 @@ fn test_call_stack() {
         .unwrap();
 
     let call_frame = cpu.current_common_call_frame().unwrap().unwrap();
-    let u64_var = call_frame.get(0).unwrap();
-    let u8_var = call_frame.get(1).unwrap();
-    let u32_var = call_frame.get(2).unwrap();
-    let u16_var = call_frame.get(3).unwrap();
+    let u64_var = call_frame.get(RegisterAddr::new(0)).unwrap();
+    let u8_var = call_frame.get(RegisterAddr::new(1)).unwrap();
+    let u32_var = call_frame.get(RegisterAddr::new(2)).unwrap();
+    let u16_var = call_frame.get(RegisterAddr::new(3)).unwrap();
     assert_eq!(Layout::new::<u64>(), u64_var.layout);
     assert_eq!(Layout::new::<u8>(), u8_var.layout);
     assert_eq!(Layout::new::<u32>(), u32_var.layout);
@@ -291,24 +291,24 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                         vec![
                                             // Load function pointer
                                             Instruction::Load_u64 {
-                                                register_addr: 0,
+                                                register_addr: RegisterAddr::new(0),
                                                 val: test as *const u8 as usize as u64,
                                             },
                                             /* #region Arguments */
                                             Instruction::Load_u64 {
-                                                register_addr: 1,
+                                                register_addr: RegisterAddr::new(1),
                                                 val: 0x1ff1,
                                             },
                                             Instruction::Load_u32 {
-                                                register_addr: 2,
+                                                register_addr: RegisterAddr::new(2),
                                                 val: 10,
                                             },
                                             Instruction::Load_u8 {
-                                                register_addr: 3,
+                                                register_addr: RegisterAddr::new(3),
                                                 val: 15,
                                             },
                                             Instruction::Load_String {
-                                                register_addr: 4,
+                                                register_addr: RegisterAddr::new(4),
                                                 val: "aaa".to_owned(),
                                             },
                                             /* #endregion */
@@ -316,7 +316,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                             /* #region Config Setup */
                                             // Call convention
                                             Instruction::Load_u8 {
-                                                register_addr: 6,
+                                                register_addr: RegisterAddr::new(6),
                                                 val: CallConvention::PlatformDefault.into(),
                                             },
                                             // Return type
@@ -326,16 +326,16 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     .into(),
                                                 method: System_NonPurusCallType_StaticMethodId::CreateU64.into(),
                                                 args: vec![],
-                                                ret_at: 7,
+                                                ret_at: RegisterAddr::new(7),
                                             },
                                             // Encoding
                                             Instruction::Load_u8 {
-                                                register_addr: 8,
+                                                register_addr: RegisterAddr::new(8),
                                                 val: StringEncoding::C_Utf16.into(),
                                             },
                                             // Object strategy
                                             Instruction::Load_u8 {
-                                                register_addr: 9,
+                                                register_addr: RegisterAddr::new(9),
                                                 val: ObjectStrategy::PointToData.into(),
                                             },
                                             // New by ref argument array
@@ -344,7 +344,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     .static_type_ref()
                                                     .into(),
                                                 len: 1,
-                                                register_addr: 10,
+                                                register_addr: RegisterAddr::new(10),
                                             },
                                             // New argument array
                                             Instruction::NewArray {
@@ -352,22 +352,25 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     .static_type_ref()
                                                     .into(),
                                                 len: 4,
-                                                register_addr: 11,
+                                                register_addr: RegisterAddr::new(11),
                                             },
                                             // Set Index
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 0,
                                             },
                                             Instruction::Load_u64 {
-                                                register_addr: 13,
+                                                register_addr: RegisterAddr::new(13),
                                                 val: 1,
                                             },
                                             Instruction::InstanceCall {
-                                                val: 10,
+                                                val: RegisterAddr::new(10),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 13],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(13),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             // Arg0
                                             Instruction::StaticCall {
@@ -378,17 +381,20 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreateU64
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             // Arg 1
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 1,
                                             },
                                             Instruction::StaticCall {
@@ -399,17 +405,20 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreateU32
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             // Arg 2
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 2,
                                             },
                                             Instruction::StaticCall {
@@ -420,17 +429,20 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreateU8
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             // Arg 3
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 3,
                                             },
                                             Instruction::StaticCall {
@@ -441,13 +453,16 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreateString
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             /* #endregion */
                                             // Construct
@@ -457,22 +472,29 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                                     .into(),
                                                 ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
                                                 args: vec![
-                                                    6,
-                                                    7,
-                                                    8,
-                                                    9,
-                                                    10,
-                                                    11,
+                                                    RegisterAddr::new(6),
+                                                    RegisterAddr::new(7),
+                                                    RegisterAddr::new(8),
+                                                    RegisterAddr::new(9),
+                                                    RegisterAddr::new(10),
+                                                    RegisterAddr::new(11),
                                                 ],
-                                                register_addr: 5,
+                                                register_addr: RegisterAddr::new(5),
                                             },
                                             Instruction::DynamicNonPurusCall {
-                                                f_pointer: 0,
-                                                config: 5,
-                                                args: vec![1, 2, 3, 4],
-                                                ret_at: 16,
+                                                f_pointer: RegisterAddr::new(0),
+                                                config: RegisterAddr::new(5),
+                                                args: vec![
+                                                    RegisterAddr::new(1),
+                                                    RegisterAddr::new(2),
+                                                    RegisterAddr::new(3),
+                                                    RegisterAddr::new(4),
+                                                ],
+                                                ret_at: RegisterAddr::new(16),
                                             },
-                                            Instruction::ReturnVal { register_addr: 16 },
+                                            Instruction::ReturnVal {
+                                                register_addr: RegisterAddr::new(16),
+                                            },
                                         ],
                                     )),
                                     Box::new(
@@ -633,24 +655,24 @@ fn dynamic_message_box() -> global::Result<()> {
                                         vec![
                                             // Load function pointer
                                             Instruction::Load_u64 {
-                                                register_addr: 0,
+                                                register_addr: RegisterAddr::new(0),
                                                 val: MessageBoxW as *const u8 as usize as u64,
                                             },
                                             /* #region Arguments */
                                             Instruction::Load_u64 {
-                                                register_addr: 1,
+                                                register_addr: RegisterAddr::new(1),
                                                 val: 0,
                                             },
                                             Instruction::Load_String {
-                                                register_addr: 2,
+                                                register_addr: RegisterAddr::new(2),
                                                 val: "TEXT".to_owned(),
                                             },
                                             Instruction::Load_String {
-                                                register_addr: 3,
+                                                register_addr: RegisterAddr::new(3),
                                                 val: "CAPTION".to_owned(),
                                             },
                                             Instruction::Load_u32 {
-                                                register_addr: 4,
+                                                register_addr: RegisterAddr::new(4),
                                                 val: windows::Win32::UI::WindowsAndMessaging::MB_ICONERROR.0,
                                             },
                                             /* #endregion */
@@ -658,7 +680,7 @@ fn dynamic_message_box() -> global::Result<()> {
                                             /* #region Config Setup */
                                             // Call convention
                                             Instruction::Load_u8 {
-                                                register_addr: 6,
+                                                register_addr: RegisterAddr::new(6),
                                                 val: CallConvention::PlatformDefault.into(),
                                             },
                                             // Return type
@@ -668,16 +690,16 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     .into(),
                                                 method: System_NonPurusCallType_StaticMethodId::CreateI32.into(),
                                                 args: vec![],
-                                                ret_at: 7,
+                                                ret_at: RegisterAddr::new(7),
                                             },
                                             // Encoding
                                             Instruction::Load_u8 {
-                                                register_addr: 8,
+                                                register_addr: RegisterAddr::new(8),
                                                 val: StringEncoding::C_Utf16.into(),
                                             },
                                             // Object strategy
                                             Instruction::Load_u8 {
-                                                register_addr: 9,
+                                                register_addr: RegisterAddr::new(9),
                                                 val: ObjectStrategy::PointToData.into(),
                                             },
                                             // New by ref argument array
@@ -686,7 +708,7 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     .static_type_ref()
                                                     .into(),
                                                 len: 0,
-                                                register_addr: 10,
+                                                register_addr: RegisterAddr::new(10),
                                             },
                                             // New argument array
                                             Instruction::NewArray {
@@ -694,11 +716,11 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     .static_type_ref()
                                                     .into(),
                                                 len: 4,
-                                                register_addr: 11,
+                                                register_addr: RegisterAddr::new(11),
                                             },
                                             // Arg0
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 0,
                                             },
                                             Instruction::StaticCall {
@@ -709,17 +731,20 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreatePointer
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             // Arg 1
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 1,
                                             },
                                             Instruction::StaticCall {
@@ -730,17 +755,20 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreateString
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             // Arg 2
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 2,
                                             },
                                             Instruction::StaticCall {
@@ -751,17 +779,20 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreateString
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             // Arg 3
                                             Instruction::Load_u64 {
-                                                register_addr: 12,
+                                                register_addr: RegisterAddr::new(12),
                                                 val: 3,
                                             },
                                             Instruction::StaticCall {
@@ -772,13 +803,16 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     System_NonPurusCallType_StaticMethodId::CreateU32
                                                         .into(),
                                                 args: vec![],
-                                                ret_at: 14,
+                                                ret_at: RegisterAddr::new(14),
                                             },
                                             Instruction::InstanceCall {
-                                                val: 11,
+                                                val: RegisterAddr::new(11),
                                                 method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![12, 14],
-                                                ret_at: 15,
+                                                args: vec![
+                                                    RegisterAddr::new(12),
+                                                    RegisterAddr::new(14),
+                                                ],
+                                                ret_at: RegisterAddr::new(15),
                                             },
                                             /* #endregion */
                                             // Construct
@@ -788,22 +822,29 @@ fn dynamic_message_box() -> global::Result<()> {
                                                     .into(),
                                                 ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
                                                 args: vec![
-                                                    6,
-                                                    7,
-                                                    8,
-                                                    9,
-                                                    10,
-                                                    11,
+                                                    RegisterAddr::new(6),
+                                                    RegisterAddr::new(7),
+                                                    RegisterAddr::new(8),
+                                                    RegisterAddr::new(9),
+                                                    RegisterAddr::new(10),
+                                                    RegisterAddr::new(11),
                                                 ],
-                                                register_addr: 5,
+                                                register_addr: RegisterAddr::new(5),
                                             },
                                             Instruction::DynamicNonPurusCall {
-                                                f_pointer: 0,
-                                                config: 5,
-                                                args: vec![1, 2, 3, 4],
-                                                ret_at: 16,
+                                                f_pointer: RegisterAddr::new(0),
+                                                config: RegisterAddr::new(5),
+                                                args: vec![
+                                                    RegisterAddr::new(1),
+                                                    RegisterAddr::new(2),
+                                                    RegisterAddr::new(3),
+                                                    RegisterAddr::new(4),
+                                                ],
+                                                ret_at: RegisterAddr::new(16),
                                             },
-                                            Instruction::ReturnVal { register_addr: 16 },
+                                            Instruction::ReturnVal {
+                                                register_addr: RegisterAddr::new(16),
+                                            },
                                         ],
                                     )),
                                     Box::new(

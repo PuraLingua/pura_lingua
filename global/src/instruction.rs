@@ -12,17 +12,10 @@ use proc_macros::WithType;
 mod jumping;
 pub use jumping::*;
 
+mod register_addr;
+pub use register_addr::*;
+
 use crate::non_purus_call_configuration::NonPurusCallConfiguration;
-
-#[repr(transparent)]
-#[derive(Debug, Clone, Copy, ReadFromSection, WriteToSection)]
-pub struct RegisterAddr(u64);
-
-impl RegisterAddr {
-    pub fn get(self) -> u64 {
-        self.0
-    }
-}
 
 #[repr(u64)]
 #[derive(Debug, Clone, WithType, ReadFromSection, WriteToSection)]
@@ -32,140 +25,157 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
     /// Usually used for Jump*
     Noop,
     LoadTrue {
-        register_addr: u64,
+        register_addr: RegisterAddr,
     },
     LoadFalse {
-        register_addr: u64,
+        register_addr: RegisterAddr,
     },
 
     Load_u8 {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         val: u8,
     },
     Load_u16 {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         val: u16,
     },
     Load_u32 {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         val: u32,
     },
     Load_u64 {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         val: u64,
     },
 
+    Load_i8 {
+        register_addr: RegisterAddr,
+        val: i8,
+    },
+    Load_i16 {
+        register_addr: RegisterAddr,
+        val: i16,
+    },
+    Load_i32 {
+        register_addr: RegisterAddr,
+        val: i32,
+    },
+    Load_i64 {
+        register_addr: RegisterAddr,
+        val: i64,
+    },
+
     LoadThis {
-        register_addr: u64,
+        register_addr: RegisterAddr,
     },
 
     Load_String {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         val: TString,
     },
 
     LoadTypeValueSize {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         ty: TTypeRef,
     },
 
     ReadPointerTo {
-        ptr: u64,
-        size: u64,
-        destination: u64,
+        ptr: RegisterAddr,
+        size: RegisterAddr,
+        destination: RegisterAddr,
     },
     WritePointer {
-        source: u64,
-        size: u64,
-        ptr: u64,
+        source: RegisterAddr,
+        size: RegisterAddr,
+        ptr: RegisterAddr,
     },
 
     IsAllZero {
-        register_addr: u64,
-        to_check: u64,
+        register_addr: RegisterAddr,
+        to_check: RegisterAddr,
     },
 
     NewObject {
         ty: TTypeRef,
         ctor_name: TMethodRef,
-        args: Vec<u64>,
-        register_addr: u64,
+        args: Vec<RegisterAddr>,
+        register_addr: RegisterAddr,
     },
     NewArray {
         element_type: TTypeRef,
         len: u64,
-        register_addr: u64,
+        register_addr: RegisterAddr,
     },
     NewDynamicArray {
         element_type: TTypeRef,
-        len_addr: u64,
-        register_addr: u64,
+        len_addr: RegisterAddr,
+        register_addr: RegisterAddr,
     },
 
     InstanceCall {
-        val: u64,
+        val: RegisterAddr,
         method: TMethodRef,
-        args: Vec<u64>,
-        ret_at: u64,
+        args: Vec<RegisterAddr>,
+        ret_at: RegisterAddr,
     },
     StaticCall {
         ty: TTypeRef,
         method: TMethodRef,
-        args: Vec<u64>,
-        ret_at: u64,
+        args: Vec<RegisterAddr>,
+        ret_at: RegisterAddr,
     },
     StaticNonPurusCall {
-        f_pointer: u64,
+        f_pointer: RegisterAddr,
         config: NonPurusCallConfiguration,
-        args: Vec<u64>,
-        ret_at: u64,
+        args: Vec<RegisterAddr>,
+        ret_at: RegisterAddr,
     },
     DynamicNonPurusCall {
-        f_pointer: u64,
-        config: u64,
-        args: Vec<u64>,
-        ret_at: u64,
+        f_pointer: RegisterAddr,
+        config: RegisterAddr,
+        args: Vec<RegisterAddr>,
+        ret_at: RegisterAddr,
     },
 
     LoadNonPurusCallConfiguration {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         val: NonPurusCallConfiguration,
     },
 
     LoadArg {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         arg: u64,
     },
 
     LoadStatic {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         ty: TTypeRef,
         field: TFieldRef,
     },
 
     LoadField {
-        container: u64,
+        container: RegisterAddr,
         field: TFieldRef,
-        register_addr: u64,
+        register_addr: RegisterAddr,
     },
 
     SetThisField {
-        val_addr: u64,
+        val_addr: RegisterAddr,
         field: TFieldRef,
     },
 
     SetStaticField {
-        val_addr: u64,
+        val_addr: RegisterAddr,
         ty: TTypeRef,
         field: TFieldRef,
     },
 
     Throw {
-        exception_addr: u64,
+        exception_addr: RegisterAddr,
     },
 
     ReturnVal {
-        register_addr: u64,
+        register_addr: RegisterAddr,
     },
 
     Jump {
@@ -173,16 +183,16 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
     },
 
     JumpIf {
-        register_addr: u64,
+        register_addr: RegisterAddr,
         target: JumpTarget,
     },
 
     JumpIfAllZero {
-        to_check: u64,
+        to_check: RegisterAddr,
         target: JumpTarget,
     },
     JumpIfNotAllZero {
-        to_check: u64,
+        to_check: RegisterAddr,
         target: JumpTarget,
     },
 }
@@ -219,6 +229,10 @@ pub macro instruction_match_helper(
         Load_u16 { register_addr, val } => $success(Load_u16 { register_addr, val }),
         Load_u32 { register_addr, val } => $success(Load_u32 { register_addr, val }),
         Load_u64 { register_addr, val } => $success(Load_u64 { register_addr, val }),
+        Load_i8 { register_addr, val } => $success(Load_i8 { register_addr, val }),
+        Load_i16 { register_addr, val } => $success(Load_i16 { register_addr, val }),
+        Load_i32 { register_addr, val } => $success(Load_i32 { register_addr, val }),
+        Load_i64 { register_addr, val } => $success(Load_i64 { register_addr, val }),
         LoadThis { register_addr } => $success(LoadThis { register_addr }),
         Load_String { register_addr, val } => $success(Load_String {
             register_addr,
@@ -540,6 +554,20 @@ where
             Load_u64 { register_addr, val } => {
                 write!(f, "{NAME}::Load_u64 {register_addr:#x} {val}({val:#x})")
             }
+
+            Load_i8 { register_addr, val } => {
+                write!(f, "{NAME}::Load_i8 {register_addr:#x} {val}({val:#x})")
+            }
+            Load_i16 { register_addr, val } => {
+                write!(f, "{NAME}::Load_i16 {register_addr:#x} {val}({val:#x})")
+            }
+            Load_i32 { register_addr, val } => {
+                write!(f, "{NAME}::Load_i32 {register_addr:#x} {val}({val:#x})")
+            }
+            Load_i64 { register_addr, val } => {
+                write!(f, "{NAME}::Load_i64 {register_addr:#x} {val}({val:#x})")
+            }
+
             LoadThis { register_addr } => write!(f, "{NAME}::LoadThis {register_addr:#x}"),
             Load_String { register_addr, val } => {
                 write!(f, "{NAME}::Load_String {register_addr:#x} {val}")

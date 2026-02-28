@@ -1,6 +1,9 @@
 use std::{
     alloc::{AllocError, Allocator, Layout},
+    clone::CloneToUninit,
+    mem::MaybeUninit,
     ptr::{Alignment, NonNull},
+    sync::RwLock,
 };
 
 use bon::Builder;
@@ -114,5 +117,204 @@ pub const fn get_return_layout_for_libffi(layout: Layout) -> Layout {
         Layout::new::<usize>()
     } else {
         layout
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct GuardedBox<'a, T: ?Sized, A: Allocator>(NonNull<T>, &'a AllocateGuard<A>);
+
+impl<'a, T: ?Sized, A: Allocator> GuardedBox<'a, T, A> {
+    pub fn new(val: T, guard: &'a AllocateGuard<A>) -> Self
+    where
+        T: Sized,
+    {
+        let mut this = Self::new_uninit(guard);
+        GuardedBox::write(&mut this, val);
+        unsafe { GuardedBox::assume_init(this) }
+    }
+    pub fn new_uninit(guard: &'a AllocateGuard<A>) -> GuardedBox<'a, MaybeUninit<T>, A>
+    where
+        T: Sized,
+    {
+        let layout = Layout::new::<T>();
+        match GuardedBox::try_new_uninit(guard) {
+            Ok(data) => data,
+            Err(_) => std::alloc::handle_alloc_error(layout),
+        }
+    }
+    pub fn try_new_uninit(
+        guard: &'a AllocateGuard<A>,
+    ) -> Result<GuardedBox<'a, MaybeUninit<T>, A>, AllocError>
+    where
+        T: Sized,
+    {
+        guard
+            .allocate(Layout::new::<MaybeUninit<T>>())
+            .map(|x| GuardedBox(x.as_non_null_ptr().cast(), guard))
+    }
+    pub const fn write(b: &mut GuardedBox<'a, MaybeUninit<T>, A>, val: T)
+    where
+        T: Sized,
+    {
+        unsafe {
+            b.0.as_mut().write(val);
+        }
+    }
+    pub const unsafe fn assume_init(b: GuardedBox<'a, MaybeUninit<T>, A>) -> Self
+    where
+        T: Sized,
+    {
+        Self(b.0.cast(), b.1)
+    }
+
+    pub fn clone_from_ref(val: &T, guard: &'a AllocateGuard<A>) -> Self
+    where
+        T: CloneToUninit,
+    {
+        let (ptr, _) = Box::into_non_null_with_allocator(Box::clone_from_ref_in(val, guard));
+        Self(ptr, guard)
+    }
+    pub const fn as_non_null(b: GuardedBox<'a, T, A>) -> NonNull<T> {
+        b.0
+    }
+}
+
+pub struct AllocateGuard<A: Allocator> {
+    a: A,
+    record: RwLock<Vec<(NonNull<u8>, Layout)>>,
+}
+
+impl<A: Allocator + [const] Default> const Default for AllocateGuard<A> {
+    fn default() -> Self {
+        Self::new(Default::default())
+    }
+}
+
+impl<A: Allocator> AllocateGuard<A> {
+    pub const fn new(a: A) -> Self {
+        Self {
+            a,
+            record: RwLock::new(Vec::new()),
+        }
+    }
+}
+
+impl AllocateGuard<std::alloc::Global> {
+    pub const fn global() -> Self {
+        Self::new(std::alloc::Global)
+    }
+}
+
+impl AllocateGuard<std::alloc::System> {
+    pub const fn system() -> Self {
+        Self::new(std::alloc::System)
+    }
+}
+
+unsafe impl<A: Allocator> Allocator for AllocateGuard<A> {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        let ptr = self.a.allocate(layout)?;
+        let mut record = self.record.write().unwrap();
+        record.push((ptr.as_non_null_ptr(), layout));
+        Ok(ptr)
+    }
+
+    /// Do not call it as everything will be dropped when self is dropped.
+    unsafe fn deallocate(&self, _: NonNull<u8>, _: Layout) {}
+
+    fn allocate_zeroed(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        let ptr = self.a.allocate_zeroed(layout)?;
+        let mut record = self.record.write().unwrap();
+        record.push((ptr.as_non_null_ptr(), layout));
+        Ok(ptr)
+    }
+
+    /// It will not deallocate ptr
+    unsafe fn grow(
+        &self,
+        ptr: NonNull<u8>,
+        old_layout: Layout,
+        new_layout: Layout,
+    ) -> Result<NonNull<[u8]>, AllocError> {
+        debug_assert!(
+            new_layout.size() >= old_layout.size(),
+            "`new_layout.size()` must be greater than or equal to `old_layout.size()`"
+        );
+
+        let new_ptr = self.allocate(new_layout)?;
+
+        // SAFETY: because `new_layout.size()` must be greater than or equal to
+        // `old_layout.size()`, both the old and new memory allocation are valid for reads and
+        // writes for `old_layout.size()` bytes. Also, because the old allocation wasn't yet
+        // deallocated, it cannot overlap `new_ptr`. Thus, the call to `copy_nonoverlapping` is
+        // safe. The safety contract for `dealloc` must be upheld by the caller.
+        unsafe {
+            std::ptr::copy_nonoverlapping(ptr.as_ptr(), new_ptr.as_mut_ptr(), old_layout.size());
+        }
+
+        Ok(new_ptr)
+    }
+
+    /// It will not deallocate ptr
+    unsafe fn grow_zeroed(
+        &self,
+        ptr: NonNull<u8>,
+        old_layout: Layout,
+        new_layout: Layout,
+    ) -> Result<NonNull<[u8]>, AllocError> {
+        debug_assert!(
+            new_layout.size() >= old_layout.size(),
+            "`new_layout.size()` must be greater than or equal to `old_layout.size()`"
+        );
+
+        let new_ptr = self.allocate_zeroed(new_layout)?;
+
+        // SAFETY: because `new_layout.size()` must be greater than or equal to
+        // `old_layout.size()`, both the old and new memory allocation are valid for reads and
+        // writes for `old_layout.size()` bytes. Also, because the old allocation wasn't yet
+        // deallocated, it cannot overlap `new_ptr`. Thus, the call to `copy_nonoverlapping` is
+        // safe. The safety contract for `dealloc` must be upheld by the caller.
+        unsafe {
+            std::ptr::copy_nonoverlapping(ptr.as_ptr(), new_ptr.as_mut_ptr(), old_layout.size());
+        }
+
+        Ok(new_ptr)
+    }
+
+    /// It will not deallocate ptr
+    unsafe fn shrink(
+        &self,
+        ptr: NonNull<u8>,
+        old_layout: Layout,
+        new_layout: Layout,
+    ) -> Result<NonNull<[u8]>, AllocError> {
+        debug_assert!(
+            new_layout.size() <= old_layout.size(),
+            "`new_layout.size()` must be smaller than or equal to `old_layout.size()`"
+        );
+
+        let new_ptr = self.allocate(new_layout)?;
+
+        // SAFETY: because `new_layout.size()` must be lower than or equal to
+        // `old_layout.size()`, both the old and new memory allocation are valid for reads and
+        // writes for `new_layout.size()` bytes. Also, because the old allocation wasn't yet
+        // deallocated, it cannot overlap `new_ptr`. Thus, the call to `copy_nonoverlapping` is
+        // safe. The safety contract for `dealloc` must be upheld by the caller.
+        unsafe {
+            std::ptr::copy_nonoverlapping(ptr.as_ptr(), new_ptr.as_mut_ptr(), new_layout.size());
+        }
+
+        Ok(new_ptr)
+    }
+}
+
+impl<A: Allocator> Drop for AllocateGuard<A> {
+    fn drop(&mut self) {
+        let record = self.record.read().unwrap();
+        for (p, layout) in &*record {
+            unsafe {
+                self.a.deallocate(*p, *layout);
+            }
+        }
     }
 }

@@ -49,6 +49,8 @@
 #![feature(closure_track_caller)]
 #![feature(cstr_display)]
 #![feature(doc_cfg)]
+#![feature(c_size_t)]
+#![feature(clone_to_uninit)]
 //
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]
@@ -66,6 +68,7 @@ pub mod type_system;
 pub mod value;
 pub mod virtual_machine;
 
+pub(crate) mod c_ffi;
 pub(crate) mod libffi_utils;
 pub(crate) mod llvm_utils;
 

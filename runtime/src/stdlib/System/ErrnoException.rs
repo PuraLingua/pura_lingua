@@ -8,7 +8,7 @@ use crate::{
 #[cfg(unix)]
 pub fn Constructor(cpu: &CPU, method: &Method<Class>, this: &mut ManagedReference<Class>) {
     Constructor_I32(cpu, method, this, unsafe {
-        *crate::virtual_machine::cpu::errno_location()
+        *crate::c_ffi::errno_location()
     });
 }
 
