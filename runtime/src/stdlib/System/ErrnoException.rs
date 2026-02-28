@@ -32,7 +32,7 @@ pub fn Constructor_I32(
             )
     );
 
-    super::Exception::Construct_String(
+    super::Exception::Constructor_String(
         cpu,
         method,
         this,

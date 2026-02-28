@@ -11,7 +11,7 @@ pub fn Constructor_String_String(
     enum_name: ManagedReference<Class>,
     message: ManagedReference<Class>,
 ) {
-    super::Exception::Construct_String(
+    super::Exception::Constructor_String(
         cpu,
         method,
         this,
