@@ -5,10 +5,19 @@
 ```bash
 cargo test --workspace
 ```
-tests might fail:
-* global_tests::gtest_test_fn <!-- may caused by file not found error -->
-* stdlib::System::DynamicLibrary::tests::simple_dynamic_lib_test
-* type_system::method::tests::test_normal_f
-* virtual_machine::cpu::tests::dynamic_message_box
-* virtual_machine::cpu::tests::dynamic_non_purus_call
-* virtual_machine::cpu::tests::test_call_stack
+That's because tests rely on global variables, which are kept during different tests.
+try using something like
+```powershell
+function Get-AllRustTest {
+	(cargo test -- --list).Split([System.Environment]::NewLine) `
+	| Where-Object {$_ -like "*: test"} `
+	| Foreach-Object -Process {$_.Split(": ")[0]}
+}
+$failures = [System.Collections.Generic.List[string]]::new()
+Get-AllRustTest | Foreach-Object -Process {
+	cargo test $_
+	if ($LASTEXITCODE -ne 0) {
+		$failures.Add($_)
+	}
+}
+```
