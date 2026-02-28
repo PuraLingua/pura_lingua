@@ -120,6 +120,20 @@ pub struct FieldInfo {
     pub ty: CoreTypeRef,
 }
 
+#[cfg(feature = "__when_impl")]
+macro common_new_method($mt:ident $TMethodId:ident $id:ident $f:path) {
+    Box::new(Method::native(
+        Some($mt),
+        $TMethodId::$id.get_name().to_owned(),
+        $TMethodId::$id.get_attr(),
+        $TMethodId::$id.get_parameters(),
+        $TMethodId::$id.get_return_type(),
+        CallConvention::PlatformDefault,
+        None,
+        $f as _,
+    ))
+}
+
 define_core_class! {
     #[Public {}] assembly
     System_Object "System::Object" =>
@@ -131,26 +145,8 @@ define_core_class! {
         #[Public {}] ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
     ] [] with
     |mt| vec![
-        Box::new(Method::native(
-            Some(mt),
-            TMethodId::Destructor.get_name().to_owned(),
-            TMethodId::Destructor.get_attr(),
-            TMethodId::Destructor.get_parameters(),
-            TMethodId::Destructor.get_return_type(),
-            CallConvention::PlatformDefault,
-            None,
-            System::Object::Destructor as _,
-        )),
-        Box::new(Method::native(
-            Some(mt),
-            TMethodId::ToString.get_name().to_owned(),
-            TMethodId::ToString.get_attr(),
-            TMethodId::ToString.get_parameters(),
-            TMethodId::ToString.get_return_type(),
-            CallConvention::PlatformDefault,
-            None,
-            System::Object::ToString as _,
-        )),
+        common_new_method!(mt TMethodId Destructor System::Object::Destructor),
+        common_new_method!(mt TMethodId ToString System::Object::ToString),
 
         // Statics
         Box::new(
@@ -222,18 +218,7 @@ define_core_struct! {
                 TStaticMethodId::StaticConstructor.get_attr(),
             ),
         ),
-        Box::new(
-            Method::native(
-                Some(mt),
-                "Initialize".to_owned(),
-                TStaticMethodId::Initialize.get_attr(),
-                TStaticMethodId::Initialize.get_parameters(),
-                CoreTypeId::System_Void.static_type_ref().into(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Nullable::Initialize as _,
-            )
-        ),
+        common_new_method!(mt TStaticMethodId Initialize System::Nullable::Initialize),
     ]
 }
 
@@ -525,18 +510,8 @@ define_core_class! {
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] [] with
     |mt| vec![
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Constructor.get_name().to_owned(),
-                TMethodId::Constructor.get_attr(),
-                TMethodId::Constructor.get_parameters(),
-                TMethodId::Constructor.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::NonPurusCallConfiguration::Constructor as _,
-            )
-        ),
+        common_new_method!(mt TMethodId Constructor System::NonPurusCallConfiguration::Constructor),
+
         // Statics
         Box::new(
             Method::default_sctor(
@@ -636,16 +611,7 @@ define_core_class! {
             def!(String),
             def!(Object),
 
-            Box::new(Method::native(
-                Some(mt),
-                TStaticMethodId::CreateStructure.get_name().to_owned(),
-                TStaticMethodId::CreateStructure.get_attr(),
-                TStaticMethodId::CreateStructure.get_parameters(),
-                TStaticMethodId::CreateStructure.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::NonPurusCallType::CreateStructure as _,
-            )),
+            common_new_method!(mt TStaticMethodId CreateStructure System::NonPurusCallType::CreateStructure)
         ]
     }
 }
@@ -668,42 +634,9 @@ define_core_class! {
         ) -> CoreTypeRef::Core(CoreTypeId::System_Pointer);
     ] [] with |mt| {
         vec![
-            Box::new(
-                Method::native(
-                    Some(mt),
-                    TMethodId::Destructor.get_name().to_owned(),
-                    TMethodId::Destructor.get_attr(),
-                    TMethodId::Destructor.get_parameters(),
-                    TMethodId::Destructor.get_return_type(),
-                    CallConvention::PlatformDefault,
-                    None,
-                    System::DynamicLibrary::Destructor as _,
-                ),
-            ),
-            Box::new(
-                Method::native(
-                    Some(mt),
-                    TMethodId::Constructor_String.get_name().to_owned(),
-                    TMethodId::Constructor_String.get_attr(),
-                    TMethodId::Constructor_String.get_parameters(),
-                    TMethodId::Constructor_String.get_return_type(),
-                    CallConvention::PlatformDefault,
-                    None,
-                    System::DynamicLibrary::Constructor_String as _,
-                )
-            ),
-            Box::new(
-                Method::native(
-                    Some(mt),
-                    TMethodId::GetSymbol.get_name().to_owned(),
-                    TMethodId::GetSymbol.get_attr(),
-                    TMethodId::GetSymbol.get_parameters(),
-                    TMethodId::GetSymbol.get_return_type(),
-                    CallConvention::PlatformDefault,
-                    None,
-                    System::DynamicLibrary::GetSymbol as _,
-                )
-            ),
+            common_new_method!(mt TMethodId Destructor System::DynamicLibrary::Destructor),
+            common_new_method!(mt TMethodId Constructor_String System::DynamicLibrary::Constructor_String),
+            common_new_method!(mt TMethodId GetSymbol System::DynamicLibrary::GetSymbol),
             // Statics
             Box::new(
                 Method::default_sctor(
@@ -772,42 +705,9 @@ define_core_class! {
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] [] with
     |mt| vec![
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Destructor.get_name().to_owned(),
-                TMethodId::Destructor.get_attr(),
-                TMethodId::Destructor.get_parameters(),
-                TMethodId::Destructor.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Array_1::Destructor as _,
-            ),
-        ),
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::ToString.get_name().to_owned(),
-                TMethodId::ToString.get_attr(),
-                TMethodId::ToString.get_parameters(),
-                TMethodId::ToString.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Array_1::ToString as _,
-            ),
-        ),
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::GetPointerOfIndex.get_name().to_owned(),
-                TMethodId::GetPointerOfIndex.get_attr(),
-                TMethodId::GetPointerOfIndex.get_parameters(),
-                TMethodId::GetPointerOfIndex.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Array_1::GetPointerOfIndex as _,
-            ),
-        ),
+        common_new_method!(mt TMethodId Destructor System::Array_1::Destructor),
+        common_new_method!(mt TMethodId ToString System::Array_1::ToString),
+        common_new_method!(mt TMethodId GetPointerOfIndex System::Array_1::GetPointerOfIndex),
         Box::new(
             Method::new(
                 mt,
@@ -915,36 +815,9 @@ define_core_class! {
         #[Public {}] get_U32Length () -> CoreTypeRef::Core(CoreTypeId::System_UInt32);
     ] [] with
     |mt| vec![
-        Box::new(Method::native(
-            Some(mt),
-            TMethodId::ToString.get_name().to_owned(),
-            TMethodId::ToString.get_attr(),
-            TMethodId::ToString.get_parameters(),
-            TMethodId::ToString.get_return_type(),
-            CallConvention::PlatformDefault,
-            None,
-            System::String::ToString as _,
-        )),
-        Box::new(Method::native(
-            Some(mt),
-            TMethodId::get_Length.get_name().to_owned(),
-            TMethodId::get_Length.get_attr(),
-            TMethodId::get_Length.get_parameters(),
-            TMethodId::get_Length.get_return_type(),
-            CallConvention::PlatformDefault,
-            None,
-            System::String::get_Length as _,
-        )),
-        Box::new(Method::native(
-            Some(mt),
-            TMethodId::get_U32Length.get_name().to_owned(),
-            TMethodId::get_U32Length.get_attr(),
-            TMethodId::get_U32Length.get_parameters(),
-            TMethodId::get_U32Length.get_return_type(),
-            CallConvention::PlatformDefault,
-            None,
-            System::String::get_U32Length as _,
-        )),
+        common_new_method!(mt TMethodId ToString System::String::ToString),
+        common_new_method!(mt TMethodId get_Length System::String::get_Length),
+        common_new_method!(mt TMethodId get_U32Length System::String::get_U32Length),
 
         // Statics
         Box::new(
@@ -967,16 +840,7 @@ define_core_class! {
         ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
     ] [] with
     |mt| vec![
-        Box::new(Method::native(
-            Some(mt),
-            TMethodId::ToString.get_name().to_owned(),
-            TMethodId::ToString.get_attr(),
-            TMethodId::ToString.get_parameters(),
-            TMethodId::ToString.get_return_type(),
-            CallConvention::PlatformDefault,
-            None,
-            System::LargeString::ToString as _,
-        )),
+        common_new_method!(mt TMethodId ToString System::LargeString::ToString),
 
         // Statics
         Box::new(
@@ -1033,30 +897,9 @@ define_core_class! {
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] [] with
     |mt| vec![
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::ToString.get_name().to_owned(),
-                TMethodId::ToString.get_attr(),
-                TMethodId::ToString.get_parameters(),
-                TMethodId::ToString.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Exception::ToString as _,
-            ),
-        ),
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Constructor_String.get_name().to_owned(),
-                TMethodId::Constructor_String.get_attr(),
-                TMethodId::Constructor_String.get_parameters(),
-                TMethodId::Constructor_String.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Exception::Construct_String as _,
-            )
-        ),
+        common_new_method!(mt TMethodId ToString System::Exception::ToString),
+        common_new_method!(mt TMethodId Constructor_String System::Exception::Constructor_String),
+
         // Statics
         Box::new(
             Method::default_sctor(
@@ -1080,18 +923,8 @@ define_core_class! {
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] [] with
     |mt| vec![
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Constructor_String_String.get_name().to_owned(),
-                TMethodId::Constructor_String_String.get_attr(),
-                TMethodId::Constructor_String_String.get_parameters(),
-                TMethodId::Constructor_String_String.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::InvalidEnumException::Constructor_String_String as _,
-            )
-        ),
+        common_new_method!(mt TMethodId Constructor_String_String System::InvalidEnumException::Constructor_String_String),
+
         // Statics
         Box::new(
             Method::default_sctor(
@@ -1118,30 +951,9 @@ define_core_class! {
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] [] with
     |mt| vec![
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Constructor.get_name().to_owned(),
-                TMethodId::Constructor.get_attr(),
-                TMethodId::Constructor.get_parameters(),
-                TMethodId::Constructor.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Win32Exception::Constructor as _,
-            )
-        ),
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Constructor_I32.get_name().to_owned(),
-                TMethodId::Constructor_I32.get_attr(),
-                TMethodId::Constructor_I32.get_parameters(),
-                TMethodId::Constructor_I32.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::Win32Exception::Constructor_I32 as _,
-            )
-        ),
+        common_new_method!(mt TMethodId Constructor System::Win32Exception::Constructor),
+        common_new_method!(mt TMethodId Constructor_I32 System::Win32Exception::Constructor_I32),
+
         // Statics
         Box::new(
             Method::default_sctor(
@@ -1168,30 +980,9 @@ define_core_class! {
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] [] with
     |mt| vec![
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Constructor.get_name().to_owned(),
-                TMethodId::Constructor.get_attr(),
-                TMethodId::Constructor.get_parameters(),
-                TMethodId::Constructor.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::ErrnoException::Constructor as _,
-            )
-        ),
-        Box::new(
-            Method::native(
-                Some(mt),
-                TMethodId::Constructor_I32.get_name().to_owned(),
-                TMethodId::Constructor_I32.get_attr(),
-                TMethodId::Constructor_I32.get_parameters(),
-                TMethodId::Constructor_I32.get_return_type(),
-                CallConvention::PlatformDefault,
-                None,
-                System::ErrnoException::Constructor_I32 as _,
-            )
-        ),
+        common_new_method!(mt TMethodId Constructor System::ErrnoException::Constructor),
+        common_new_method!(mt TMethodId Constructor_I32 System::ErrnoException::Constructor_I32),
+
         // Statics
         Box::new(
             Method::default_sctor(

@@ -51,6 +51,8 @@
 #![feature(doc_cfg)]
 #![feature(c_size_t)]
 #![feature(clone_to_uninit)]
+#![feature(unboxed_closures)]
+#![feature(fn_traits)]
 //
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]

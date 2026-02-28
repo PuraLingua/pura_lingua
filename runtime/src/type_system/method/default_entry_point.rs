@@ -90,7 +90,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         let frame = call_frame(cpu);
 
         match ins {
-            Instruction::Noop => (),
+            Instruction::Nop => (),
             Instruction::LoadTrue { register_addr } => {
                 if !frame.write_typed(*register_addr, true) {
                     load_register_failed!(*register_addr);

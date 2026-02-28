@@ -3,7 +3,7 @@ use std::alloc::{Allocator, Layout};
 use global::{
     attrs::CallConvention,
     instruction::{Instruction, RegisterAddr},
-    non_purus_call_configuration::{ObjectStrategy, StringEncoding},
+    non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType, ObjectStrategy, StringEncoding},
 };
 use widestring::U16CStr;
 

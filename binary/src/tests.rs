@@ -44,7 +44,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
     let mut section = Section::new();
     let assembly = Assembly {
         extra_header: ExtraHeader {
-            name: section.as_string_section_mut().add_string("Test"),
+            name: section.as_string_section_mut().add_string("TestNormalF"),
         },
         custom_attributes: Vec::new(),
         type_refs: vec![
@@ -54,7 +54,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
             core_type_ref!(section => System_String),
             core_type_ref!(section => System_Exception),
             TypeRef {
-                assembly: section.as_string_section_mut().add_string("Test"),
+                assembly: section.as_string_section_mut().add_string("TestNormalF"),
                 index: 0,
             },
         ],
@@ -62,7 +62,9 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
         method_specs: Vec::new(),
         type_defs: vec![TypeDef::Class(ClassDef {
             main: None,
-            name: section.as_string_section_mut().add_string("Test::Test"),
+            name: section
+                .as_string_section_mut()
+                .add_string("TestNormalF::Test"),
             attr: global::attr!(class Public {}),
             parent: Some(
                 TypeTokenBuilder::new()

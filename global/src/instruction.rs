@@ -23,7 +23,7 @@ use crate::non_purus_call_configuration::NonPurusCallConfiguration;
 #[with_type(derive = (Copy, IntoPrimitive, TryFromPrimitive, Debug, ReadFromSection, WriteToSection))]
 pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
     /// Usually used for Jump*
-    Noop,
+    Nop,
     LoadTrue {
         register_addr: RegisterAddr,
     },
@@ -222,7 +222,7 @@ pub macro instruction_match_helper(
 ) {{
     use $crate::instruction::Instruction::*;
     match $this {
-        Noop => $success(Noop),
+        Nop => $success(Nop),
         LoadTrue { register_addr } => $success(LoadTrue { register_addr }),
         LoadFalse { register_addr } => $success(LoadFalse { register_addr }),
         Load_u8 { register_addr, val } => $success(Load_u8 { register_addr, val }),
@@ -538,7 +538,7 @@ where
         const NAME: &str = "Instruction";
         use Instruction::*;
         match self {
-            Noop => write!(f, "{NAME}::Noop"),
+            Nop => write!(f, "{NAME}::Noop"),
             LoadTrue { register_addr } => write!(f, "{NAME}::LoadTrue {register_addr:#x}"),
             LoadFalse { register_addr } => write!(f, "{NAME}::LoadFalse {register_addr:#x}"),
 

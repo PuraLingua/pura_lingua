@@ -12,6 +12,7 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
     let field_id_enum_ident = ast.field_id_enum_ident();
     let method_id_enum_ident = ast.method_id_enum_ident();
     let static_method_id_enum_ident = ast.static_method_id_enum_ident();
+
     let assembly_name = &ast.assembly_name;
     let attr = &ast.attr.inner;
     let id = &ast.id;

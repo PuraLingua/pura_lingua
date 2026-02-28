@@ -27,6 +27,7 @@ mem_leak_detector = { git = "https://github.com/ExPuritate/mem-leak-detector.git
 slab = "0.4.12"
 thiserror = "2.0.18"
 crossfig = "0.1.3"
+allocate_guard = { git = "https://github.com/ExPuritate/allocate_guard-rs.git" }
 
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.62"

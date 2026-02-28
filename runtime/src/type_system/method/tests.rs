@@ -14,7 +14,7 @@ use crate::{
         type_ref::TypeRef,
     },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
-    virtual_machine::{EnsureVirtualMachineInitialized, global_vm},
+    virtual_machine::{EnsureVirtualMachineInitialized, cpu::MainResult, global_vm},
 };
 
 use super::*;
@@ -94,7 +94,7 @@ fn test_normal_f() {
 
     let assembly = global_vm()
         .assembly_manager()
-        .get_assembly_by_name("Test")
+        .get_assembly_by_name("TestNormalF")
         .unwrap()
         .unwrap();
 
@@ -118,6 +118,9 @@ fn test_normal_f() {
     let f2 = unsafe { class.as_ref().get_method(f2_id).unwrap() };
 
     unsafe {
-        dbg!(cpu.invoke_main(f2.as_ref(), vec![]));
+        assert_eq!(
+            cpu.invoke_main(f2.as_ref(), vec![]),
+            MainResult::VoidWithException
+        );
     }
 }

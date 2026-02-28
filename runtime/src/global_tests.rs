@@ -244,3 +244,44 @@ fn gtest_simple_console() -> global::Result<()> {
 
     Ok(())
 }
+
+#[test]
+#[cfg(windows)]
+fn gtest_middle_ir_simple_console() -> global::Result<()> {
+    let vm = global_vm();
+
+    vm.assembly_manager()
+        .load_binaries(&[binary::assembly::Assembly::from_path(
+            "../TestData/MiddleIR_SimpleConsole.plb",
+        )?])?;
+
+    let cpu_id = vm.add_cpu();
+    let cpu = cpu_id.as_global_cpu().unwrap();
+
+    let assembly = vm
+        .assembly_manager()
+        .get_assembly_by_name("MiddleIR::SimpleConsole")
+        .unwrap()
+        .unwrap();
+
+    let console_class = assembly.get_class(0).unwrap().unwrap();
+
+    let to_write = ManagedReference::new_string(&cpu, "aaa\n");
+    let write_stdout = unsafe {
+        console_class
+            .as_ref()
+            .method_table_ref()
+            .find_first_method_by_name("WriteStdout")
+            .unwrap()
+    };
+
+    unsafe {
+        write_stdout.as_ref().typed_res_call::<()>(
+            &cpu,
+            None,
+            &[(&raw const to_write).cast_mut().cast()],
+        );
+    }
+
+    Ok(())
+}

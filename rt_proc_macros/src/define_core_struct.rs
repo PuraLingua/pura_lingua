@@ -29,6 +29,7 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
     let method_definition = ast.define_methods(&[]);
 
     let method_ids = ast.method_ids.iter().map(|x| &x.id).collect::<Vec<_>>();
+    let method_names = ast.method_ids.iter().map(|x| &x.name).collect::<Vec<_>>();
     let method_attrs = ast
         .method_ids
         .iter()
@@ -56,6 +57,11 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
         .static_method_ids
         .iter()
         .map(|x| &x.id)
+        .collect::<Vec<_>>();
+    let static_method_names = ast
+        .static_method_ids
+        .iter()
+        .map(|x| &x.name)
         .collect::<Vec<_>>();
     let static_method_attrs = ast
         .static_method_ids
@@ -141,6 +147,14 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
                     Self::__END => unreachable!(),
                 }
             }
+            pub const fn get_name(&self) -> &'static str {
+                match self {
+                    #(
+                        Self::#method_ids => #method_names,
+                    )*
+                    Self::__END => unreachable!(),
+                }
+            }
         }
 
         impl #static_method_id_enum_ident {
@@ -185,6 +199,14 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
                         Self::#static_method_ids =>
                             <#runtime_crate::type_system::type_handle::MaybeUnloadedTypeHandle
                             as From<#stdlib_header_crate::CoreTypeRef>>::from(#static_method_return_types),
+                    )*
+                }
+            }
+            pub const fn get_name(&self) -> &'static str {
+                match self {
+                    Self::StaticConstructor => ".sctor",
+                    #(
+                        Self::#static_method_ids => #static_method_names,
                     )*
                 }
             }

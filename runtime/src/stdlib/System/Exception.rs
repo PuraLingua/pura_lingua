@@ -10,7 +10,7 @@ use crate::{
     virtual_machine::cpu::CPU,
 };
 
-pub extern "system" fn Construct_String(
+pub extern "system" fn Constructor_String(
     cpu: &CPU,
     _: &Method<Class>,
     this: &mut ManagedReference<Class>,
