@@ -74,9 +74,15 @@ impl CpuID {
 impl VirtualMachine {
     pub fn construct_in(this: NonNull<Self>) {
         unsafe {
+            this.byte_add(offset_of!(VirtualMachine, resource_manager))
+                .cast::<ResourceManager>()
+                .write(ResourceManager {});
+            this.byte_add(offset_of!(VirtualMachine, cpu_lock))
+                .cast::<Mutex<()>>()
+                .write(Mutex::new(()));
             this.byte_add(offset_of!(VirtualMachine, central_processing_units))
-                .cast::<RwLock<Vec<Box<CPU>>>>()
-                .write(RwLock::new(Vec::new()));
+                .cast::<SyncUnsafeCell<Vec<Pin<Box<RwLock<CPU>>>>>>()
+                .write(SyncUnsafeCell::new(Vec::new()));
             this.byte_add(offset_of!(Self, cpu_for_static))
                 .cast::<Pin<Box<RwLock<CPU>>>>()
                 .write(CPU::new(this));

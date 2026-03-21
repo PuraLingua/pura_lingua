@@ -108,11 +108,7 @@ fn test_call_stack() {
     };
     unsafe { dbg!(method.as_ref().attr().local_variable_types().len()) };
 
-    let cpu_id = global_vm().add_cpu();
-    let mut cpu = {
-        super let guard = global_vm().get_cpu(cpu_id).unwrap();
-        guard.write().unwrap()
-    };
+    let mut cpu = CpuID::new_write_global();
     cpu.prepare_call_stack_for_method(unsafe { method.as_ref() });
 
     let call_frame = cpu.current_common_call_frame().unwrap();
