@@ -1,6 +1,3 @@
-#![feature(iterator_try_collect)]
-#![feature(once_cell_try)]
-
 use proc_macro_utils::{
     crate_name_resolution::PredefinedCrateName, macro_definitions::define_macros,
 };

@@ -1,12 +1,9 @@
 // cSpell:disable
-#![feature(proc_macro_totokens)]
 #![feature(extend_one)]
-#![feature(decl_macro)]
 #![feature(macro_metavar_expr_concat)]
 #![feature(const_trait_impl)]
 #![feature(const_default)]
 #![feature(const_try)]
-#![feature(proc_macro_diagnostic)]
 #![allow(static_mut_refs)]
 // cSpell:enable
 

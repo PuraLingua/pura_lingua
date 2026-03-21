@@ -5,3 +5,4 @@
 /.cargo/
 /.rmv
 /TestData
+/rustc-ice-*.txt
