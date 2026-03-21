@@ -220,7 +220,7 @@ pub macro instruction_match_helper(
     $field_help:ident,
     $success:ident $(,)?
 ) {{
-    use $crate::instruction::Instruction::*;
+    use $crate::instruction::v1::Instruction::*;
     match $this {
         Nop => $success(Nop),
         LoadTrue { register_addr } => $success(LoadTrue { register_addr }),

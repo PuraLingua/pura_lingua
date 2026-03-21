@@ -209,7 +209,7 @@ fn gtest_simple_console() -> global::Result<()> {
 
     vm.assembly_manager()
         .load_binaries(&[binary::assembly::Assembly::from_path(
-            "../TestData/SimpleIR_SimpleConsole.plb",
+            "../TestData/SimpleIR.SimpleConsole.plb",
         )?])?;
 
     let mut cpu = CpuID::new_write_global();
@@ -249,7 +249,7 @@ fn gtest_middle_ir_simple_console() -> global::Result<()> {
 
     vm.assembly_manager()
         .load_binaries(&[binary::assembly::Assembly::from_path(
-            "../TestData/MiddleIR_SimpleConsole.plb",
+            "../TestData/MiddleIR.SimpleConsole.plb",
         )?])?;
 
     let mut cpu = CpuID::new_write_global();

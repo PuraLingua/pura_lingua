@@ -1,6 +1,13 @@
 use std::ptr::NonNull;
 
-use global::{attrs::CallConvention, dt_println, instruction::RegisterAddr};
+use global::{
+    attrs::CallConvention,
+    dt_println,
+    instruction::{
+        CommonReadPointerTo, CommonWritePointer, IRegisterAddr, Instruction_Call, Instruction_Load,
+        LoadContent,
+    },
+};
 use stdlib_header::definitions::{System_Array_1_MethodId, System_Object_MethodId};
 
 use crate::{
@@ -122,7 +129,7 @@ pub extern "system" fn GetPointerOfIndex(
 }
 
 macro define_registers($($name:ident)*) {$(
-    const $name: RegisterAddr = RegisterAddr::new(${index()});
+    const $name: global::instruction::ShortRegisterAddr = global::instruction::ShortRegisterAddr::new(${index()});
 )*}
 
 _define_class!(
@@ -155,29 +162,30 @@ _define_class!(
                 {
                     use global::instruction::Instruction;
                     vec![
-                        Instruction::LoadThis {
-                            register_addr: this_addr,
-                        },
-                        Instruction::LoadArg {
-                            register_addr: arg_Index,
-                            arg: 0,
-                        },
-                        Instruction::InstanceCall {
+                        Instruction::SLoad(Instruction_Load {
+                            addr: this_addr,
+                            content: LoadContent::This,
+                        }),
+                        Instruction::SLoad(Instruction_Load {
+                            addr: arg_Index,
+                            content: LoadContent::Arg(0),
+                        }),
+                        Instruction::SCall(global::instruction::Instruction_Call::InstanceCall {
                             val: this_addr,
                             method: System_Array_1_MethodId::GetPointerOfIndex.into(),
                             args: vec![arg_Index],
                             ret_at: ptr2result,
-                        },
-                        Instruction::LoadTypeValueSize {
-                            register_addr: t_size,
-                            ty: TypeHandle::Generic(0).into(),
-                        },
-                        Instruction::ReadPointerTo {
+                        }),
+                        Instruction::SLoad(Instruction_Load {
+                            addr: t_size,
+                            content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                        }),
+                        Instruction::SReadPointerTo(CommonReadPointerTo {
                             ptr: ptr2result,
                             size: t_size,
                             destination: result,
-                        },
-                        Instruction::ReturnVal {
+                        }),
+                        Instruction::SReturnVal {
                             register_addr: result,
                         },
                     ]
@@ -208,33 +216,26 @@ _define_class!(
                 {
                     use global::instruction::Instruction;
                     vec![
-                        Instruction::LoadThis {
-                            register_addr: this_addr,
-                        },
-                        Instruction::LoadArg {
-                            register_addr: arg_Index,
-                            arg: 0,
-                        },
-                        Instruction::LoadArg {
-                            register_addr: arg_Value,
-                            arg: 1,
-                        },
+                        Instruction::SLoad(Instruction_Load { addr: this_addr, content: LoadContent::This }),
+                        Instruction::SLoad(Instruction_Load { addr: arg_Index, content: LoadContent::Arg(0) }),
+                        Instruction::SLoad(Instruction_Load { addr: arg_Value, content: LoadContent::Arg(1) }),
 
-                        Instruction::LoadTypeValueSize {
-                            register_addr: t_size,
-                            ty: TypeHandle::Generic(0).into(),
-                        },
-                        Instruction::InstanceCall {
+                        Instruction::SLoad(Instruction_Load {
+                            addr: t_size,
+                            content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                        }),
+
+                        Instruction::SCall(Instruction_Call::InstanceCall {
                             val: this_addr,
                             method: System_Array_1_MethodId::GetPointerOfIndex.into(),
                             args: vec![arg_Index],
                             ret_at: pointer2target,
-                        },
-                        Instruction::WritePointer {
+                        }),
+                        Instruction::SWritePointer(CommonWritePointer {
                             source: arg_Value,
                             size: t_size,
                             ptr: pointer2target,
-                        }
+                        }),
                     ]
                 },
             )

@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use binary_core::traits::{ReadFromSection, WriteToSection};
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 
-pub trait IRegisterAddr:
+pub const trait IRegisterAddr:
     Copy
     + const Clone
     + const Default
@@ -14,6 +14,16 @@ pub trait IRegisterAddr:
     + std::fmt::LowerHex
     + std::fmt::UpperHex
 {
+    type TInner;
+    const ZERO: Self;
+
+    fn new(x: Self::TInner) -> Self;
+    fn get(self) -> u64;
+    fn into_generic(self) -> RegisterAddr;
+    #[inline(always)]
+    fn get_usize(self) -> usize {
+        self.get() as usize
+    }
 }
 
 /// Even though it has repr(transparent), the layout is opaque and may change in the future
@@ -22,14 +32,52 @@ pub trait IRegisterAddr:
 #[derive_const(Clone)]
 pub struct RegisterAddr(u64);
 
+impl RegisterAddr {
+    pub const fn try_into_short(self) -> Option<ShortRegisterAddr> {
+        u16::try_from(self.0).ok().map(ShortRegisterAddr)
+    }
+}
+
 /// Even though it has repr(transparent), the layout is opaque and may change in the future
 #[repr(transparent)]
 #[derive(Debug, Copy, ReadFromSection, WriteToSection)]
 #[derive_const(Clone)]
 pub struct ShortRegisterAddr(u16);
 
-impl IRegisterAddr for RegisterAddr {}
-impl IRegisterAddr for ShortRegisterAddr {}
+impl const IRegisterAddr for RegisterAddr {
+    type TInner = u64;
+    const ZERO: Self = Self(0);
+
+    #[inline(always)]
+    fn new(x: u64) -> Self {
+        Self(x)
+    }
+    #[inline(always)]
+    fn get(self) -> u64 {
+        self.0
+    }
+    #[inline(always)]
+    fn into_generic(self) -> RegisterAddr {
+        self
+    }
+}
+impl const IRegisterAddr for ShortRegisterAddr {
+    type TInner = u16;
+    const ZERO: Self = Self(0);
+
+    #[inline(always)]
+    fn new(x: Self::TInner) -> Self {
+        Self(x)
+    }
+    #[inline(always)]
+    fn get(self) -> u64 {
+        self.0 as u64
+    }
+    #[inline(always)]
+    fn into_generic(self) -> RegisterAddr {
+        RegisterAddr(self.get())
+    }
+}
 
 impl const Default for RegisterAddr {
     #[inline(always)]
@@ -43,40 +91,6 @@ impl const Default for ShortRegisterAddr {
     fn default() -> Self {
         Self::ZERO
     }
-}
-
-impl RegisterAddr {
-    #[inline(always)]
-    pub const fn new(x: u64) -> Self {
-        Self(x)
-    }
-    #[inline(always)]
-    pub const fn get(self) -> u64 {
-        self.0
-    }
-    #[inline(always)]
-    pub const fn get_usize(self) -> usize {
-        self.0 as usize
-    }
-
-    pub const ZERO: Self = Self(0);
-}
-
-impl ShortRegisterAddr {
-    #[inline(always)]
-    pub const fn new(x: u16) -> Self {
-        Self(x)
-    }
-    #[inline(always)]
-    pub const fn get(self) -> u64 {
-        self.0 as u64
-    }
-    #[inline(always)]
-    pub const fn get_usize(self) -> usize {
-        self.0 as usize
-    }
-
-    pub const ZERO: Self = Self(0);
 }
 
 macro fmt_impl($($Trait:ident)*) {$(

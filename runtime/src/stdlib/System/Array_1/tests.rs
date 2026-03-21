@@ -1,6 +1,6 @@
 use global::{
     attrs::CallConvention,
-    instruction::{Instruction, RegisterAddr},
+    instruction::{Instruction, Instruction_New, RegisterAddr},
 };
 
 use crate::{
@@ -109,43 +109,43 @@ fn array_get_set() -> global::Result<()> {
                                     CallConvention::PlatformDefault,
                                     None,
                                     vec![
-                                        Instruction::NewArray {
+                                        Instruction::New(Instruction_New::NewArray {
                                             element_type: CoreTypeId::System_String
                                                 .static_type_ref()
                                                 .into(),
                                             len: 2,
-                                            register_addr: RegisterAddr::new(0),
-                                        },
-                                        Instruction::Load_String {
-                                            register_addr: RegisterAddr::new(1),
-                                            val: "aaa".to_owned(),
-                                        },
-                                        Instruction::Load_String {
-                                            register_addr: RegisterAddr::new(2),
-                                            val: "bbb".to_owned(),
-                                        },
+                                            output: RegisterAddr::new(0),
+                                        }),
+                                        Instruction::Load(Instruction_Load {
+                                            addr: RegisterAddr::new(1),
+                                            content: LoadContent::String("aaa".to_owned()),
+                                        }),
+                                        Instruction::Load(Instruction_Load {
+                                            addr: RegisterAddr::new(2),
+                                            content: LoadContent::String("bbb".to_owned()),
+                                        }),
 
-										Instruction::Load_u64 {
-                                            register_addr: RegisterAddr::new(3),
-                                            val: 0,
-                                        },
-										Instruction::InstanceCall {
+										Instruction::Load(Instruction_Load {
+                                            addr: RegisterAddr::new(3),
+                                            content: LoadContent::U64(0),
+                                        }),
+										Instruction::Call(Instruction_Call::InstanceCall {
 											val: RegisterAddr::new(0),
 											method: System_Array_1_MethodId::set_Index.into(),
 											args: vec![RegisterAddr::new(3), RegisterAddr::new(1)],
 											ret_at: RegisterAddr::new(4),
-										},
+										}),
 
-										Instruction::Load_u64 {
-                                            register_addr: RegisterAddr::new(3),
-                                            val: 1,
-                                        },
-										Instruction::InstanceCall {
+										Instruction::Load(Instruction_Load {
+                                            addr: RegisterAddr::new(3),
+                                            content: LoadContent::U64(1),
+                                        }),
+										Instruction::Call(Instruction_Call::InstanceCall {
 											val: RegisterAddr::new(0),
 											method: System_Array_1_MethodId::set_Index.into(),
 											args: vec![RegisterAddr::new(3), RegisterAddr::new(2)],
 											ret_at: RegisterAddr::new(4),
-										},
+										}),
 
 										Instruction::ReturnVal {
                                             register_addr: RegisterAddr::new(0),

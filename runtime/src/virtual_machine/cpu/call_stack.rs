@@ -1,7 +1,11 @@
 use std::{alloc::Layout, ptr::NonNull};
 
 use enumflags2::BitFlags;
-use global::{UnwrapEnum, attrs::MethodImplementationFlags, instruction::RegisterAddr};
+use global::{
+    UnwrapEnum,
+    attrs::MethodImplementationFlags,
+    instruction::{IRegisterAddr, RegisterAddr},
+};
 
 use crate::{
     type_system::{
@@ -375,7 +379,7 @@ impl CommonCallStackFrame {
         Self::new(method, full_layout, infos)
     }
 
-    pub fn get(&self, i: RegisterAddr) -> Option<LocalVariable> {
+    pub fn get<TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr) -> Option<LocalVariable> {
         self.layouts
             .get(i.get_usize())
             .map(|&LocalVariableInfo { offset, layout, ty }| LocalVariable {
@@ -385,15 +389,15 @@ impl CommonCallStackFrame {
             })
     }
 
-    pub fn get_typed<T>(&self, i: RegisterAddr) -> Option<&T> {
+    pub fn get_typed<T, TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr) -> Option<&T> {
         self.get(i).map(|x| LocalVariable::as_ref_typed::<T>(&x))
     }
 
-    pub fn read_typed<T>(&self, i: RegisterAddr) -> Option<T> {
+    pub fn read_typed<T, TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr) -> Option<T> {
         self.get(i).map(LocalVariable::read_typed)
     }
     /// Return false if i is not found
-    pub fn write_typed<T>(&self, i: RegisterAddr, val: T) -> bool {
+    pub fn write_typed<T, TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr, val: T) -> bool {
         match self.get(i) {
             None => false,
             Some(local_var) => {
@@ -404,7 +408,7 @@ impl CommonCallStackFrame {
     }
 
     /// Return false if i is not found
-    pub fn zero_register(&self, i: RegisterAddr) -> bool {
+    pub fn zero_register<TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr) -> bool {
         match self.get(i) {
             None => false,
             Some(local_var) => {

@@ -372,7 +372,7 @@ impl AssemblyManager {
                 .iter()
                 .map(|ins| {
                     ins.clone()
-                        .map_types(
+                        .map(
                             |s| b_assembly.get_string(s).map(ToOwned::to_owned),
                             |tt| {
                                 MaybeUnloadedTypeHandle::from_token_for_type(

@@ -3,7 +3,10 @@ use std::io::Write;
 use binary_core::section::Section;
 use global::{
     attrs::CallConvention,
-    instruction::{Instruction, RegisterAddr},
+    instruction::{
+        IRegisterAddr, Instruction, Instruction_Call, Instruction_Load, Instruction_New,
+        LoadContent, RegisterAddr,
+    },
 };
 use stdlib_header::{
     CoreTypeId,
@@ -98,11 +101,11 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                     call_convention: CallConvention::PlatformDefault,
                     generic_bounds: None,
                     instructions: vec![
-                        Instruction::Load_u64 {
-                            register_addr: RegisterAddr::new(0),
-                            val: 10,
-                        },
-                        Instruction::StaticCall {
+                        Instruction::Load(Instruction_Load {
+                            addr: RegisterAddr::new(0),
+                            content: LoadContent::U64(10u64),
+                        }),
+                        Instruction::Call(Instruction_Call::StaticCall {
                             ty: TypeTokenBuilder::new()
                                 .with_ty(TypeType::TypeRef)
                                 .with_index(2)
@@ -110,23 +113,23 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                             method: System_UInt64_StaticMethodId::ToString.into(),
                             args: vec![RegisterAddr::new(0)],
                             ret_at: RegisterAddr::new(1),
-                        },
-                        Instruction::NewObject {
+                        }),
+                        Instruction::New(Instruction_New::NewObject {
                             ty: TypeTokenBuilder::new()
                                 .with_ty(TypeType::TypeRef)
                                 .with_index(4)
                                 .build(),
                             ctor_name: System_Exception_MethodId::Constructor_String.into(),
                             args: vec![RegisterAddr::new(1)],
-                            register_addr: RegisterAddr::new(2),
-                        },
+                            output: RegisterAddr::new(2),
+                        }),
                         Instruction::Throw {
                             exception_addr: RegisterAddr::new(2),
                         },
-                        Instruction::Load_u64 {
-                            register_addr: RegisterAddr::new(0),
-                            val: 5,
-                        }, // Unreachable
+                        Instruction::Load(Instruction_Load {
+                            addr: RegisterAddr::new(0),
+                            content: LoadContent::U64(5u64),
+                        }),
                     ],
                 },
                 Method {
@@ -145,7 +148,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                         .build(),
                     call_convention: CallConvention::PlatformDefault,
                     generic_bounds: None,
-                    instructions: vec![Instruction::StaticCall {
+                    instructions: vec![Instruction::Call(Instruction_Call::StaticCall {
                         ty: TypeTokenBuilder::new()
                             .with_ty(TypeType::TypeDef)
                             .with_index(0)
@@ -156,7 +159,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                             .build(),
                         args: vec![],
                         ret_at: RegisterAddr::new(1),
-                    }],
+                    })],
                 },
                 // Statics
                 Method {

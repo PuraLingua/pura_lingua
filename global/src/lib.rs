@@ -30,6 +30,9 @@
 #![feature(try_trait_v2_residual)]
 #![feature(ptr_metadata)]
 #![feature(adt_const_params)]
+#![feature(const_result_trait_fn)]
+#![feature(unboxed_closures)]
+#![feature(fn_traits)]
 //
 #![allow(internal_features)]
 #![allow(static_mut_refs)]

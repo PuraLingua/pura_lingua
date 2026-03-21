@@ -1,6 +1,8 @@
 use global::{
     attrs::CallConvention,
-    instruction::{Instruction, RegisterAddr},
+    instruction::{
+        IRegisterAddr, Instruction, Instruction_Load, Instruction_Set, LoadContent, RegisterAddr,
+    },
     string_name,
 };
 
@@ -51,19 +53,19 @@ fn test_static() {
                                     CallConvention::PlatformDefault,
                                     None,
                                     vec![
-                                        Instruction::Load_u64 {
-                                            register_addr: RegisterAddr::new(0),
-                                            val: 10,
-                                        },
-                                        Instruction::SetStaticField {
-                                            val_addr: RegisterAddr::new(0),
+                                        Instruction::Load(Instruction_Load {
+                                            addr: RegisterAddr::new(0),
+                                            content: LoadContent::U64(10),
+                                        }),
+                                        Instruction::Set(Instruction_Set::Static {
+                                            val: RegisterAddr::new(0),
                                             ty: TypeRef::Index {
                                                 assembly: AssemblyRef::Name(string_name!("Test")),
                                                 ind: 0,
                                             }
                                             .into(),
                                             field: 0,
-                                        },
+                                        }),
                                     ],
                                 ))]
                             })

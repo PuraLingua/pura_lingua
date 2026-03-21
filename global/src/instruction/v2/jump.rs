@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use proc_macros::WithType;
@@ -19,4 +21,21 @@ pub enum JumpCondition<TRegisterAddr: IRegisterAddr> {
     If(TRegisterAddr),
     IfCheckSucceeds(ToCheckContent<TRegisterAddr>),
     IfCheckFails(ToCheckContent<TRegisterAddr>),
+}
+
+impl<TRegisterAddr: IRegisterAddr> Display for Instruction_Jump<TRegisterAddr> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(" {}", self.target))?;
+
+        match &self.condition {
+            JumpCondition::Unconditional => Ok(()),
+            JumpCondition::If(cond) => f.write_fmt(format_args!(" if {cond:#x}")),
+            JumpCondition::IfCheckSucceeds(to_check) => {
+                f.write_fmt(format_args!(" if {to_check} succeeds"))
+            }
+            JumpCondition::IfCheckFails(to_check) => {
+                f.write_fmt(format_args!(" if {to_check} fails"))
+            }
+        }
+    }
 }

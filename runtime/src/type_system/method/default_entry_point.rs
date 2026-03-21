@@ -5,7 +5,7 @@ use std::{
 };
 
 use global::{
-    instruction::{Instruction, JumpTarget, JumpTargetType, RegisterAddr},
+    instruction::{IRegisterAddr, Instruction, RegisterAddr},
     t_println,
 };
 
@@ -13,9 +13,9 @@ use crate::{
     type_system::{
         class::Class,
         get_traits::{GetAssemblyRef, GetTypeVars},
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::MaybeUnloadedTypeHandle,
     },
-    value::managed_reference::{FieldAccessor, ManagedReference},
+    value::managed_reference::ManagedReference,
     virtual_machine::cpu::{CPU, CommonCallStackFrame},
 };
 
@@ -38,27 +38,62 @@ enum Termination {
     Terminated,
 }
 
-fn do_jump(pc: &mut usize, target: JumpTarget) {
-    match target.ty() {
-        JumpTargetType::Absolute => {
-            *pc = (target.val() as usize) - 1;
-        }
-        JumpTargetType::Forward => {
-            <_ as std::ops::AddAssign>::add_assign(pc, (target.val() as usize) - 1);
-        }
-        JumpTargetType::Backward => {
-            <_ as std::ops::SubAssign>::sub_assign(pc, (target.val() as usize) - 1);
-        }
-        JumpTargetType::Unknown => unreachable!(),
-    }
-}
-
 macro load_register_failed($addr:expr) {
-    return Some(Err(Termination::LoadRegisterFailed($addr)))
+    return Some(Err(Termination::LoadRegisterFailed($addr.into_generic())))
 }
 
 fn call_frame(cpu: &CPU) -> &CommonCallStackFrame {
     cpu.current_common_call_frame().unwrap()
+}
+
+mod load;
+
+mod read_write_pointer;
+
+mod check;
+
+mod new;
+
+mod call;
+
+mod set;
+
+mod jump;
+
+fn eval_throw<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
+    #[allow(unused)] method: &Method<T>,
+    #[allow(unused)] cpu: &mut CPU,
+    #[allow(unused)] this: Option<NonNull<()>>,
+    #[allow(unused)] args: &[*mut c_void],
+    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] pc: &mut usize,
+    exception_addr: &TRegisterAddr,
+) -> Option<Result<(), Termination>> {
+    let Some(exception) = call_frame(cpu).get_typed::<ManagedReference<Class>, _>(*exception_addr)
+    else {
+        load_register_failed!(*exception_addr);
+    };
+    assert!(!exception.is_null());
+    cpu.throw_exception(*exception);
+    Some(Ok(()))
+}
+
+fn eval_return_val<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
+    #[allow(unused)] method: &Method<T>,
+    #[allow(unused)] cpu: &mut CPU,
+    #[allow(unused)] this: Option<NonNull<()>>,
+    #[allow(unused)] args: &[*mut c_void],
+    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] pc: &mut usize,
+    register_addr: &TRegisterAddr,
+) -> Option<Result<(), Termination>> {
+    let Some(res_var) = call_frame(cpu).get(*register_addr) else {
+        load_register_failed!(*register_addr);
+    };
+    unsafe {
+        res_var.copy_all_to(result_ptr.as_non_null_ptr());
+    }
+    return Some(Err(Termination::Returned));
 }
 
 trait Spec: Sized + GetAssemblyRef + GetTypeVars {
@@ -85,590 +120,63 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         let Some(ins) = method.instructions.get(*pc) else {
             return Some(Err(Termination::AllInstructionExecuted));
         };
-        println!("{}", ins);
 
-        match ins {
-            Instruction::Nop => (),
-            Instruction::LoadTrue { register_addr } => {
-                if !call_frame(cpu).write_typed(*register_addr, true) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::LoadFalse { register_addr } => {
-                if !call_frame(cpu).write_typed(*register_addr, false) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::Load_u8 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::Load_u16 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::Load_u32 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::Load_u64 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-
-            Instruction::Load_i8 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::Load_i16 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::Load_i32 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::Load_i64 { register_addr, val } => {
-                if !call_frame(cpu).write_typed(*register_addr, *val) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-
-            Instruction::LoadThis { register_addr } => {
-                let Some(local_var) = call_frame(cpu).get(*register_addr) else {
-                    load_register_failed!(*register_addr);
-                };
-                debug_assert!(local_var.layout.size() >= Layout::new::<*const ()>().size());
-                let Some(this) = this else {
-                    return Some(Err(Termination::NullReference(
-                        core::panic::Location::caller(),
-                    )));
-                };
-                unsafe {
-                    local_var
-                        .ptr
-                        .copy_from(this.cast(), Layout::new::<*const ()>().size());
-                }
-            }
-            Instruction::Load_String { register_addr, val } => {
-                let val_obj = ManagedReference::new_string(cpu, val);
-                if !call_frame(cpu).write_typed(*register_addr, val_obj) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::LoadTypeValueSize { register_addr, ty } => {
-                let Some(ty) = ty.load(cpu.vm_ref().assembly_manager()) else {
-                    return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
-                };
-                let ty = ty.get_non_generic_with_method(method);
-                let size = ty.val_layout().size();
-                if !call_frame(cpu).write_typed(*register_addr, size) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::ReadPointerTo {
-                ptr,
-                size,
-                destination,
-            } => {
-                let Some(&ptr_var) = call_frame(cpu).get_typed::<*const u8>(*ptr) else {
-                    load_register_failed!(*ptr);
-                };
-                if ptr_var.is_null() {
-                    return Some(Err(Termination::NullReference(
-                        core::panic::Location::caller(),
-                    )));
-                }
-                let Some(size) = call_frame(cpu).get_typed(*size) else {
-                    load_register_failed!(*size);
-                };
-                let Some(destination) = call_frame(cpu).get(*destination) else {
-                    load_register_failed!(*destination);
-                };
-                unsafe {
-                    ptr_var.copy_to(destination.ptr.as_ptr(), *size);
-                }
-            }
-            Instruction::WritePointer { source, size, ptr } => {
-                let Some(source) = call_frame(cpu).get(*source) else {
-                    load_register_failed!(*source);
-                };
-                let Some(size) = call_frame(cpu).get_typed::<usize>(*size) else {
-                    load_register_failed!(*size);
-                };
-                let Some(&ptr_var) = call_frame(cpu).get_typed::<*const u8>(*ptr) else {
-                    load_register_failed!(*ptr);
-                };
-                let Some(ptr_var) = NonNull::new(ptr_var.cast_mut()) else {
-                    return Some(Err(Termination::NullReference(
-                        core::panic::Location::caller(),
-                    )));
-                };
-                unsafe {
-                    source.copy_to(ptr_var, *size);
-                }
-            }
-
-            Instruction::IsAllZero {
-                register_addr,
-                to_check,
-            } => {
-                let Some(to_check_var) = call_frame(cpu).get(*to_check) else {
-                    load_register_failed!(*to_check);
-                };
-                let res = to_check_var.is_all_zero();
-                if !call_frame(cpu).write_typed(*register_addr, res) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-
-            Instruction::NewObject {
-                ty,
-                ctor_name,
-                args,
-                register_addr,
-            } => {
-                let args = args
-                    .iter()
-                    .map(|x| {
-                        call_frame(cpu)
-                            .get(*x)
-                            .unwrap()
-                            .ptr
-                            .cast::<c_void>()
-                            .as_ptr()
-                    })
-                    .collect::<Vec<_>>();
-
-                match cpu.new_object(ty, ctor_name, &args) {
-                    Some(obj) => {
-                        if !call_frame(cpu).write_typed(*register_addr, obj) {
-                            load_register_failed!(*register_addr);
-                        }
-                    }
-                    None => {
-                        return Some(Err(Termination::NewObjectFailed));
-                    }
-                }
-            }
-            Instruction::NewArray {
-                element_type,
-                len,
-                register_addr,
-            } => {
-                let Some(element_th) = element_type.load(cpu.vm_ref().assembly_manager()) else {
-                    return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
-                };
-                let element_th = element_th.get_non_generic_with_method(method);
-                let arr = match element_th {
-                    NonGenericTypeHandle::Class(ty) => unsafe {
-                        ManagedReference::alloc_array(
-                            cpu,
-                            ty.as_ref().method_table,
-                            (*len) as usize,
-                        )
-                    },
-                    NonGenericTypeHandle::Struct(ty) => unsafe {
-                        ManagedReference::alloc_array(
-                            cpu,
-                            ty.as_ref().method_table,
-                            (*len) as usize,
-                        )
-                    },
-                };
-                if !call_frame(cpu).write_typed(*register_addr, arr) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-            Instruction::NewDynamicArray {
-                element_type,
-                len_addr,
-                register_addr,
-            } => {
-                let Some(&len) = call_frame(cpu).get_typed::<usize>(*len_addr) else {
-                    load_register_failed!(*len_addr);
-                };
-                let Some(element_th) = element_type.load(cpu.vm_ref().assembly_manager()) else {
-                    return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
-                };
-                let element_th = element_th.get_non_generic_with_method(method);
-                let arr = match element_th {
-                    NonGenericTypeHandle::Class(ty) => unsafe {
-                        ManagedReference::alloc_array(cpu, ty.as_ref().method_table, len)
-                    },
-                    NonGenericTypeHandle::Struct(ty) => unsafe {
-                        ManagedReference::alloc_array(cpu, ty.as_ref().method_table, len)
-                    },
-                };
-                if !call_frame(cpu).write_typed(*register_addr, arr) {
-                    load_register_failed!(*register_addr);
-                }
-            }
-
-            Instruction::InstanceCall {
-                val,
-                method,
-                args,
-                ret_at,
-            } => {
-                let args = args
-                    .iter()
-                    .map(|x| {
-                        call_frame(cpu)
-                            .get(*x)
-                            .unwrap()
-                            .ptr
-                            .cast::<c_void>()
-                            .as_ptr()
-                    })
-                    .collect::<Vec<_>>();
-
-                let Some(val) = call_frame(cpu).read_typed::<ManagedReference<Class>>(*val) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*val)));
-                };
-                if val.is_null() {
-                    return Some(Err(Termination::NullReference(
-                        core::panic::Location::caller(),
-                    )));
-                }
-                let mt = val.method_table_ref().unwrap();
-                let Some(m) = mt.get_method_by_ref(method) else {
-                    return Some(Err(Termination::LoadMethodFailed(method.clone())));
-                };
-
-                let m_ref = unsafe { m.as_ref() };
-                let actual_layout = m_ref.get_return_type().val_layout();
-                let (ret_ptr, ret_layout) =
-                    m_ref.untyped_call(cpu, Some(NonNull::from_ref(&val).cast()), &args);
-
-                if actual_layout != Layout::new::<()>() {
-                    let Some(out_var) = call_frame(cpu).get(*ret_at) else {
-                        return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
-                    };
-                    unsafe {
-                        out_var.copy_from(ret_ptr, actual_layout.size());
-                    }
-                }
-                unsafe {
-                    std::alloc::Allocator::deallocate(&std::alloc::Global, ret_ptr, ret_layout);
-                }
-            }
-            Instruction::StaticCall {
-                ty,
-                method: m_target,
-                args,
-                ret_at,
-            } => {
-                let Some(ty) = ty
-                    .load(cpu.vm_ref().assembly_manager())
-                    .map(|x| x.get_non_generic_with_method(method))
-                else {
-                    return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
-                };
-
-                let args = args
-                    .iter()
-                    .map(|x| {
-                        call_frame(cpu)
-                            .get(*x)
-                            .unwrap()
-                            .ptr()
-                            .cast::<c_void>()
-                            .as_ptr()
-                    })
-                    .collect::<Vec<_>>();
-
-                macro apply($n:ident $b:block) {
-                    match ty {
-                        NonGenericTypeHandle::Class($n) => $b,
-                        NonGenericTypeHandle::Struct($n) => $b,
-                    }
-                }
-
-                let actual_layout;
-
-                let (ret_ptr, ret_layout) = apply! {
-                    t {
-                        let t_ref = unsafe { t.as_ref() };
-                        let mt = t_ref.method_table_ref();
-                        let m = mt.get_method_by_ref(m_target).unwrap();
-                        let m_ref = unsafe { m.as_ref() };
-                        actual_layout = m_ref.get_return_type().val_layout();
-
-                        m_ref.untyped_call(cpu, None, &args)
-                    }
-                };
-
-                if actual_layout != Layout::new::<()>() {
-                    let Some(out_var) = call_frame(cpu).get(*ret_at) else {
-                        return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
-                    };
-                    unsafe {
-                        out_var.copy_from(ret_ptr, actual_layout.size());
-                    }
-                }
-                unsafe {
-                    std::alloc::Allocator::deallocate(&std::alloc::Global, ret_ptr, ret_layout);
-                }
-            }
-            Instruction::StaticNonPurusCall {
-                f_pointer,
-                config,
-                args,
-                ret_at,
-            } => {
-                let Some(&f_pointer) = call_frame(cpu).get_typed::<*const u8>(*f_pointer) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*f_pointer)));
-                };
-                let args = args
-                    .iter()
-                    .map(|x| {
-                        call_frame(cpu)
-                            .get(*x)
-                            .unwrap()
-                            .ptr()
-                            .cast::<c_void>()
-                            .as_ptr()
-                    })
-                    .collect::<Vec<_>>();
-                let (ret_ptr, ret_layout) = cpu.non_purus_call(config, f_pointer, args);
-                let Some(ret_out) = call_frame(cpu).get(*ret_at) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
-                };
-                let true_ret_layout = config.return_type.layout();
-                unsafe {
-                    ret_out.copy_from(ret_ptr, true_ret_layout.size());
-                    std::alloc::Allocator::deallocate(&std::alloc::Global, ret_ptr, ret_layout);
-                }
-            }
-            Instruction::DynamicNonPurusCall {
-                f_pointer,
-                config,
-                args,
-                ret_at,
-            } => {
-                let Some(f_pointer) = call_frame(cpu).read_typed::<*const u8>(*f_pointer) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*f_pointer)));
-                };
-                let Some(config) = call_frame(cpu).read_typed::<ManagedReference<Class>>(*config)
-                else {
-                    return Some(Err(Termination::LoadRegisterFailed(*config)));
-                };
-                let args = args
-                    .iter()
-                    .map(|x| {
-                        call_frame(cpu)
-                            .get(*x)
-                            .unwrap()
-                            .ptr()
-                            .cast::<c_void>()
-                            .as_ptr()
-                    })
-                    .collect::<Vec<_>>();
-                let cfg = match cpu.unmarshal_non_purus_configuration(config) {
-                    Ok(x) => x,
-                    Err(err) => return Some(Err(Termination::UnmarshalFailed(err))),
-                };
-                let (ret_ptr, ret_layout) = cpu.non_purus_call(&cfg, f_pointer, args);
-                let Some(ret_out) = call_frame(cpu).get(*ret_at) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
-                };
-                let true_ret_layout = cfg.return_type.layout();
-                unsafe {
-                    ret_out.copy_from(ret_ptr, true_ret_layout.size());
-                    std::alloc::Allocator::deallocate(&std::alloc::Global, ret_ptr, ret_layout);
-                }
-            }
-
-            Instruction::LoadNonPurusCallConfiguration { register_addr, val } => {
-                let data = cpu.marshal_non_purus_configuration(val);
-                if !call_frame(cpu).write_typed(*register_addr, data) {
-                    return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
-                }
-            }
-
-            Instruction::LoadArg { register_addr, arg } => {
-                let Some(arg) = args.get((*arg) as usize) else {
-                    return Some(Err(Termination::LoadArgFailed(*arg)));
-                };
-
-                match NonNull::new(*arg) {
-                    None => {
-                        call_frame(cpu).zero_register(*register_addr);
-                    }
-                    Some(p) => {
-                        let Some(out_var) = call_frame(cpu).get(*register_addr) else {
-                            return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
-                        };
-                        unsafe { out_var.copy_all_from(p.cast()) }
-                    }
-                }
-            }
-            Instruction::LoadStatic {
-                register_addr,
-                ty,
-                field,
-            } => {
-                let Some(ty) = ty
-                    .load(cpu.vm_ref().assembly_manager())
-                    .map(|x| x.get_non_generic_with_method(method))
-                else {
-                    return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
-                };
-                let Some((f_ptr, f_layout)) = cpu.vm_ref().get_static_field(ty, *field) else {
-                    return Some(Err(Termination::LoadFieldFailed(*field)));
-                };
-                let Some(out_var) = call_frame(cpu).get(*register_addr) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
-                };
-                unsafe {
-                    out_var.copy_from(f_ptr.cast(), f_layout.size());
-                }
-            }
-            Instruction::LoadField {
-                container,
-                field,
-                register_addr,
-            } => {
-                let Some(container) = call_frame(cpu).get(*container) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*container)));
-                };
-                let Some(register_var) = call_frame(cpu).get(*register_addr) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
-                };
-                match container.ty {
-                    NonGenericTypeHandle::Class(_) => {
-                        let Some((field_ptr, field_layout)) = container
-                            .as_ref_typed::<ManagedReference<Class>>()
-                            .const_access::<FieldAccessor<Class>>()
-                            .field(*field, Default::default())
-                        else {
-                            return Some(Err(Termination::LoadFieldFailed(*field)));
-                        };
-                        debug_assert!(register_var.layout.size() >= field_layout.size());
-                        unsafe {
-                            register_var.copy_from(field_ptr, field_layout.size());
-                        }
-                    }
-                    NonGenericTypeHandle::Struct(s) => {
-                        let Some(field_info) = unsafe { s.as_ref() }
-                            .method_table_ref()
-                            .field_mem_info(*field, Default::default(), Default::default())
-                        else {
-                            return Some(Err(Termination::LoadFieldFailed(*field)));
-                        };
-                        debug_assert!(register_var.layout.size() >= field_info.layout.size());
-                        unsafe {
-                            register_var.copy_from(
-                                container.ptr.byte_add(field_info.offset),
-                                field_info.layout.size(),
-                            );
-                        }
-                    }
-                }
-            }
-            Instruction::SetThisField { val_addr, field } => {
-                let Some(val_var) = call_frame(cpu).get(*val_addr) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*val_addr)));
-                };
-                let Some(this) = this else {
-                    return Some(Err(Termination::NullReference(
-                        core::panic::Location::caller(),
-                    )));
-                };
-                unsafe {
-                    let this = this.cast::<ManagedReference<Class>>().as_ref();
-                    let Some((f_ptr, f_layout)) = this
-                        .const_access::<FieldAccessor<_>>()
-                        .field(*field, Default::default())
-                    else {
-                        return Some(Err(Termination::LoadFieldFailed(*field)));
-                    };
-                    val_var.copy_to(f_ptr.cast(), f_layout.size());
-                }
-            }
-            Instruction::SetStaticField {
-                val_addr,
-                ty,
-                field,
-            } => {
-                let Some(ty) = ty
-                    .load(cpu.vm_ref().assembly_manager())
-                    .map(|x| x.get_non_generic_with_method(method))
-                else {
-                    return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
-                };
-                let Some((f_ptr, f_layout)) = cpu.vm_ref().get_static_field(ty, *field) else {
-                    return Some(Err(Termination::LoadFieldFailed(*field)));
-                };
-                let Some(val_var) = call_frame(cpu).get(*val_addr) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*val_addr)));
-                };
-                unsafe {
-                    val_var.copy_to(f_ptr.cast(), f_layout.size());
-                }
-            }
-            Instruction::Throw { exception_addr } => {
-                let Some(exception) =
-                    call_frame(cpu).get_typed::<ManagedReference<Class>>(*exception_addr)
-                else {
-                    return Some(Err(Termination::LoadRegisterFailed(*exception_addr)));
-                };
-                assert!(!exception.is_null());
-                cpu.throw_exception(*exception);
-            }
-            Instruction::ReturnVal { register_addr } => {
-                let Some(res_var) = call_frame(cpu).get(*register_addr) else {
-                    return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
-                };
-                unsafe {
-                    res_var.copy_all_to(result_ptr.as_non_null_ptr());
-                }
-                return Some(Err(Termination::Returned));
-            }
-
-            &Instruction::Jump { target } => {
-                do_jump(pc, target);
-            }
-
-            &Instruction::JumpIf {
-                register_addr,
-                target,
-            } => {
-                let Some(cond) = call_frame(cpu).get_typed::<bool>(register_addr) else {
-                    return Some(Err(Termination::LoadRegisterFailed(register_addr)));
-                };
-                if *cond {
-                    do_jump(pc, target);
-                }
-            }
-
-            &Instruction::JumpIfAllZero { to_check, target } => {
-                let Some(to_check_var) = call_frame(cpu).get(to_check) else {
-                    return Some(Err(Termination::LoadRegisterFailed(to_check)));
-                };
-                if to_check_var.is_all_zero() {
-                    do_jump(pc, target);
-                }
-            }
-            &Instruction::JumpIfNotAllZero { to_check, target } => {
-                let Some(to_check_var) = call_frame(cpu).get(to_check) else {
-                    return Some(Err(Termination::LoadRegisterFailed(to_check)));
-                };
-                if !to_check_var.is_all_zero() {
-                    do_jump(pc, target);
-                }
-            }
+        if !matches!(ins, Instruction::Nop) {
+            eprintln!("INVOKE: {ins}");
         }
 
-        Some(Ok(()))
+        macro _eval($ins:ident by $evaluator:ident) {
+            $evaluator::eval(method, cpu, this, args, result_ptr, pc, $ins)
+        }
+
+        match ins {
+            Instruction::Nop => Some(Ok(())),
+            Instruction::Load(ins) => _eval!(ins by load),
+            Instruction::SLoad(ins) => _eval!(ins by load),
+
+            Instruction::ReadPointerTo(ins) => {
+                read_write_pointer::read_pointer_to(method, cpu, this, args, result_ptr, pc, ins)
+            }
+            Instruction::SReadPointerTo(ins) => {
+                read_write_pointer::read_pointer_to(method, cpu, this, args, result_ptr, pc, ins)
+            }
+
+            Instruction::WritePointer(ins) => {
+                read_write_pointer::write_pointer(method, cpu, this, args, result_ptr, pc, ins)
+            }
+            Instruction::SWritePointer(ins) => {
+                read_write_pointer::write_pointer(method, cpu, this, args, result_ptr, pc, ins)
+            }
+
+            Instruction::Check(ins) => _eval!(ins by check),
+            Instruction::SCheck(ins) => _eval!(ins by check),
+
+            Instruction::New(ins) => _eval!(ins by new),
+            Instruction::SNew(ins) => _eval!(ins by new),
+
+            Instruction::Call(ins) => _eval!(ins by call),
+            Instruction::SCall(ins) => _eval!(ins by call),
+
+            Instruction::Set(ins) => _eval!(ins by set),
+            Instruction::SSet(ins) => _eval!(ins by set),
+
+            Instruction::Throw { exception_addr } => {
+                eval_throw(method, cpu, this, args, result_ptr, pc, exception_addr)
+            }
+            Instruction::SThrow { exception_addr } => {
+                eval_throw(method, cpu, this, args, result_ptr, pc, exception_addr)
+            }
+
+            Instruction::ReturnVal { register_addr } => {
+                eval_return_val(method, cpu, this, args, result_ptr, pc, register_addr)
+            }
+            Instruction::SReturnVal { register_addr } => {
+                eval_return_val(method, cpu, this, args, result_ptr, pc, register_addr)
+            }
+
+            Instruction::Jump(ins) => _eval!(ins by jump),
+            Instruction::SJump(ins) => _eval!(ins by jump),
+        }
     }
 }
 

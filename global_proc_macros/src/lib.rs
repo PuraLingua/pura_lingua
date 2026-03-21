@@ -6,6 +6,7 @@
 #![feature(const_trait_impl)]
 #![feature(const_default)]
 #![feature(const_try)]
+#![feature(proc_macro_diagnostic)]
 #![allow(static_mut_refs)]
 // cSpell:enable
 
@@ -13,8 +14,10 @@ mod all_variants;
 mod attr;
 mod custom_partial_eq;
 mod define_instruction;
+mod derive_map;
 mod str_enum;
 mod thread_safe;
+mod transpose;
 mod unwrap_enum;
 mod util;
 mod with_type;
@@ -39,6 +42,8 @@ define_derive_macros! {
     StrEnum[str_val, global_crate] => str_enum::derive_str_enum_impl;
     CharEnum[char_val, global_crate] => str_enum::derive_char_enum_impl;
     UnwrapEnum[unwrap_enum] => unwrap_enum::derive_unwrap_enum_impl;
+    Transpose[transpose] => transpose::derive_transpose;
+    DeriveMap[] => derive_map::map_derive;
 }
 
 define_macros! {
