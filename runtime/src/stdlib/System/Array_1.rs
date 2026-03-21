@@ -1,10 +1,15 @@
 use std::ptr::NonNull;
 
-use global::dt_println;
+use global::{attrs::CallConvention, dt_println, instruction::RegisterAddr};
+use stdlib_header::definitions::{System_Array_1_MethodId, System_Object_MethodId};
 
 use crate::{
-    stdlib::System_Object_MethodId,
-    type_system::{class::Class, method::Method, type_handle::NonGenericTypeHandle},
+    stdlib::System::{_define_class, common_new_method, default_sctor},
+    type_system::{
+        class::Class,
+        method::Method,
+        type_handle::{NonGenericTypeHandle, TypeHandle},
+    },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
     virtual_machine::cpu::CPU,
 };
@@ -13,7 +18,7 @@ use crate::{
 mod tests;
 
 pub extern "system" fn Destructor(
-    cpu: &CPU,
+    cpu: &mut CPU,
     method: &Method<Class>,
     this: &mut ManagedReference<Class>,
 ) {
@@ -23,7 +28,7 @@ pub extern "system" fn Destructor(
 }
 
 pub extern "system" fn ToString(
-    cpu: &CPU,
+    cpu: &mut CPU,
     method: &Method<Class>,
     this: &ManagedReference<Class>,
 ) -> ManagedReference<Class> {
@@ -115,3 +120,126 @@ pub extern "system" fn GetPointerOfIndex(
         .and_then(|mut x| x.nth(index))
         .map(|x| unsafe { NonNull::new_unchecked(x.as_ptr().cast_mut()) })
 }
+
+macro define_registers($($name:ident)*) {$(
+    const $name: RegisterAddr = RegisterAddr::new(${index()});
+)*}
+
+_define_class!(
+    fn load(assembly, mt, method_info)
+    System_Array_1
+#methods(TMethodId):
+    Destructor => common_new_method!(mt TMethodId Destructor Destructor);
+    ToString => common_new_method!(mt TMethodId ToString ToString);
+    GetPointerOfIndex => common_new_method!(mt TMethodId GetPointerOfIndex GetPointerOfIndex);
+    get_Index => {
+        define_registers!(
+            this_addr
+            arg_Index
+            ptr2result
+            t_size
+            result
+        );
+        Box::new(
+            Method::new(
+                mt,
+                TMethodId::get_Index.get_name().to_owned(),
+                super::map_method_attr(TMethodId::get_Index.get_attr()),
+                TMethodId::get_Index.get_parameters()
+                    .into_iter()
+                    .map(super::map_parameter)
+                    .collect(),
+                TMethodId::get_Index.get_return_type().into(),
+                CallConvention::PlatformDefault,
+                None,
+                {
+                    use global::instruction::Instruction;
+                    vec![
+                        Instruction::LoadThis {
+                            register_addr: this_addr,
+                        },
+                        Instruction::LoadArg {
+                            register_addr: arg_Index,
+                            arg: 0,
+                        },
+                        Instruction::InstanceCall {
+                            val: this_addr,
+                            method: System_Array_1_MethodId::GetPointerOfIndex.into(),
+                            args: vec![arg_Index],
+                            ret_at: ptr2result,
+                        },
+                        Instruction::LoadTypeValueSize {
+                            register_addr: t_size,
+                            ty: TypeHandle::Generic(0).into(),
+                        },
+                        Instruction::ReadPointerTo {
+                            ptr: ptr2result,
+                            size: t_size,
+                            destination: result,
+                        },
+                        Instruction::ReturnVal {
+                            register_addr: result,
+                        },
+                    ]
+                },
+            )
+        )
+    };
+    set_Index => {
+        define_registers!(
+            this_addr
+            arg_Index
+            arg_Value
+            t_size
+            pointer2target
+        );
+        Box::new(
+            Method::new(
+                mt,
+                TMethodId::set_Index.get_name().to_owned(),
+                super::map_method_attr(TMethodId::set_Index.get_attr()),
+                TMethodId::set_Index.get_parameters()
+                    .into_iter()
+                    .map(super::map_parameter)
+                    .collect(),
+                TMethodId::set_Index.get_return_type().into(),
+                CallConvention::PlatformDefault,
+                None,
+                {
+                    use global::instruction::Instruction;
+                    vec![
+                        Instruction::LoadThis {
+                            register_addr: this_addr,
+                        },
+                        Instruction::LoadArg {
+                            register_addr: arg_Index,
+                            arg: 0,
+                        },
+                        Instruction::LoadArg {
+                            register_addr: arg_Value,
+                            arg: 1,
+                        },
+
+                        Instruction::LoadTypeValueSize {
+                            register_addr: t_size,
+                            ty: TypeHandle::Generic(0).into(),
+                        },
+                        Instruction::InstanceCall {
+                            val: this_addr,
+                            method: System_Array_1_MethodId::GetPointerOfIndex.into(),
+                            args: vec![arg_Index],
+                            ret_at: pointer2target,
+                        },
+                        Instruction::WritePointer {
+                            source: arg_Value,
+                            size: t_size,
+                            ptr: pointer2target,
+                        }
+                    ]
+                },
+            )
+        )
+    };
+#static_methods(TStaticMethodId):
+    StaticConstructor => default_sctor!(mt TStaticMethodId);
+);

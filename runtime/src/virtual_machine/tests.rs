@@ -16,7 +16,7 @@ use super::*;
 
 #[test]
 fn test_static() {
-    EnsureVirtualMachineInitialized();
+    EnsureGlobalVirtualMachineInitialized();
 
     global_vm()
         .assembly_manager()
@@ -32,6 +32,7 @@ fn test_static() {
                             class Public {}
                         ),
                         Some(g_core_class!(System_Object)),
+                        vec![],
                         |class| {
                             MethodTable::new(class, |mt| {
                                 // Statics

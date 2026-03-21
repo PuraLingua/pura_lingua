@@ -133,6 +133,12 @@ pub macro function_name() {{
     &name[..name.len() - 3]
 }}
 
+pub macro layout_eq($T1:ty, $T2:ty) {{
+    const T1_LAYOUT: ::std::alloc::Layout = ::std::alloc::Layout::new::<$T1>();
+    const T2_LAYOUT: ::std::alloc::Layout = ::std::alloc::Layout::new::<$T2>();
+    (T1_LAYOUT.size() == T2_LAYOUT.size()) && (T1_LAYOUT.align() == T2_LAYOUT.align())
+}}
+
 pub macro warn_if_default_impl() {
     $crate::macros::dt_println!("DEFAULT method {}", $crate::macros::function_name!())
 }

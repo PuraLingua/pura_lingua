@@ -1,10 +1,12 @@
 use std::{
     alloc::{Allocator, Global, Layout},
+    cell::SyncUnsafeCell,
     collections::HashMap,
     mem::{MaybeUninit, offset_of},
     num::NonZero,
+    pin::Pin,
     ptr::{NonNull, Unique},
-    sync::{MappedRwLockReadGuard, Once, RwLock, RwLockReadGuard},
+    sync::{LockResult, Mutex, Once, RwLock, RwLockWriteGuard},
 };
 
 use cpu::CPU;
@@ -33,11 +35,12 @@ pub struct VirtualMachine {
     pub(crate) assembly_manager: AssemblyManager,
     resource_manager: ResourceManager,
     #[getset(skip)]
-    #[allow(clippy::vec_box)]
-    // cSpell:disable-next-line
-    central_processing_units: RwLock<Vec<Box<CPU>>>,
+    cpu_lock: Mutex<()>,
     #[getset(skip)]
-    cpu_for_static: RwLock<Box<CPU>>,
+    #[allow(clippy::vec_box)]
+    central_processing_units: SyncUnsafeCell<Vec<Pin<Box<RwLock<CPU>>>>>,
+    #[getset(skip)]
+    cpu_for_static: Pin<Box<RwLock<CPU>>>,
 
     #[getset(skip)]
     pub(crate) class_static_map: RwLock<HashMap<NonNull<Class>, ManagedReference<Class>>>,
@@ -47,17 +50,25 @@ pub struct VirtualMachine {
 }
 
 #[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum CpuID {
-    StaticCPU,
-    Common(NonZero<usize>),
+    StaticCPU = 0,
+    Common(NonZero<usize>) = 1,
 }
 
 impl CpuID {
-    pub fn new_global() -> MappedRwLockReadGuard<'static, CPU> {
+    pub fn new_global() -> Pin<&'static RwLock<CPU>> {
         global_vm().add_cpu().as_global_cpu().unwrap()
     }
-    pub fn as_global_cpu(&self) -> Option<MappedRwLockReadGuard<'static, CPU>> {
+    pub fn new_write_global() -> RwLockWriteGuard<'static, CPU> {
+        global_vm().add_cpu().as_global_write_cpu().unwrap()
+    }
+    pub fn as_global_cpu(&self) -> Option<Pin<&'static RwLock<CPU>>> {
         global_vm().get_cpu(*self)
+    }
+    pub fn as_global_write_cpu(&self) -> Option<RwLockWriteGuard<'static, CPU>> {
+        self.as_global_cpu()
+            .map(|x| Pin::get_ref(x).write().unwrap())
     }
 }
 
@@ -68,10 +79,8 @@ impl VirtualMachine {
                 .cast::<RwLock<Vec<Box<CPU>>>>()
                 .write(RwLock::new(Vec::new()));
             this.byte_add(offset_of!(Self, cpu_for_static))
-                .cast::<RwLock<Box<CPU>>>()
-                .write(RwLock::new(Box::from_non_null(
-                    CPU::new(this).as_non_null_ptr(),
-                )));
+                .cast::<Pin<Box<RwLock<CPU>>>>()
+                .write(CPU::new(this));
             this.byte_add(offset_of!(Self, class_static_map))
                 .cast::<RwLock<HashMap<NonNull<Class>, ManagedReference<Class>>>>()
                 .write(RwLock::new(HashMap::new()));
@@ -91,30 +100,48 @@ impl VirtualMachine {
         Unique::from_non_null(this)
     }
 
-    pub fn cpu_for_static(&self) -> MappedRwLockReadGuard<'_, CPU> {
-        RwLockReadGuard::map(self.cpu_for_static.read().unwrap(), |x| &**x)
+    pub fn new_system() -> Unique<Self> {
+        let this = alloc_type::<Self, _>(&std::alloc::System).unwrap();
+
+        Self::construct_in(this);
+
+        Unique::from_non_null(this)
+    }
+
+    pub fn cpu_for_static(&self) -> Pin<&RwLock<CPU>> {
+        Pin::as_ref(&self.cpu_for_static)
+    }
+
+    pub fn write_cpu_for_static<'a>(&'a self) -> LockResult<RwLockWriteGuard<'a, CPU>> {
+        self.cpu_for_static.write()
     }
 
     #[must_use]
     pub fn add_cpu(&self) -> CpuID {
-        let mut central_processing_units = self.central_processing_units.write().unwrap();
+        let _guard = self.cpu_lock.lock().unwrap();
+        let central_processing_units =
+            unsafe { self.central_processing_units.get().as_mut_unchecked() };
         let index = central_processing_units.len();
-        central_processing_units.push(unsafe {
-            Box::from_non_null(CPU::new(NonNull::from_ref(self)).as_non_null_ptr())
-        });
+        central_processing_units.push(CPU::new(NonNull::from_ref(self)));
         CpuID::Common(unsafe { NonZero::new_unchecked(index + 1) })
     }
 
-    pub fn get_cpu(&self, index: CpuID) -> Option<MappedRwLockReadGuard<'_, CPU>> {
+    pub fn get_cpu(&self, index: CpuID) -> Option<Pin<&RwLock<CPU>>> {
         match index {
             CpuID::StaticCPU => Some(self.cpu_for_static()),
             CpuID::Common(index) => {
-                RwLockReadGuard::filter_map(self.central_processing_units.read().unwrap(), |x| {
-                    x.get(index.get() - 1).map(|x| &**x)
-                })
-                .ok()
+                let _guard = self.cpu_lock.lock().unwrap();
+                let central_processing_units =
+                    unsafe { self.central_processing_units.get().as_ref_unchecked() };
+                central_processing_units
+                    .get(index.get() - 1)
+                    .map(|x| Pin::as_ref(x))
             }
         }
+    }
+
+    pub fn write_cpu<'a>(&'a self, index: CpuID) -> Option<LockResult<RwLockWriteGuard<'a, CPU>>> {
+        self.get_cpu(index).map(|x| Pin::get_ref(x).write())
     }
 
     pub fn load_class_static(&self, class: NonNull<Class>) -> ManagedReference<Class> {
@@ -124,9 +151,9 @@ impl VirtualMachine {
         } {
             return v;
         }
-        let cpu = self.cpu_for_static();
+        let mut cpu = self.write_cpu_for_static().unwrap();
         let obj = ManagedReference::<Class>::common_alloc(
-            &cpu,
+            &mut cpu,
             unsafe { *class.as_ref().method_table() },
             true,
         );
@@ -143,7 +170,7 @@ impl VirtualMachine {
         };
 
         unsafe {
-            sctor.as_ref().typed_res_call::<()>(&cpu, None, &[]);
+            sctor.as_ref().typed_res_call::<()>(&mut cpu, None, &[]);
         }
 
         obj
@@ -156,7 +183,7 @@ impl VirtualMachine {
         } {
             return v;
         }
-        let cpu = self.cpu_for_static();
+        let mut cpu = self.write_cpu_for_static().unwrap();
         let mt = unsafe { s.as_ref().method_table_ref() };
         let obj_layout = mt.static_layout(Default::default());
         let obj = Global.allocate(obj_layout).unwrap();
@@ -172,7 +199,7 @@ impl VirtualMachine {
         };
 
         unsafe {
-            sctor.as_ref().typed_res_call::<()>(&cpu, None, &[]);
+            sctor.as_ref().typed_res_call::<()>(&mut cpu, None, &[]);
         }
 
         (obj.as_non_null_ptr(), obj_layout)
@@ -191,12 +218,12 @@ impl VirtualMachine {
                 } else {
                     drop(static_map);
                     let mut static_map = self.class_static_map.write().unwrap();
-                    let static_cpu = self.cpu_for_static();
+                    let mut static_cpu = self.write_cpu_for_static().unwrap();
                     println!("Initializing static for {}", unsafe {
                         class.as_ref().name()
                     });
                     let obj = ManagedReference::<Class>::common_alloc(
-                        &static_cpu,
+                        &mut static_cpu,
                         unsafe { *class.as_ref().method_table() },
                         true,
                     );
@@ -205,7 +232,9 @@ impl VirtualMachine {
                     let sctor =
                         unsafe { class.as_ref().method_table_ref() }.get_static_constructor();
                     unsafe {
-                        sctor.as_ref().typed_res_call::<()>(&static_cpu, None, &[]);
+                        sctor
+                            .as_ref()
+                            .typed_res_call::<()>(&mut static_cpu, None, &[]);
                     }
 
                     obj
@@ -221,7 +250,7 @@ impl VirtualMachine {
                 } else {
                     drop(static_map);
                     let mut static_map = self.struct_static_map.write().unwrap();
-                    let static_cpu = self.cpu_for_static();
+                    let mut static_cpu = self.write_cpu_for_static().unwrap();
                     let mt = unsafe { s.as_ref().method_table_ref() };
                     let obj_layout = mt.static_layout(Default::default());
                     let obj_p = std::alloc::Global
@@ -232,7 +261,9 @@ impl VirtualMachine {
                     drop(static_map);
                     let sctor = mt.get_static_constructor();
                     unsafe {
-                        sctor.as_ref().typed_res_call::<()>(&static_cpu, None, &[]);
+                        sctor
+                            .as_ref()
+                            .typed_res_call::<()>(&mut static_cpu, None, &[]);
                     }
                     (obj_p, obj_layout)
                 };
@@ -244,33 +275,33 @@ impl VirtualMachine {
     }
 }
 
-#[used]
-#[unsafe(no_mangle)]
 /* cSpell: disable-next-line */
-static mut G_RUNTIM: MaybeUninit<VirtualMachine> = MaybeUninit::zeroed();
-static ENSURE_VM_INIT: Once = Once::new();
+static mut G_RUNTIME: MaybeUninit<VirtualMachine> = MaybeUninit::zeroed();
+static VM_INIT: Once = Once::new();
 
 #[inline(always)]
 pub const unsafe fn global_vm_unchecked() -> &'static mut VirtualMachine {
-    /* cSpell: disable-next-line */
-    unsafe { G_RUNTIM.assume_init_mut() }
+    unsafe { G_RUNTIME.assume_init_mut() }
 }
 
 #[inline(always)]
 pub fn global_vm() -> &'static mut VirtualMachine {
-    if !ENSURE_VM_INIT.is_completed() {
+    if !VM_INIT.is_completed() {
         std::hint::cold_path();
-        EnsureVirtualMachineInitialized();
+        EnsureGlobalVirtualMachineInitialized();
     }
     unsafe { global_vm_unchecked() }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn EnsureVirtualMachineInitialized() {
-    ENSURE_VM_INIT.call_once(|| unsafe {
-        /* cSpell: disable */
-        let rt_ptr = G_RUNTIM.as_mut_ptr();
+#[inline(always)]
+pub fn is_global_vm_init() -> bool {
+    VM_INIT.is_completed()
+}
+
+#[allow(nonstandard_style)]
+pub fn EnsureGlobalVirtualMachineInitialized() {
+    VM_INIT.call_once(|| unsafe {
+        let rt_ptr = G_RUNTIME.as_mut_ptr();
         VirtualMachine::construct_in(NonNull::new_unchecked(rt_ptr));
-        /* cSpell: enable */
     });
 }

@@ -1,5 +1,5 @@
-// #[allow(unused)]
 use crate::{
+    stdlib::System::{_define_class, common_new_method, default_sctor},
     type_system::{class::Class, method::Method},
     value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
@@ -60,3 +60,13 @@ pub fn Constructor_I32(
 ) {
     panic!("Unsupported");
 }
+
+_define_class!(
+    fn load(assembly, mt, method_info)
+    System_ErrnoException
+#methods(TMethodId):
+    Constructor => common_new_method!(mt TMethodId Constructor Constructor);
+    Constructor_I32 => common_new_method!(mt TMethodId Constructor_I32 Constructor_I32);
+#static_methods(TStaticMethodId):
+    StaticConstructor => default_sctor!(mt TStaticMethodId);
+);

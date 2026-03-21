@@ -34,6 +34,8 @@ bitfields = { workspace = true }
 
 string_name = { workspace = true }
 
+c_definitions = { workspace = true }
+
 binary_core = { package = "pura_lingua_binary_core", path = "../binary_core" }
 binary_proc_macros = { package = "pura_lingua_binary_proc_macros", path = "../binary_proc_macros" }
 

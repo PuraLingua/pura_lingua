@@ -2,9 +2,10 @@ use std::ffi::c_void;
 use std::ptr::NonNull;
 
 use global::t_println;
+use stdlib_header::definitions::System_DynamicLibrary_FieldId;
 
 use crate::{
-    stdlib::System_DynamicLibrary_FieldId,
+    stdlib::System::{_define_class, common_new_method, default_sctor},
     type_system::{class::Class, method::Method},
     value::managed_reference::{FieldAccessor, ManagedReference, StringAccessor},
     virtual_machine::cpu::CPU,
@@ -14,7 +15,7 @@ use crate::{
 mod tests;
 
 pub extern "system" fn Constructor_String(
-    cpu: &CPU,
+    cpu: &mut CPU,
     _: &Method<Class>,
     this: &mut ManagedReference<Class>,
     file: ManagedReference<Class>,
@@ -42,7 +43,7 @@ pub extern "system" fn Constructor_String(
 }
 
 pub extern "system" fn GetSymbol(
-    cpu: &CPU,
+    cpu: &mut CPU,
     _: &Method<Class>,
     this: &mut ManagedReference<Class>,
     name: ManagedReference<Class>,
@@ -58,7 +59,7 @@ pub extern "system" fn GetSymbol(
 }
 
 pub extern "system" fn Destructor(
-    cpu: &CPU,
+    cpu: &mut CPU,
     _: &Method<Class>,
     this: &mut ManagedReference<Class>,
 ) {
@@ -88,7 +89,7 @@ fn ClearHandlePtr(this: &mut ManagedReference<Class>) {
 
 // cSpell:disable
 #[cfg(windows)]
-fn LoadLibrary(cpu: &CPU, file: ManagedReference<Class>) -> Option<NonNull<c_void>> {
+fn LoadLibrary(cpu: &mut CPU, file: ManagedReference<Class>) -> Option<NonNull<c_void>> {
     match unsafe {
         windows::Win32::System::LibraryLoader::LoadLibraryW(windows::core::PCWSTR::from_raw(
             file.access::<StringAccessor>()
@@ -101,7 +102,7 @@ fn LoadLibrary(cpu: &CPU, file: ManagedReference<Class>) -> Option<NonNull<c_voi
         Ok(x) => Some(unsafe { NonNull::new_unchecked(x.0) }),
         Err(e) => {
             println!("WIN32 API ERROR: {}", e.message());
-            assert!(cpu.throw_helper().win32(e.code().0));
+            assert!(cpu.throw_helper_mut().win32(e.code().0));
             None
         }
     }
@@ -109,7 +110,7 @@ fn LoadLibrary(cpu: &CPU, file: ManagedReference<Class>) -> Option<NonNull<c_voi
 
 #[cfg(windows)]
 fn GetSymbolImpl(
-    cpu: &CPU,
+    cpu: &mut CPU,
     handle: *mut c_void,
     name: ManagedReference<Class>,
 ) -> Option<NonNull<c_void>> {
@@ -136,7 +137,8 @@ fn GetSymbolImpl(
             .unwrap();
 
         if used_len.is_none() {
-            assert!(cpu.throw_helper().current_win32());
+            assert!(cpu.throw_helper_mut().current_win32());
+            return None;
         }
         match windows::Win32::System::LibraryLoader::GetProcAddress(
             hModule,
@@ -144,7 +146,7 @@ fn GetSymbolImpl(
         ) {
             Some(x) => Some(NonNull::new_unchecked(x as _)),
             None => {
-                assert!(cpu.throw_helper().current_win32());
+                assert!(cpu.throw_helper_mut().current_win32());
                 None
             }
         }
@@ -153,20 +155,20 @@ fn GetSymbolImpl(
 
 #[cfg(windows)]
 #[must_use]
-fn FreeLibrary(cpu: &CPU, handle: *mut c_void) -> bool {
+fn FreeLibrary(cpu: &mut CPU, handle: *mut c_void) -> bool {
     let hLibModule = windows::Win32::Foundation::HMODULE(handle);
     match unsafe { windows::Win32::Foundation::FreeLibrary(hLibModule) } {
         Ok(_) => true,
         Err(e) => {
             println!("WIN32 API ERROR: {}", e.message());
-            assert!(cpu.throw_helper().win32(e.code().0));
+            assert!(cpu.throw_helper_mut().win32(e.code().0));
             false
         }
     }
 }
 
 #[cfg(unix)]
-fn LoadLibrary(cpu: &CPU, file: ManagedReference<Class>) -> Option<NonNull<c_void>> {
+fn LoadLibrary(cpu: &mut CPU, file: ManagedReference<Class>) -> Option<NonNull<c_void>> {
     let file_path = std::ffi::CString::new(
         file.access::<StringAccessor>()
             .unwrap()
@@ -179,7 +181,7 @@ fn LoadLibrary(cpu: &CPU, file: ManagedReference<Class>) -> Option<NonNull<c_voi
     match NonNull::new(handle) {
         Some(x) => Some(x),
         None => {
-            assert!(cpu.throw_helper().current_dlerror());
+            assert!(cpu.throw_helper_mut().current_dlerror());
             None
         }
     }
@@ -187,7 +189,7 @@ fn LoadLibrary(cpu: &CPU, file: ManagedReference<Class>) -> Option<NonNull<c_voi
 
 #[cfg(unix)]
 fn GetSymbolImpl(
-    cpu: &CPU,
+    cpu: &mut CPU,
     handle: *mut c_void,
     name: ManagedReference<Class>,
 ) -> Option<NonNull<c_void>> {
@@ -202,7 +204,7 @@ fn GetSymbolImpl(
     match NonNull::new(unsafe { libc::dlsym(handle, c_name.as_ptr()) }) {
         Some(x) => Some(x),
         None => {
-            assert!(cpu.throw_helper().current_dlerror());
+            assert!(cpu.throw_helper_mut().current_dlerror());
             None
         }
     }
@@ -210,13 +212,13 @@ fn GetSymbolImpl(
 
 #[cfg(unix)]
 #[must_use]
-fn FreeLibrary(cpu: &CPU, handle: *mut c_void) -> bool {
+fn FreeLibrary(cpu: &mut CPU, handle: *mut c_void) -> bool {
     if handle.is_null() {
         return true;
     }
     unsafe {
         if libc::dlclose(handle) != 0 {
-            assert!(cpu.throw_helper().current_dlerror());
+            assert!(cpu.throw_helper_mut().current_dlerror());
             false
         } else {
             true
@@ -224,3 +226,14 @@ fn FreeLibrary(cpu: &CPU, handle: *mut c_void) -> bool {
     }
 }
 // cSpell:enable
+
+_define_class!(
+    fn load(assembly, mt, method_info)
+    System_DynamicLibrary
+#methods(TMethodId):
+    Destructor => common_new_method!(mt TMethodId Destructor Destructor);
+    Constructor_String => common_new_method!(mt TMethodId Constructor_String Constructor_String);
+    GetSymbol => common_new_method!(mt TMethodId GetSymbol GetSymbol);
+#static_methods(TStaticMethodId):
+    StaticConstructor => default_sctor!(mt TStaticMethodId);
+);

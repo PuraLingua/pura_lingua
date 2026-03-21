@@ -308,12 +308,18 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
             type TMethodId = #method_id_enum_ident;
             type TStaticMethodId = #static_method_id_enum_ident;
 
+            let (parent, parent_generics) = match #parent {
+                Some((parent, parent_generics)) => (Some(parent), parent_generics),
+                None => (None, Vec::new()),
+            };
+
             NonGenericTypeHandle::Class(Class::new(
                 NonNull::from_ref(#assembly_name),
                 #name.to_owned(),
                 ::global::attr!(class #attr),
-                (#parent).map(<MaybeUnloadedTypeHandle as From<#stdlib_header_crate::CoreTypeRef>>::from)
+                parent.map(<MaybeUnloadedTypeHandle as From<#stdlib_header_crate::CoreTypeRef>>::from)
                     .map(|x| x.load(#assembly_name.manager_ref()).unwrap().into_non_generic().unwrap().unwrap_class()),
+                parent_generics,
                 |class| {
                     MethodTable::new(class, #method_generator).as_non_null_ptr()
                 },

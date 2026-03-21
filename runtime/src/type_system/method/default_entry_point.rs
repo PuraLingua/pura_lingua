@@ -57,15 +57,15 @@ macro load_register_failed($addr:expr) {
     return Some(Err(Termination::LoadRegisterFailed($addr)))
 }
 
-fn call_frame(cpu: &CPU) -> std::sync::MappedRwLockReadGuard<'_, CommonCallStackFrame> {
-    cpu.current_common_call_frame().unwrap().unwrap()
+fn call_frame(cpu: &CPU) -> &CommonCallStackFrame {
+    cpu.current_common_call_frame().unwrap()
 }
 
 trait Spec: Sized + GetAssemblyRef + GetTypeVars {
     /// Return false if it's terminated
     fn spec_match_code(
         method: &Method<Self>,
-        cpu: &CPU,
+        cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
         result_ptr: NonNull<[u8]>,
@@ -76,7 +76,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
     /// false if it's terminated
     fn common_match_code(
         method: &Method<Self>,
-        cpu: &CPU,
+        cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
         result_ptr: NonNull<[u8]>,
@@ -87,64 +87,62 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         };
         println!("{}", ins);
 
-        let frame = call_frame(cpu);
-
         match ins {
             Instruction::Nop => (),
             Instruction::LoadTrue { register_addr } => {
-                if !frame.write_typed(*register_addr, true) {
+                if !call_frame(cpu).write_typed(*register_addr, true) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::LoadFalse { register_addr } => {
-                if !frame.write_typed(*register_addr, false) {
+                if !call_frame(cpu).write_typed(*register_addr, false) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::Load_u8 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::Load_u16 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::Load_u32 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::Load_u64 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
 
             Instruction::Load_i8 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::Load_i16 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::Load_i32 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
             Instruction::Load_i64 { register_addr, val } => {
-                if !frame.write_typed(*register_addr, *val) {
+                if !call_frame(cpu).write_typed(*register_addr, *val) {
                     load_register_failed!(*register_addr);
                 }
             }
 
             Instruction::LoadThis { register_addr } => {
-                let Some(local_var) = frame.get(*register_addr) else {
+                let Some(local_var) = call_frame(cpu).get(*register_addr) else {
                     load_register_failed!(*register_addr);
                 };
                 debug_assert!(local_var.layout.size() >= Layout::new::<*const ()>().size());
@@ -161,7 +159,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             }
             Instruction::Load_String { register_addr, val } => {
                 let val_obj = ManagedReference::new_string(cpu, val);
-                if !frame.write_typed(*register_addr, val_obj) {
+                if !call_frame(cpu).write_typed(*register_addr, val_obj) {
                     load_register_failed!(*register_addr);
                 }
             }
@@ -171,7 +169,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 };
                 let ty = ty.get_non_generic_with_method(method);
                 let size = ty.val_layout().size();
-                if !frame.write_typed(*register_addr, size) {
+                if !call_frame(cpu).write_typed(*register_addr, size) {
                     load_register_failed!(*register_addr);
                 }
             }
@@ -180,7 +178,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 size,
                 destination,
             } => {
-                let Some(&ptr_var) = frame.get_typed::<*const u8>(*ptr) else {
+                let Some(&ptr_var) = call_frame(cpu).get_typed::<*const u8>(*ptr) else {
                     load_register_failed!(*ptr);
                 };
                 if ptr_var.is_null() {
@@ -188,10 +186,10 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                         core::panic::Location::caller(),
                     )));
                 }
-                let Some(size) = frame.get_typed(*size) else {
+                let Some(size) = call_frame(cpu).get_typed(*size) else {
                     load_register_failed!(*size);
                 };
-                let Some(destination) = frame.get(*destination) else {
+                let Some(destination) = call_frame(cpu).get(*destination) else {
                     load_register_failed!(*destination);
                 };
                 unsafe {
@@ -199,13 +197,13 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 }
             }
             Instruction::WritePointer { source, size, ptr } => {
-                let Some(source) = frame.get(*source) else {
+                let Some(source) = call_frame(cpu).get(*source) else {
                     load_register_failed!(*source);
                 };
-                let Some(size) = frame.get_typed::<usize>(*size) else {
+                let Some(size) = call_frame(cpu).get_typed::<usize>(*size) else {
                     load_register_failed!(*size);
                 };
-                let Some(&ptr_var) = frame.get_typed::<*const u8>(*ptr) else {
+                let Some(&ptr_var) = call_frame(cpu).get_typed::<*const u8>(*ptr) else {
                     load_register_failed!(*ptr);
                 };
                 let Some(ptr_var) = NonNull::new(ptr_var.cast_mut()) else {
@@ -222,11 +220,11 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 register_addr,
                 to_check,
             } => {
-                let Some(to_check_var) = frame.get(*to_check) else {
+                let Some(to_check_var) = call_frame(cpu).get(*to_check) else {
                     load_register_failed!(*to_check);
                 };
                 let res = to_check_var.is_all_zero();
-                if !frame.write_typed(*register_addr, res) {
+                if !call_frame(cpu).write_typed(*register_addr, res) {
                     load_register_failed!(*register_addr);
                 }
             }
@@ -239,14 +237,19 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             } => {
                 let args = args
                     .iter()
-                    .map(|x| frame.get(*x).unwrap().ptr.cast::<c_void>().as_ptr())
+                    .map(|x| {
+                        call_frame(cpu)
+                            .get(*x)
+                            .unwrap()
+                            .ptr
+                            .cast::<c_void>()
+                            .as_ptr()
+                    })
                     .collect::<Vec<_>>();
-                drop(frame);
 
                 match cpu.new_object(ty, ctor_name, &args) {
                     Some(obj) => {
-                        let frame = call_frame(cpu);
-                        if !frame.write_typed(*register_addr, obj) {
+                        if !call_frame(cpu).write_typed(*register_addr, obj) {
                             load_register_failed!(*register_addr);
                         }
                     }
@@ -260,7 +263,6 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 len,
                 register_addr,
             } => {
-                drop(frame);
                 let Some(element_th) = element_type.load(cpu.vm_ref().assembly_manager()) else {
                     return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
                 };
@@ -281,8 +283,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                         )
                     },
                 };
-                let frame = call_frame(cpu);
-                if !frame.write_typed(*register_addr, arr) {
+                if !call_frame(cpu).write_typed(*register_addr, arr) {
                     load_register_failed!(*register_addr);
                 }
             }
@@ -291,10 +292,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 len_addr,
                 register_addr,
             } => {
-                let Some(&len) = frame.get_typed::<usize>(*len_addr) else {
+                let Some(&len) = call_frame(cpu).get_typed::<usize>(*len_addr) else {
                     load_register_failed!(*len_addr);
                 };
-                drop(frame);
                 let Some(element_th) = element_type.load(cpu.vm_ref().assembly_manager()) else {
                     return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
                 };
@@ -307,8 +307,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                         ManagedReference::alloc_array(cpu, ty.as_ref().method_table, len)
                     },
                 };
-                let frame = call_frame(cpu);
-                if !frame.write_typed(*register_addr, arr) {
+                if !call_frame(cpu).write_typed(*register_addr, arr) {
                     load_register_failed!(*register_addr);
                 }
             }
@@ -321,10 +320,17 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             } => {
                 let args = args
                     .iter()
-                    .map(|x| frame.get(*x).unwrap().ptr.cast::<c_void>().as_ptr())
+                    .map(|x| {
+                        call_frame(cpu)
+                            .get(*x)
+                            .unwrap()
+                            .ptr
+                            .cast::<c_void>()
+                            .as_ptr()
+                    })
                     .collect::<Vec<_>>();
 
-                let Some(val) = frame.read_typed::<ManagedReference<Class>>(*val) else {
+                let Some(val) = call_frame(cpu).read_typed::<ManagedReference<Class>>(*val) else {
                     return Some(Err(Termination::LoadRegisterFailed(*val)));
                 };
                 if val.is_null() {
@@ -332,7 +338,6 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                         core::panic::Location::caller(),
                     )));
                 }
-                drop(frame);
                 let mt = val.method_table_ref().unwrap();
                 let Some(m) = mt.get_method_by_ref(method) else {
                     return Some(Err(Termination::LoadMethodFailed(method.clone())));
@@ -344,8 +349,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                     m_ref.untyped_call(cpu, Some(NonNull::from_ref(&val).cast()), &args);
 
                 if actual_layout != Layout::new::<()>() {
-                    let frame = call_frame(cpu);
-                    let Some(out_var) = frame.get(*ret_at) else {
+                    let Some(out_var) = call_frame(cpu).get(*ret_at) else {
                         return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
                     };
                     unsafe {
@@ -371,7 +375,14 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
 
                 let args = args
                     .iter()
-                    .map(|x| frame.get(*x).unwrap().ptr().cast::<c_void>().as_ptr())
+                    .map(|x| {
+                        call_frame(cpu)
+                            .get(*x)
+                            .unwrap()
+                            .ptr()
+                            .cast::<c_void>()
+                            .as_ptr()
+                    })
                     .collect::<Vec<_>>();
 
                 macro apply($n:ident $b:block) {
@@ -389,7 +400,6 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                         let mt = t_ref.method_table_ref();
                         let m = mt.get_method_by_ref(m_target).unwrap();
                         let m_ref = unsafe { m.as_ref() };
-                        drop(frame);
                         actual_layout = m_ref.get_return_type().val_layout();
 
                         m_ref.untyped_call(cpu, None, &args)
@@ -397,8 +407,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 };
 
                 if actual_layout != Layout::new::<()>() {
-                    let frame = call_frame(cpu);
-                    let Some(out_var) = frame.get(*ret_at) else {
+                    let Some(out_var) = call_frame(cpu).get(*ret_at) else {
                         return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
                     };
                     unsafe {
@@ -415,17 +424,22 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 args,
                 ret_at,
             } => {
-                let Some(&f_pointer) = frame.get_typed::<*const u8>(*f_pointer) else {
+                let Some(&f_pointer) = call_frame(cpu).get_typed::<*const u8>(*f_pointer) else {
                     return Some(Err(Termination::LoadRegisterFailed(*f_pointer)));
                 };
                 let args = args
                     .iter()
-                    .map(|x| frame.get(*x).unwrap().ptr().cast::<c_void>().as_ptr())
+                    .map(|x| {
+                        call_frame(cpu)
+                            .get(*x)
+                            .unwrap()
+                            .ptr()
+                            .cast::<c_void>()
+                            .as_ptr()
+                    })
                     .collect::<Vec<_>>();
-                drop(frame);
                 let (ret_ptr, ret_layout) = cpu.non_purus_call(config, f_pointer, args);
-                let frame = call_frame(cpu);
-                let Some(ret_out) = frame.get(*ret_at) else {
+                let Some(ret_out) = call_frame(cpu).get(*ret_at) else {
                     return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
                 };
                 let true_ret_layout = config.return_type.layout();
@@ -440,24 +454,30 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 args,
                 ret_at,
             } => {
-                let Some(f_pointer) = frame.read_typed::<*const u8>(*f_pointer) else {
+                let Some(f_pointer) = call_frame(cpu).read_typed::<*const u8>(*f_pointer) else {
                     return Some(Err(Termination::LoadRegisterFailed(*f_pointer)));
                 };
-                let Some(config) = frame.read_typed::<ManagedReference<Class>>(*config) else {
+                let Some(config) = call_frame(cpu).read_typed::<ManagedReference<Class>>(*config)
+                else {
                     return Some(Err(Termination::LoadRegisterFailed(*config)));
                 };
                 let args = args
                     .iter()
-                    .map(|x| frame.get(*x).unwrap().ptr().cast::<c_void>().as_ptr())
+                    .map(|x| {
+                        call_frame(cpu)
+                            .get(*x)
+                            .unwrap()
+                            .ptr()
+                            .cast::<c_void>()
+                            .as_ptr()
+                    })
                     .collect::<Vec<_>>();
-                drop(frame);
                 let cfg = match cpu.unmarshal_non_purus_configuration(config) {
                     Ok(x) => x,
                     Err(err) => return Some(Err(Termination::UnmarshalFailed(err))),
                 };
                 let (ret_ptr, ret_layout) = cpu.non_purus_call(&cfg, f_pointer, args);
-                let frame = call_frame(cpu);
-                let Some(ret_out) = frame.get(*ret_at) else {
+                let Some(ret_out) = call_frame(cpu).get(*ret_at) else {
                     return Some(Err(Termination::LoadRegisterFailed(*ret_at)));
                 };
                 let true_ret_layout = cfg.return_type.layout();
@@ -468,12 +488,8 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             }
 
             Instruction::LoadNonPurusCallConfiguration { register_addr, val } => {
-                drop(frame);
-
                 let data = cpu.marshal_non_purus_configuration(val);
-
-                let frame = call_frame(cpu);
-                if !frame.write_typed(*register_addr, data) {
+                if !call_frame(cpu).write_typed(*register_addr, data) {
                     return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
                 }
             }
@@ -485,10 +501,10 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
 
                 match NonNull::new(*arg) {
                     None => {
-                        frame.zero_register(*register_addr);
+                        call_frame(cpu).zero_register(*register_addr);
                     }
                     Some(p) => {
-                        let Some(out_var) = frame.get(*register_addr) else {
+                        let Some(out_var) = call_frame(cpu).get(*register_addr) else {
                             return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
                         };
                         unsafe { out_var.copy_all_from(p.cast()) }
@@ -506,12 +522,10 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 else {
                     return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
                 };
-                drop(frame);
                 let Some((f_ptr, f_layout)) = cpu.vm_ref().get_static_field(ty, *field) else {
                     return Some(Err(Termination::LoadFieldFailed(*field)));
                 };
-                let frame = call_frame(cpu);
-                let Some(out_var) = frame.get(*register_addr) else {
+                let Some(out_var) = call_frame(cpu).get(*register_addr) else {
                     return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
                 };
                 unsafe {
@@ -523,10 +537,10 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 field,
                 register_addr,
             } => {
-                let Some(container) = frame.get(*container) else {
+                let Some(container) = call_frame(cpu).get(*container) else {
                     return Some(Err(Termination::LoadRegisterFailed(*container)));
                 };
-                let Some(register_var) = frame.get(*register_addr) else {
+                let Some(register_var) = call_frame(cpu).get(*register_addr) else {
                     return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
                 };
                 match container.ty {
@@ -561,7 +575,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 }
             }
             Instruction::SetThisField { val_addr, field } => {
-                let Some(val_var) = frame.get(*val_addr) else {
+                let Some(val_var) = call_frame(cpu).get(*val_addr) else {
                     return Some(Err(Termination::LoadRegisterFailed(*val_addr)));
                 };
                 let Some(this) = this else {
@@ -591,12 +605,10 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 else {
                     return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
                 };
-                drop(frame);
                 let Some((f_ptr, f_layout)) = cpu.vm_ref().get_static_field(ty, *field) else {
                     return Some(Err(Termination::LoadFieldFailed(*field)));
                 };
-                let frame = call_frame(cpu);
-                let Some(val_var) = frame.get(*val_addr) else {
+                let Some(val_var) = call_frame(cpu).get(*val_addr) else {
                     return Some(Err(Termination::LoadRegisterFailed(*val_addr)));
                 };
                 unsafe {
@@ -604,15 +616,16 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 }
             }
             Instruction::Throw { exception_addr } => {
-                let Some(exception) = frame.get_typed::<ManagedReference<Class>>(*exception_addr)
+                let Some(exception) =
+                    call_frame(cpu).get_typed::<ManagedReference<Class>>(*exception_addr)
                 else {
                     return Some(Err(Termination::LoadRegisterFailed(*exception_addr)));
                 };
                 assert!(!exception.is_null());
-                cpu.throw_exception(*exception).unwrap();
+                cpu.throw_exception(*exception);
             }
             Instruction::ReturnVal { register_addr } => {
-                let Some(res_var) = frame.get(*register_addr) else {
+                let Some(res_var) = call_frame(cpu).get(*register_addr) else {
                     return Some(Err(Termination::LoadRegisterFailed(*register_addr)));
                 };
                 unsafe {
@@ -629,7 +642,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 register_addr,
                 target,
             } => {
-                let Some(cond) = frame.get_typed::<bool>(register_addr) else {
+                let Some(cond) = call_frame(cpu).get_typed::<bool>(register_addr) else {
                     return Some(Err(Termination::LoadRegisterFailed(register_addr)));
                 };
                 if *cond {
@@ -638,7 +651,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             }
 
             &Instruction::JumpIfAllZero { to_check, target } => {
-                let Some(to_check_var) = frame.get(to_check) else {
+                let Some(to_check_var) = call_frame(cpu).get(to_check) else {
                     return Some(Err(Termination::LoadRegisterFailed(to_check)));
                 };
                 if to_check_var.is_all_zero() {
@@ -646,7 +659,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
                 }
             }
             &Instruction::JumpIfNotAllZero { to_check, target } => {
-                let Some(to_check_var) = frame.get(to_check) else {
+                let Some(to_check_var) = call_frame(cpu).get(to_check) else {
                     return Some(Err(Termination::LoadRegisterFailed(to_check)));
                 };
                 if !to_check_var.is_all_zero() {
@@ -662,7 +675,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
 impl<T: GetAssemblyRef + GetTypeVars> Spec for T {
     default fn spec_match_code(
         method: &Method<Self>,
-        cpu: &CPU,
+        cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
         result_ptr: NonNull<[u8]>,
@@ -678,7 +691,7 @@ impl<T: GetAssemblyRef + GetTypeVars> Spec for T {
 #[allow(improper_ctypes_definitions)] // It is always called in rust.
 pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
     method: &Method<T>,
-    cpu: &CPU,
+    cpu: &mut CPU,
     this: Option<NonNull<()>>,
     args: &[*mut c_void],
 ) -> (NonNull<u8>, Layout) {
@@ -690,7 +703,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
     let mut pc = 0;
 
     loop {
-        if cpu.has_exception().unwrap() {
+        if cpu.has_exception() {
             return (result_ptr.cast(), result_layout);
         }
         if let Err(t) = T::spec_match_code(method, cpu, this, args, result_ptr, &mut pc) {

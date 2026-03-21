@@ -4,30 +4,29 @@ use global::{
 };
 
 use crate::{
-    stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _, System_Array_1_MethodId},
+    stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _},
     test_utils::g_core_type,
     type_system::{
         assembly::Assembly, method_table::MethodTable, type_handle::MaybeUnloadedTypeHandle,
         type_ref::TypeRef,
     },
-    virtual_machine::{EnsureVirtualMachineInitialized, global_vm},
+    virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
 };
 
 use super::*;
 
 #[test]
 fn test_to_string() {
-    EnsureVirtualMachineInitialized();
+    EnsureGlobalVirtualMachineInitialized();
 
-    let cpu_id = global_vm().add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
     let string_t = CoreTypeId::System_String
         .global_type_handle()
         .unwrap_class();
-    let s1 = ManagedReference::new_string(&cpu, "aaa");
-    let s2 = ManagedReference::new_string(&cpu, "bbb");
+    let s1 = ManagedReference::new_string(&mut cpu, "aaa");
+    let s2 = ManagedReference::new_string(&mut cpu, "bbb");
     let mut arr =
-        ManagedReference::alloc_array(&cpu, unsafe { *string_t.as_ref().method_table() }, 2);
+        ManagedReference::alloc_array(&mut cpu, unsafe { *string_t.as_ref().method_table() }, 2);
 
     unsafe {
         let array_accessor = arr.access_unchecked_mut::<ArrayAccessor>();
@@ -49,7 +48,7 @@ fn test_to_string() {
         ToString_m
             .as_ref()
             .typed_res_call::<ManagedReference<Class>>(
-                &cpu,
+                &mut cpu,
                 Some(NonNull::from_ref(arr_r).cast()),
                 &[],
             )
@@ -60,7 +59,7 @@ fn test_to_string() {
 
 #[test]
 fn array_get_set() -> global::Result<()> {
-    EnsureVirtualMachineInitialized();
+    EnsureGlobalVirtualMachineInitialized();
 
     let assembly_id = global_vm()
         .assembly_manager()
@@ -81,6 +80,7 @@ fn array_get_set() -> global::Result<()> {
                                 .get_core_type(CoreTypeId::System_Object)
                                 .unwrap_class(),
                         ),
+                        vec![],
                         |class| {
                             MethodTable::new(class, |mt| {
                                 vec![Box::new(Method::new(
@@ -167,8 +167,7 @@ fn array_get_set() -> global::Result<()> {
             },
         ));
 
-    let cpu_id = global_vm().add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
     let assembly = global_vm()
         .assembly_manager()
         .get_assembly(assembly_id)
@@ -185,7 +184,7 @@ fn array_get_set() -> global::Result<()> {
     let arr = unsafe {
         m_set
             .as_ref()
-            .typed_res_call::<ManagedReference<Class>>(&cpu, None, &[])
+            .typed_res_call::<ManagedReference<Class>>(&mut cpu, None, &[])
     };
     assert!(!arr.is_null());
     for x in unsafe {

@@ -34,7 +34,7 @@ fn main() -> global::Result<()> {
     }
     match kind {
         OutputKind::Json => {
-            let information = pura_lingua_runtime_stdlib_serde::get_all_core_type_info();
+            let information = pura_lingua_runtime_stdlib::get_all_core_type_info();
             let mut serializer = serde_json::Serializer::with_formatter(
                 file,
                 serde_json::ser::PrettyFormatter::with_indent(b"    "),

@@ -7,7 +7,13 @@ version.workspace = true
 global = { workspace = true }
 proc_macros = { package = "pura_lingua_runtime_stdlib_proc_macros", path = "../rt_stdlib_proc_macros" }
 
+enumflags2 = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0.149", features = ["indexmap"] }
+
+[[bin]]
+name = "puralingua_output_core_header"
+path = "./src/bin/output.rs"
 
 [features]
 default = ["__when_not_impl"]

@@ -1,0 +1,6 @@
+[package]
+name = "pura_lingua_c_definitions"
+edition = "2024"
+version.workspace = true
+
+[dependencies]

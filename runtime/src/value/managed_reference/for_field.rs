@@ -78,6 +78,40 @@ where
                 .map(map_info)
         }
     }
+    /// Mark all fields and this
+    pub fn set_marker(&mut self, val: bool) {
+        if let Some(header) = self.0.header_mut() {
+            header.set_is_marked(true);
+        }
+        #[inline]
+        fn mark_field(field_ptr: NonNull<u8>, field_type: NonGenericTypeHandle, val: bool) {
+            match field_type {
+                NonGenericTypeHandle::Class(_) => unsafe {
+                    field_ptr
+                        .cast::<ManagedReference<Class>>()
+                        .as_mut()
+                        .const_access_mut::<FieldAccessor<Class>>()
+                        .set_marker(val);
+                },
+                NonGenericTypeHandle::Struct(s) => {
+                    let s_ref = unsafe { s.as_ref() };
+                    for field_info in s_ref
+                        .method_table_ref()
+                        .all_fields_mem_info(Default::default(), Default::default())
+                    {
+                        mark_field(
+                            unsafe { field_ptr.byte_add(field_info.offset) },
+                            field_info.ty,
+                            val,
+                        );
+                    }
+                }
+            }
+        }
+        for (field_ptr, _, field_type) in self.all_fields(Default::default()) {
+            mark_field(field_ptr, field_type, val);
+        }
+    }
 }
 
 impl FieldAccessor<Class> {

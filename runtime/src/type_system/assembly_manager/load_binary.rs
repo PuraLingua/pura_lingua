@@ -6,7 +6,7 @@ use global::StringName;
 use crate::type_system::{
     assembly::Assembly,
     assembly_manager::AssemblyRef,
-    class::Class,
+    class::{Class, ClassParent, LoadedClassParent},
     field::Field,
     generics::GenericBounds,
     get_traits::{GetAssemblyRef, GetTypeVars},
@@ -49,12 +49,47 @@ impl AssemblyManager {
                             continue;
                         };
                         let parent_type_ref = unsafe { Box::from_non_null(parent.unloaded) };
-                        parent.loaded = parent_type_ref
-                            .load(self)
-                            .unwrap()
-                            .into_non_generic()
-                            .unwrap()
-                            .unwrap_class();
+                        *parent = match Box::into_inner(parent_type_ref) {
+                            TypeRef::Index { assembly, ind } => {
+                                let assembly = self.get_assembly_by_ref(&assembly).unwrap().ok_or(
+                                    binary::binary_core::Error::UnknownAssembly(
+                                        assembly.to_string(),
+                                    ),
+                                )?;
+                                ClassParent::new_simple(
+                                    *assembly
+                                        .get_class(ind)
+                                        .unwrap()
+                                        .ok_or(binary::binary_core::Error::UnknownType(ind))?,
+                                )
+                            }
+                            TypeRef::Specific {
+                                assembly_and_index,
+                                types,
+                            } => {
+                                let to_instantiate = match assembly_and_index {
+                                    Either::Left((assembly, ind)) => {
+                                        let assembly = self
+                                            .get_assembly_by_ref(&assembly)
+                                            .unwrap()
+                                            .ok_or(binary::binary_core::Error::UnknownAssembly(
+                                                assembly.to_string(),
+                                            ))?;
+                                        *assembly
+                                            .get_class(ind)
+                                            .unwrap()
+                                            .ok_or(binary::binary_core::Error::UnknownType(ind))?
+                                    }
+                                    Either::Right(x) => x
+                                        .load(self)
+                                        .unwrap()
+                                        .into_non_generic()
+                                        .unwrap()
+                                        .unwrap_class(),
+                                };
+                                ClassParent::new_with_generic(to_instantiate, types)
+                            }
+                        };
 
                         unsafe {
                             class.as_mut().method_table = MethodTable::new(class, |mt| {
@@ -139,7 +174,9 @@ impl AssemblyManager {
                         MaybeUnloadedTypeHandle::Loaded(type_handle) => {
                             match type_handle.into_non_generic() {
                                 None => Err(binary::prelude::Error::InheritFromGeneric),
-                                Some(NonGenericTypeHandle::Class(class)) => Ok(Either::Left(class)),
+                                Some(NonGenericTypeHandle::Class(class)) => {
+                                    Ok(Either::Left(LoadedClassParent::Simple(class)))
+                                }
                                 Some(_) => Err(binary::prelude::Error::WrongParentType),
                             }
                         }

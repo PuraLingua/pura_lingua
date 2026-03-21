@@ -1,7 +1,7 @@
 use std::alloc::{Allocator, Layout};
 use std::assert_matches;
 use std::cell::Cell;
-use std::mem::offset_of;
+use std::mem::{ManuallyDrop, offset_of};
 use std::ptr::{NonNull, Unique};
 use std::sync::{MappedRwLockReadGuard, RwLock};
 
@@ -10,6 +10,7 @@ use global::attrs::TypeAttr;
 use global::getset::{Getters, MutGetters};
 
 use crate::memory::GetFieldOffsetOptions;
+use crate::type_system::assembly_manager::AssemblyManager;
 use crate::type_system::{
     assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
     type_handle::MaybeUnloadedTypeHandle,
@@ -20,10 +21,60 @@ use super::assembly_manager::TypeLoadState;
 use super::method::Method;
 use super::type_ref::TypeRef;
 
-#[derive(Clone, Copy)]
-pub(crate) union Parent {
-    pub(crate) loaded: NonNull<Class>,
+#[derive(Clone, Debug)]
+pub(crate) enum LoadedClassParent {
+    Simple(NonNull<Class>),
+    WithGeneric(NonNull<Class>, Vec<MaybeUnloadedTypeHandle>),
+}
+
+impl LoadedClassParent {
+    fn instantiate(
+        &self,
+        assembly_manager: &AssemblyManager,
+        type_vars: &[MaybeUnloadedTypeHandle],
+    ) -> Self {
+        match self {
+            Self::Simple(class) => Self::Simple(*class),
+            Self::WithGeneric(class, generics) => {
+                let generics = generics
+                    .iter()
+                    .map(|x| {
+                        x.load(assembly_manager)
+                            .map(|x| {
+                                x.get_non_generic_with_generic_resolver(|g| {
+                                    type_vars[g as usize].load(assembly_manager).unwrap()
+                                })
+                            })
+                            .map(MaybeUnloadedTypeHandle::from)
+                    })
+                    .try_collect::<Box<[_]>>()
+                    .unwrap();
+
+                unsafe { Self::Simple(class.as_ref().instantiate(&generics)) }
+            }
+        }
+    }
+}
+
+pub(crate) union ClassParent {
+    pub(crate) loaded: ManuallyDrop<LoadedClassParent>,
     pub(crate) unloaded: NonNull<TypeRef>,
+}
+
+impl ClassParent {
+    pub(crate) fn new_simple(class: NonNull<Class>) -> Self {
+        Self {
+            loaded: ManuallyDrop::new(LoadedClassParent::Simple(class)),
+        }
+    }
+    pub(crate) fn new_with_generic(
+        class: NonNull<Class>,
+        generics: Vec<MaybeUnloadedTypeHandle>,
+    ) -> Self {
+        Self {
+            loaded: ManuallyDrop::new(LoadedClassParent::WithGeneric(class, generics)),
+        }
+    }
 }
 
 #[derive(Getters, MutGetters, derive_more::Debug)]
@@ -40,14 +91,14 @@ pub struct Class {
     #[getset(skip)]
     #[debug(
         "{}",
-        m_parent.map(|x| if self.load_state == TypeLoadState::Finished {
+        m_parent.as_ref().map(|x| if self.load_state == TypeLoadState::Finished {
                 format!("{:#?}", unsafe { &x.loaded })
             } else {
                 format!("{:#?}", unsafe { &x.unloaded })
             }
         ).unwrap_or("None".to_owned()),
     )]
-    pub(crate) m_parent: Option<Parent>,
+    pub(crate) m_parent: Option<ClassParent>,
 
     pub(crate) method_table: NonNull<MethodTable<Self>>,
     fields: Vec<Field>,
@@ -62,10 +113,13 @@ pub struct Class {
 
 impl Class {
     pub const fn parent(&self) -> Option<NonNull<Self>> {
-        const fn map(x: Parent) -> NonNull<Class> {
-            unsafe { x.loaded }
+        const fn map(x: &ClassParent) -> NonNull<Class> {
+            match unsafe { &*x.loaded } {
+                LoadedClassParent::Simple(class) => *class,
+                LoadedClassParent::WithGeneric(class, _) => *class,
+            }
         }
-        self.m_parent.map(map)
+        self.m_parent.as_ref().map(map)
     }
 }
 
@@ -91,9 +145,13 @@ impl Class {
             name: self.name.clone(),
             attr: self.attr,
 
-            m_parent: self.m_parent.map(|parent| unsafe {
-                Parent {
-                    loaded: parent.loaded.as_ref().instantiate(type_vars),
+            m_parent: self.m_parent.as_ref().map(|parent| unsafe {
+                ClassParent {
+                    loaded: ManuallyDrop::new(
+                        parent
+                            .loaded
+                            .instantiate(self.assembly_ref().manager_ref(), type_vars),
+                    ),
                 }
             }),
 
@@ -143,6 +201,7 @@ impl Class {
         attr: TypeAttr,
 
         parent: Option<NonNull<Class>>,
+        parent_generics: Vec<MaybeUnloadedTypeHandle>,
 
         mt_generator: F,
         mut fields: Vec<Field>,
@@ -164,7 +223,13 @@ impl Class {
             name: name.into_boxed_str(),
             attr,
 
-            m_parent: parent.map(|x| Parent { loaded: x }),
+            m_parent: parent.map(|parent| {
+                if parent_generics.is_empty() {
+                    ClassParent::new_simple(parent)
+                } else {
+                    ClassParent::new_with_generic(parent, parent_generics)
+                }
+            }),
 
             // MethodTable is initialized afterwards
             method_table: NonNull::dangling(),
@@ -199,13 +264,13 @@ impl Class {
 
     /// The NonNull passed to mt_generator is always valid to be cast to &Self
     #[allow(clippy::too_many_arguments)]
-    pub fn new_for_binary<F: FnOnce(NonNull<Self>) -> NonNull<MethodTable<Self>>>(
+    pub(crate) fn new_for_binary<F: FnOnce(NonNull<Self>) -> NonNull<MethodTable<Self>>>(
         assembly: NonNull<Assembly>,
 
         name: String,
         attr: TypeAttr,
 
-        parent: Option<Either<NonNull<Class>, TypeRef>>,
+        parent: Option<Either<LoadedClassParent, TypeRef>>,
 
         mt_generator: F,
         fields: Vec<Field>,
@@ -215,10 +280,12 @@ impl Class {
     ) -> Unique<Self> {
         let mut load_state = TypeLoadState::Finished;
         let parent = parent.map(|x| match x {
-            Either::Left(loaded) => Parent { loaded },
+            Either::Left(loaded) => ClassParent {
+                loaded: ManuallyDrop::new(loaded),
+            },
             Either::Right(unloaded) => {
                 load_state = TypeLoadState::Loading;
-                Parent {
+                ClassParent {
                     unloaded: Box::into_non_null(Box::new(unloaded)),
                 }
             }
@@ -285,16 +352,21 @@ impl Class {
             return;
         }
         std::hint::cold_path();
-        let cpu = self.assembly_ref().manager_ref().vm_ref().cpu_for_static();
+        let mut cpu = self
+            .assembly_ref()
+            .manager_ref()
+            .vm_ref()
+            .write_cpu_for_static()
+            .unwrap();
         let mut instance = self.static_instance.write().unwrap();
         *instance = Some(ManagedReference::common_alloc(
-            &cpu,
+            &mut cpu,
             self.method_table,
             true,
         ));
         let sctor = self.method_table_ref().get_static_constructor();
         unsafe {
-            sctor.as_ref().typed_res_call::<()>(&cpu, None, &[]);
+            sctor.as_ref().typed_res_call::<()>(&mut cpu, None, &[]);
         }
     }
     pub fn get_static_field(
@@ -350,6 +422,23 @@ impl Drop for Class {
                 unsafe {
                     g.drop_in_place();
                     std::alloc::Global.deallocate(g.cast(), Layout::new::<Class>());
+                }
+            }
+        }
+
+        match self.load_state {
+            TypeLoadState::Loading => {
+                if let Some(parent) = self.m_parent.take() {
+                    unsafe {
+                        drop(Box::from_non_null(parent.unloaded));
+                    }
+                }
+            }
+            TypeLoadState::Finished => {
+                if let Some(mut parent) = self.m_parent.take() {
+                    unsafe {
+                        ManuallyDrop::drop(&mut parent.loaded);
+                    }
                 }
             }
         }

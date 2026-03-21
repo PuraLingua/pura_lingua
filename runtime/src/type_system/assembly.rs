@@ -115,4 +115,51 @@ impl Assembly {
             .read()
             .map(|x| RwLockReadGuard::filter_map(x, |x| x.get(index as usize)).ok())
     }
+
+    pub fn find_type_handle<'a>(
+        &'a self,
+        name: impl AsRef<str>,
+    ) -> Result<
+        Option<MappedRwLockReadGuard<'a, NonGenericTypeHandle>>,
+        PoisonError<RwLockReadGuard<'a, Vec<NonGenericTypeHandle>>>,
+    > {
+        let name = name.as_ref();
+        self.types
+            .read()
+            .map(|x| RwLockReadGuard::filter_map(x, |x| x.iter().find(|x| x.name() == name)).ok())
+    }
+    /// More convenient sometimes but may panic
+    pub fn find_type<T>(
+        &self,
+        name: impl AsRef<str>,
+    ) -> Result<
+        Option<MappedRwLockReadGuard<'_, T>>,
+        PoisonError<RwLockReadGuard<'_, Vec<NonGenericTypeHandle>>>,
+    >
+    where
+        for<'a> &'a NonGenericTypeHandle: IUnwrap<&'a T>,
+    {
+        self.find_type_handle(name)
+            .map(move |x| x.map(|x| MappedRwLockReadGuard::map(x, |x| x._unwrap())))
+    }
+    #[inline(always)]
+    pub fn find_class(
+        &self,
+        name: impl AsRef<str>,
+    ) -> Result<
+        Option<MappedRwLockReadGuard<'_, NonNull<Class>>>,
+        PoisonError<RwLockReadGuard<'_, Vec<NonGenericTypeHandle>>>,
+    > {
+        self.find_type(name)
+    }
+    #[inline(always)]
+    pub fn find_struct(
+        &self,
+        name: impl AsRef<str>,
+    ) -> Result<
+        Option<MappedRwLockReadGuard<'_, NonNull<Struct>>>,
+        PoisonError<RwLockReadGuard<'_, Vec<NonGenericTypeHandle>>>,
+    > {
+        self.find_type(name)
+    }
 }

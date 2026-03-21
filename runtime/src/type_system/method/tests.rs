@@ -1,32 +1,27 @@
 #![allow(nonstandard_style, unused)]
 
 use global::string_name;
+use stdlib_header::definitions::{System_String_MethodId, System_UInt8_StaticMethodId};
 
 use crate::{
-    stdlib::{
-        CoreTypeId, System_Exception_MethodId, System_Object_MethodId,
-        System_Object_StaticMethodId, System_String_MethodId, System_UInt8_MethodId,
-        System_UInt8_StaticMethodId, System_UInt64_MethodId, System_UInt64_StaticMethodId,
-    },
+    stdlib::CoreTypeId,
     test_utils::{g_core_class, g_core_type},
     type_system::{
         assembly::Assembly, assembly_manager::AssemblyRef, class::Class, field::Field,
         type_ref::TypeRef,
     },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
-    virtual_machine::{EnsureVirtualMachineInitialized, cpu::MainResult, global_vm},
+    virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, cpu::MainResult, global_vm},
 };
 
 use super::*;
 
 #[test]
 fn test_call() {
-    EnsureVirtualMachineInitialized();
+    EnsureGlobalVirtualMachineInitialized();
 
-    let vm = global_vm();
-    let cpu_id = vm.add_cpu();
-    let cpu = vm.get_cpu(cpu_id).unwrap();
-    let assembly_manager = vm.assembly_manager();
+    let mut cpu = CpuID::new_write_global();
+    let assembly_manager = global_vm().assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(
         "Test".to_owned(),
         false,
@@ -45,7 +40,7 @@ fn test_call() {
     let u8_v = 10u8;
     let u8_v_r = &u8_v;
     let ret = unsafe { u8_ToString.as_ref() }.typed_res_call::<ManagedReference<Class>>(
-        &cpu,
+        &mut cpu,
         None,
         &[(&raw const u8_v_r).cast::<c_void>().cast_mut()],
     );
@@ -65,7 +60,7 @@ fn test_call() {
         .get_method(System_String_MethodId::ToString as u32)
         .unwrap();
     let ret2 = unsafe { string_ToString.as_ref() }.typed_call::<ManagedReference<Class>>(
-        &cpu,
+        &mut cpu,
         Some(NonNull::from_ref(&ret).cast()),
         &[],
     );
@@ -80,12 +75,10 @@ fn test_call() {
 
 #[test]
 fn test_normal_f() {
-    EnsureVirtualMachineInitialized();
+    EnsureGlobalVirtualMachineInitialized();
 
-    let vm = global_vm();
-    let cpu_id = vm.add_cpu();
-    let cpu = vm.get_cpu(cpu_id).unwrap();
-    let assembly_manager = vm.assembly_manager();
+    let mut cpu = CpuID::new_write_global();
+    let assembly_manager = global_vm().assembly_manager();
     assembly_manager
         .load_binaries(&[
             binary::assembly::Assembly::from_path("../TestData/TestNormalF.plb").unwrap(),
@@ -100,7 +93,7 @@ fn test_normal_f() {
 
     let class = assembly.get_class(0).unwrap().unwrap();
     let obj = ManagedReference::<Class>::common_alloc(
-        &cpu,
+        &mut cpu,
         unsafe { *class.as_ref().method_table() },
         false,
     );

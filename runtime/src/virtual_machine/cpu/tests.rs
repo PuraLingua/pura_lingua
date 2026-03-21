@@ -5,12 +5,12 @@ use global::{
     instruction::{Instruction, RegisterAddr},
     non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType, ObjectStrategy, StringEncoding},
 };
+use stdlib_header::definitions::{System_Array_1_MethodId, System_NonPurusCallConfiguration_MethodId, System_NonPurusCallType_StaticMethodId};
 use widestring::U16CStr;
 
 use crate::{
     stdlib::{
-        CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _, System_Array_1_MethodId,
-        System_NonPurusCallConfiguration_MethodId, System_NonPurusCallType_StaticMethodId,
+        CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _
     },
     test_utils::{LEAK_DETECTOR, g_core_type},
     type_system::{
@@ -20,14 +20,14 @@ use crate::{
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
-    virtual_machine::{EnsureVirtualMachineInitialized, global_vm},
+    virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
 };
 
 use super::*;
 
 #[test]
 fn test_call_stack() {
-    EnsureVirtualMachineInitialized();
+    EnsureGlobalVirtualMachineInitialized();
 
     global_vm()
         .assembly_manager()
@@ -48,6 +48,7 @@ fn test_call_stack() {
                                 .get_core_type(CoreTypeId::System_Object)
                                 .unwrap_class(),
                         ),
+                        vec![],
                         |class| {
                             MethodTable::new(class, |mt| {
                                 vec![
@@ -108,11 +109,13 @@ fn test_call_stack() {
     unsafe { dbg!(method.as_ref().attr().local_variable_types().len()) };
 
     let cpu_id = global_vm().add_cpu();
-    let cpu = global_vm().get_cpu(cpu_id).unwrap();
-    cpu.prepare_call_stack_for_method(unsafe { method.as_ref() })
-        .unwrap();
+    let mut cpu = {
+        super let guard = global_vm().get_cpu(cpu_id).unwrap();
+        guard.write().unwrap()
+    };
+    cpu.prepare_call_stack_for_method(unsafe { method.as_ref() });
 
-    let call_frame = cpu.current_common_call_frame().unwrap().unwrap();
+    let call_frame = cpu.current_common_call_frame().unwrap();
     let u64_var = call_frame.get(RegisterAddr::new(0)).unwrap();
     let u8_var = call_frame.get(RegisterAddr::new(1)).unwrap();
     let u32_var = call_frame.get(RegisterAddr::new(2)).unwrap();
@@ -140,7 +143,7 @@ fn static_non_purus_call() {
     }
     let f_ptr = test as *const u8;
     let cpu_id = global_vm().add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = cpu_id.as_global_write_cpu().unwrap();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: CallConvention::PlatformDefault,
@@ -157,7 +160,7 @@ fn static_non_purus_call() {
     let a = 0x1ff1u64;
     let b = 10u32;
     let c = 15u8;
-    let mut d = ManagedReference::new_string(&cpu, "aaa");
+    let mut d = ManagedReference::new_string(&mut cpu, "aaa");
     let (result, result_layout) = cpu.non_purus_call(
         &cfg,
         f_ptr,
@@ -171,7 +174,7 @@ fn static_non_purus_call() {
     unsafe {
         dbg!(result.cast::<u64>().as_ref());
     }
-    d.destroy(&cpu);
+    d.destroy(&mut cpu);
 
     unsafe {
         LEAK_DETECTOR.deallocate(result, result_layout);
@@ -186,8 +189,7 @@ fn non_purus_call_marshal() {
         0
     }
     let f_ptr = test as *const u8;
-    let cpu_id = global_vm().add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: CallConvention::PlatformDefault,
@@ -207,7 +209,7 @@ fn non_purus_call_marshal() {
     let a = 0x1ff1u64;
     let b = 10u32;
     let c = 15u8;
-    let mut d = ManagedReference::new_string(&cpu, "aaa");
+    let mut d = ManagedReference::new_string(&mut cpu, "aaa");
     let (result, result_layout) = cpu.non_purus_call(
         &cfg,
         f_ptr,
@@ -221,7 +223,7 @@ fn non_purus_call_marshal() {
     unsafe {
         dbg!(result.cast::<u64>().as_ref());
     }
-    d.destroy(&cpu);
+    d.destroy(&mut cpu);
 
     unsafe {
         LEAK_DETECTOR.deallocate(result, result_layout);
@@ -255,6 +257,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                                 .get_core_type(CoreTypeId::System_Object)
                                 .unwrap_class(),
                         ),
+                        vec![],
                         |class| {
                             MethodTable::new(class, |mt| {
                                 vec![
@@ -516,8 +519,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
             },
         ));
 
-    let cpu_id = global_vm().add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let assem = global_vm()
         .assembly_manager()
@@ -531,7 +533,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
     let result = unsafe {
         test_fn
             .as_ref()
-            .typed_res_call::<u64>(&cpu, None, &[])
+            .typed_res_call::<u64>(&mut cpu, None, &[])
     };
     dbg!(result);
 
@@ -551,8 +553,7 @@ fn message_box() {
         ) -> windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT
     );
     let f_ptr = MessageBoxW as *const u8;
-    let cpu_id = global_vm().add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: CallConvention::PlatformDefault,
@@ -567,8 +568,8 @@ fn message_box() {
         ],
     };
     let hwnd = windows::Win32::Foundation::HWND(std::ptr::null_mut());
-    let lptext = ManagedReference::new_string(&cpu, "TEXT");
-    let lpcaption = ManagedReference::new_string(&cpu, "CAPTION");
+    let lptext = ManagedReference::new_string(&mut cpu, "TEXT");
+    let lpcaption = ManagedReference::new_string(&mut cpu, "CAPTION");
     let utype = windows::Win32::UI::WindowsAndMessaging::MB_ICONERROR;
 
     let (result, result_layout) = cpu.non_purus_call(
@@ -619,6 +620,7 @@ fn dynamic_message_box() -> global::Result<()> {
                                 .get_core_type(CoreTypeId::System_Object)
                                 .unwrap_class(),
                         ),
+                        vec![],
                         |class| {
                             MethodTable::new(class, |mt| {
                                 vec![
@@ -866,8 +868,7 @@ fn dynamic_message_box() -> global::Result<()> {
             },
         ));
 
-    let cpu_id = global_vm().add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let assem = global_vm()
         .assembly_manager()
@@ -881,7 +882,7 @@ fn dynamic_message_box() -> global::Result<()> {
     let result = unsafe {
         test_fn
             .as_ref()
-            .typed_res_call::<i32>(&cpu, None, &[])
+            .typed_res_call::<i32>(&mut cpu, None, &[])
     };
     dbg!(result);
 

@@ -49,9 +49,10 @@ impl AssemblyManager {
 type ReadAssembliesPoisonError<'a> = PoisonError<RwLockReadGuard<'a, Vec<Box<Assembly>>>>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum AssemblyRef {
-    Name(StringName),
-    Id(usize),
+    Name(StringName) = 0,
+    Id(usize) = 1,
 }
 
 impl PartialEq<usize> for AssemblyRef {
@@ -59,6 +60,15 @@ impl PartialEq<usize> for AssemblyRef {
         match self {
             Self::Id(id) => id.eq(other),
             _ => false,
+        }
+    }
+}
+
+impl std::fmt::Display for AssemblyRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AssemblyRef::Name(string_name) => f.write_str(string_name.as_str()),
+            AssemblyRef::Id(id) => <_ as std::fmt::Display>::fmt(id, f),
         }
     }
 }

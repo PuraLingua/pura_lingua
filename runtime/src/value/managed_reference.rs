@@ -6,7 +6,6 @@ use std::{
 };
 
 use crate::{
-    stdlib::System_Object_MethodId,
     type_system::{
         class::Class,
         field::Field,
@@ -29,23 +28,19 @@ pub use for_array::ArrayAccessor;
 pub use for_field::FieldAccessor;
 pub use for_large_string::LargeStringAccessor;
 pub use for_string::StringAccessor;
+use stdlib_header::definitions::System_Object_MethodId;
 
 #[repr(transparent)]
 pub struct ManagedReference<T> {
     pub(crate) data: Option<NonNull<ManagedReferenceInner<T>>>,
 }
 
-#[test]
-#[ignore = "Compile time check only"]
-fn __test_layout() {
-    fn __f()
-    where
-        global::assertions::LayoutEq<ManagedReference<Class>, NonNull<u8>>:
-            global::assertions::SuccessAssert,
-    {
-    }
-    __f();
-}
+const _: () = {
+    assert!(global::macros::layout_eq!(
+        ManagedReference<Class>,
+        NonNull<u8>
+    ));
+};
 
 impl<T> Debug for ManagedReference<T> {
     #[inline]
@@ -292,7 +287,7 @@ where
         this
     }
 
-    pub fn common_alloc(cpu: &CPU, mt: NonNull<MethodTable<T>>, is_static: bool) -> Self
+    pub fn common_alloc(cpu: &mut CPU, mt: NonNull<MethodTable<T>>, is_static: bool) -> Self
     where
         T: GetNonGenericTypeHandleKind,
     {
@@ -364,11 +359,11 @@ mod for_string;
 mod for_struct;
 
 trait DestroySpec {
-    fn destroy_spec(&mut self, cpu: &CPU);
+    fn destroy_spec(&mut self, cpu: &mut CPU);
 }
 
 trait CallDestructorSpec: Sized {
-    fn call_destructor_spec(r: &ManagedReference<Self>, cpu: &CPU);
+    fn call_destructor_spec(r: &ManagedReference<Self>, cpu: &mut CPU);
 }
 
 trait GcMarkSpec {
@@ -376,7 +371,7 @@ trait GcMarkSpec {
 }
 
 impl CallDestructorSpec for Class {
-    fn call_destructor_spec(r: &ManagedReference<Self>, cpu: &CPU) {
+    fn call_destructor_spec(r: &ManagedReference<Self>, cpu: &mut CPU) {
         unsafe {
             let destructor = *r
                 .method_table_ref_unchecked()
@@ -391,11 +386,11 @@ impl CallDestructorSpec for Class {
 
 impl CallDestructorSpec for Struct {
     #[inline(always)]
-    fn call_destructor_spec(_: &ManagedReference<Self>, _: &CPU) {}
+    fn call_destructor_spec(_: &ManagedReference<Self>, _: &mut CPU) {}
 }
 
 impl DestroySpec for ManagedReference<Class> {
-    fn destroy_spec(&mut self, cpu: &CPU) {
+    fn destroy_spec(&mut self, cpu: &mut CPU) {
         if self.is_null() {
             return;
         }
@@ -420,7 +415,7 @@ impl DestroySpec for ManagedReference<Class> {
 }
 
 impl DestroySpec for ManagedReference<Struct> {
-    fn destroy_spec(&mut self, _: &CPU) {
+    fn destroy_spec(&mut self, _: &mut CPU) {
         if self.is_null() {
             return;
         }
@@ -450,11 +445,18 @@ impl<T> GcMarkSpec for ManagedReference<T> {
     }
 }
 
-impl GcMarkSpec for ManagedReference<Class> {
+impl<T> GcMarkSpec for ManagedReference<T>
+where
+    T: GetAssemblyRef
+        + GetFields
+        + GetGeneric
+        + GetMethodTableRef
+        + GetParent
+        + GetTypeVars
+        + GetFields<Field = Field>,
+{
     fn set_marker_spec(&mut self, val: bool) {
-        if let Some(header) = self.header_mut() {
-            header.set_is_marked(val);
-        }
+        self.const_access_mut::<FieldAccessor<T>>().set_marker(val);
     }
 }
 
@@ -464,7 +466,7 @@ where
     Self: DestroySpec,
 {
     /// This method should never be called except GC
-    pub fn destroy(&mut self, cpu: &CPU) {
+    pub fn destroy(&mut self, cpu: &mut CPU) {
         self.destroy_spec(cpu);
     }
 }
@@ -475,7 +477,7 @@ where
     T: CallDestructorSpec,
 {
     /// This method should never be called except GC
-    pub fn call_destructor(&mut self, cpu: &CPU) {
+    pub fn call_destructor(&mut self, cpu: &mut CPU) {
         T::call_destructor_spec(self, cpu);
     }
 }

@@ -142,7 +142,7 @@ impl<T> Method<T> {
         mt: Option<NonNull<MethodTable<T>>>,
         attr: MethodAttr<MaybeUnloadedTypeHandle>,
     ) -> Self {
-        extern "system" fn sctor<T>(_: &CPU, _: &Method<T>) {
+        extern "system" fn sctor<T>(_: &mut CPU, _: &Method<T>) {
             dt_println!("Calling default sctor");
         }
         Self::create_sctor(mt, attr, sctor::<T>)
@@ -151,7 +151,7 @@ impl<T> Method<T> {
     pub fn create_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
         mut attr: MethodAttr<MaybeUnloadedTypeHandle>,
-        rust_fn: extern "system" fn(&CPU, &Method<T>),
+        rust_fn: extern "system" fn(&mut CPU, &Method<T>),
     ) -> Self {
         attr.impl_flags_mut()
             .insert(MethodImplementationFlags::Static);

@@ -29,7 +29,7 @@ impl IAccessor<Class> for LargeStringAccessor {
 }
 
 impl ManagedReference<Class> {
-    pub fn new_large_string(cpu: &CPU, s: &str) -> Self {
+    pub fn new_large_string(cpu: &mut CPU, s: &str) -> Self {
         let mt = unsafe {
             *(cpu
                 .vm_ref()

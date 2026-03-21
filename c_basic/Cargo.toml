@@ -1,0 +1,13 @@
+[package]
+name = "pura_lingua_c_basic"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+c_definitions = { workspace = true }
+anyhow = { workspace = true }
+string_name = { workspace = true }
+
+[lib]
+name = "PuralinguaCBasic"
+crate-type = ["cdylib"]

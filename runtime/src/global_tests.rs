@@ -61,7 +61,7 @@ fn gtest_utf8() -> global::Result<()> {
         lpReserved : *const core::ffi::c_void
     ) -> windows::core::BOOL);
 
-    let cpu = CpuID::new_global();
+    let mut cpu = CpuID::new_write_global();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: global::attrs::CallConvention::PlatformDefault,
@@ -82,7 +82,7 @@ fn gtest_utf8() -> global::Result<()> {
             windows::Win32::System::Console::STD_OUTPUT_HANDLE,
         )?
     };
-    let s = ManagedReference::new_string(&cpu, "aaa\n");
+    let s = ManagedReference::new_string(&mut cpu, "aaa\n");
     let s_len = 4u32;
     let mut chars_written = 0;
     let reserved = std::ptr::null::<c_void>();
@@ -132,8 +132,7 @@ fn gtest_test_fn() -> global::Result<()> {
             "../TestData/Test.plb",
         )?])?;
 
-    let cpu_id = vm.add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let assembly = vm
         .assembly_manager()
@@ -148,7 +147,7 @@ fn gtest_test_fn() -> global::Result<()> {
         .unwrap();
 
     let result =
-        unsafe { test_fn.as_ref() }.typed_res_call::<ManagedReference<Class>>(&cpu, None, &[]);
+        unsafe { test_fn.as_ref() }.typed_res_call::<ManagedReference<Class>>(&mut cpu, None, &[]);
 
     let res = result
         .access::<StringAccessor>()
@@ -170,8 +169,7 @@ fn gtest_test_msgbox() -> global::Result<()> {
             "../TestData/MsgboxTest.plb",
         )?])?;
 
-    let cpu_id = vm.add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let assembly = vm
         .assembly_manager()
@@ -187,7 +185,7 @@ fn gtest_test_msgbox() -> global::Result<()> {
 
     let result = unsafe { test_fn.as_ref() }
         .typed_res_call::<windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT>(
-        &cpu,
+        &mut cpu,
         None,
         &[],
     );
@@ -214,8 +212,7 @@ fn gtest_simple_console() -> global::Result<()> {
             "../TestData/SimpleIR_SimpleConsole.plb",
         )?])?;
 
-    let cpu_id = vm.add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let assembly = vm
         .assembly_manager()
@@ -225,7 +222,7 @@ fn gtest_simple_console() -> global::Result<()> {
 
     let console_class = assembly.get_class(0).unwrap().unwrap();
 
-    let to_write = ManagedReference::new_string(&cpu, "aaa\n");
+    let to_write = ManagedReference::new_string(&mut cpu, "aaa\n");
     let write_stdout = unsafe {
         console_class
             .as_ref()
@@ -236,7 +233,7 @@ fn gtest_simple_console() -> global::Result<()> {
 
     unsafe {
         write_stdout.as_ref().typed_res_call::<()>(
-            &cpu,
+            &mut cpu,
             None,
             &[(&raw const to_write).cast_mut().cast()],
         );
@@ -255,8 +252,7 @@ fn gtest_middle_ir_simple_console() -> global::Result<()> {
             "../TestData/MiddleIR_SimpleConsole.plb",
         )?])?;
 
-    let cpu_id = vm.add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let assembly = vm
         .assembly_manager()
@@ -266,7 +262,7 @@ fn gtest_middle_ir_simple_console() -> global::Result<()> {
 
     let console_class = assembly.get_class(0).unwrap().unwrap();
 
-    let to_write = ManagedReference::new_string(&cpu, "aaa\n");
+    let to_write = ManagedReference::new_string(&mut cpu, "aaa\n");
     let write_stdout = unsafe {
         console_class
             .as_ref()
@@ -277,7 +273,7 @@ fn gtest_middle_ir_simple_console() -> global::Result<()> {
 
     unsafe {
         write_stdout.as_ref().typed_res_call::<()>(
-            &cpu,
+            &mut cpu,
             None,
             &[(&raw const to_write).cast_mut().cast()],
         );

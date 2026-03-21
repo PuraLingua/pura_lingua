@@ -5,13 +5,9 @@ use global::{
     instruction::{Instruction, RegisterAddr},
     non_purus_call_configuration, string_name,
 };
-use stdlib_header::CoreTypeId;
+use stdlib_header::{CoreTypeId, definitions::System_DynamicLibrary_MethodId};
 
 use crate::{
-    stdlib::{
-        System_Array_1_MethodId, System_DynamicLibrary_MethodId,
-        System_NonPurusCallConfiguration_MethodId, System_NonPurusCallType_StaticMethodId,
-    },
     test_utils::g_core_type,
     type_system::{
         assembly::Assembly,
@@ -22,7 +18,7 @@ use crate::{
         method_table::MethodTable,
         type_ref::TypeRef,
     },
-    virtual_machine::global_vm,
+    virtual_machine::{CpuID, global_vm},
 };
 
 #[test]
@@ -56,6 +52,7 @@ fn simple_dynamic_lib_test() {
                             .get_core_type(CoreTypeId::System_Object)
                             .unwrap_class(),
                     ),
+                    vec![],
                     MethodTable::wrap_as_method_generator(|mt| {
                         vec![
                             // Statics
@@ -111,8 +108,7 @@ fn simple_dynamic_lib_test() {
         },
     ));
 
-    let cpu_id = vm.add_cpu();
-    let cpu = cpu_id.as_global_cpu().unwrap();
+    let mut cpu = CpuID::new_write_global();
 
     let assem = global_vm()
         .assembly_manager()
@@ -128,7 +124,7 @@ fn simple_dynamic_lib_test() {
             let result = unsafe {
                 fn_to_invoke
                     .as_ref()
-                    .typed_res_call::<libc::time_t>(&cpu, None, &[])
+                    .typed_res_call::<libc::time_t>(&mut cpu, None, &[])
             };
             let mut buffer: [libc::c_char; 80] = [0; 80];
             let time_info = unsafe { libc::localtime(&raw const result) };
@@ -144,7 +140,7 @@ fn simple_dynamic_lib_test() {
             let result = unsafe {
                 fn_to_invoke
                     .as_ref()
-                    .typed_res_call::<windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT>(&cpu, None, &[])
+                    .typed_res_call::<windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT>(&mut cpu, None, &[])
             };
             println!(
                 "You clicked {}",
@@ -163,6 +159,10 @@ fn gen_simple_dynamic_lib_to_invoke(
     _assembly_manager: &AssemblyManager,
     mt: NonNull<MethodTable<Class>>,
 ) -> Box<Method<Class>> {
+    use stdlib_header::definitions::{
+        System_Array_1_MethodId, System_NonPurusCallConfiguration_MethodId, System_NonPurusCallType_StaticMethodId
+    };
+
     use crate::stdlib::CoreTypeIdConstExt as _;
 
     const TEST_CLASS_REF: TypeRef = TypeRef::Index {

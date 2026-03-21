@@ -4,7 +4,7 @@ pub extern crate binary;
 pub extern crate dynamic;
 #[cfg(feature = "basic")]
 pub extern crate global;
+#[cfg(feature = "runtime")]
+pub extern crate runtime;
 #[cfg(feature = "stdlib_header")]
 pub extern crate stdlib_header;
-#[cfg(feature = "stdlib_header")]
-pub extern crate stdlib_header_serde;

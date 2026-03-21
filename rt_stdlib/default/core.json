@@ -11,6 +11,7 @@
         "name": "System::Object",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [
             {
                 "id": 0,
@@ -74,6 +75,7 @@
         "name": "System::ValueType",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -106,6 +108,7 @@
         "name": "System::Void",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -141,6 +144,7 @@
             "is_infinite": false
         },
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -169,11 +173,11 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "WithGeneric": [
                                 "System_Nullable_1",
                                 [
@@ -183,15 +187,15 @@
                                 ]
                             ]
                         }
-                    },
-                    {
-                        "attr": {
+                    ],
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Generic": 0
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Void"
@@ -224,6 +228,7 @@
         "name": "System::Boolean",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -256,6 +261,7 @@
         "name": "System::UInt8",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -284,14 +290,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_UInt8"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -312,6 +318,7 @@
         "name": "System::UInt16",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -340,14 +347,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_UInt16"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -368,6 +375,7 @@
         "name": "System::UInt32",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -396,14 +404,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_UInt32"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -424,6 +432,7 @@
         "name": "System::UInt64",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -452,14 +461,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_UInt64"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -480,6 +489,7 @@
         "name": "System::USize",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -508,14 +518,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_USize"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -536,6 +546,7 @@
         "name": "System::Int8",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -564,14 +575,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_Int8"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -592,6 +603,7 @@
         "name": "System::Int16",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -620,14 +632,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_Int16"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -648,6 +660,7 @@
         "name": "System::Int32",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -676,14 +689,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_Int32"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -704,6 +717,7 @@
         "name": "System::Int64",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -732,14 +746,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_Int64"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -760,6 +774,7 @@
         "name": "System::ISize",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -788,14 +803,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 1
                         },
-                        "ty": {
+                        {
                             "Core": "System_ISize"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_String"
@@ -816,6 +831,7 @@
         "name": "System::Char",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -848,6 +864,7 @@
         "name": "System::Pointer",
         "generic_count": null,
         "parent": null,
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -894,6 +911,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 2,
@@ -906,43 +924,43 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_UInt8"
                         }
-                    },
-                    {
-                        "attr": {
+                    ],
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_NonPurusCallType"
                         }
-                    },
-                    {
-                        "attr": {
+                    ],
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_UInt8"
                         }
-                    },
-                    {
-                        "attr": {
+                    ],
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_UInt8"
                         }
-                    },
-                    {
-                        "attr": {
+                    ],
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "WithGeneric": [
                                 "System_Array_1",
                                 [
@@ -952,12 +970,12 @@
                                 ]
                             ]
                         }
-                    },
-                    {
-                        "attr": {
+                    ],
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "WithGeneric": [
                                 "System_Array_1",
                                 [
@@ -967,7 +985,7 @@
                                 ]
                             ]
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Void"
@@ -1088,6 +1106,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -1296,11 +1315,11 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "WithGeneric": [
                                 "System_Array_1",
                                 [
@@ -1310,7 +1329,7 @@
                                 ]
                             ]
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_NonPurusCallType"
@@ -1370,6 +1389,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 0,
@@ -1397,14 +1417,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_String"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Void"
@@ -1421,14 +1441,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_String"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Pointer"
@@ -1467,6 +1487,42 @@
         ]
     },
     {
+        "id": "System_Tuple",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Tuple`0+",
+        "generic_count": {
+            "count": 0,
+            "is_infinite": true
+        },
+        "parent": null,
+        "parent_generics": [],
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
         "id": "System_Array_1",
         "kind": "Class",
         "attr": {
@@ -1483,6 +1539,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 0,
@@ -1524,7 +1581,16 @@
                     "overrides": null,
                     "local_variable_types": []
                 },
-                "args": [],
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
                 "return_type": {
                     "Core": "System_Pointer"
                 }
@@ -1555,7 +1621,16 @@
                         }
                     ]
                 },
-                "args": [],
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
                 "return_type": {
                     "Generic": 0
                 }
@@ -1586,7 +1661,24 @@
                         }
                     ]
                 },
-                "args": [],
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Generic": 0
+                        }
+                    ]
+                ],
                 "return_type": {
                     "Core": "System_Void"
                 }
@@ -1625,6 +1717,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 1,
@@ -1705,6 +1798,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 1,
@@ -1755,6 +1849,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {
@@ -1801,6 +1896,7 @@
         "parent": {
             "Core": "System_Object"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 1,
@@ -1828,14 +1924,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_String"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Void"
@@ -1923,6 +2019,7 @@
         "parent": {
             "Core": "System_Exception"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 3,
@@ -1935,22 +2032,22 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_String"
                         }
-                    },
-                    {
-                        "attr": {
+                    ],
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_String"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Void"
@@ -1990,6 +2087,7 @@
         "parent": {
             "Core": "System_Exception"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 3,
@@ -2017,14 +2115,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_Int32"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Void"
@@ -2076,6 +2174,7 @@
         "parent": {
             "Core": "System_Exception"
         },
+        "parent_generics": [],
         "methods": [
             {
                 "id": 3,
@@ -2103,14 +2202,14 @@
                     "local_variable_types": []
                 },
                 "args": [
-                    {
-                        "attr": {
+                    [
+                        {
                             "impl_flags": 0
                         },
-                        "ty": {
+                        {
                             "Core": "System_Int32"
                         }
-                    }
+                    ]
                 ],
                 "return_type": {
                     "Core": "System_Void"
@@ -2162,6 +2261,7 @@
         "parent": {
             "Core": "System_Exception"
         },
+        "parent_generics": [],
         "methods": [],
         "static_methods": [
             {

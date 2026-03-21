@@ -1,6 +1,7 @@
 #![feature(pattern)]
 
 use derive_more::Deref;
+// cSpell:disable-next-line
 use faststr::FastStr;
 use global_proc_macros::ThreadSafe;
 use std::borrow::Borrow;
@@ -18,8 +19,16 @@ pub struct StringName {
     s: FastStr,
 }
 
+const fn __assert_layout() {
+    const {
+        assert!(size_of::<StringName>() == size_of::<[u8; 32]>());
+        assert!(align_of::<StringName>() == 0x8);
+    }
+}
+
 impl StringName {
     pub const fn from_static_str(s: &'static str) -> Self {
+        __assert_layout();
         Self {
             s: FastStr::from_static_str(s),
         }

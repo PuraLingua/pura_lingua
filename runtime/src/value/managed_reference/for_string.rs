@@ -13,12 +13,12 @@ use super::{IAccessor, ManagedReference};
 
 impl ManagedReference<Class> {
     #[track_caller]
-    pub fn new_string(cpu: &CPU, s: &str) -> Self {
+    pub fn new_string(cpu: &mut CPU, s: &str) -> Self {
         Self::new_string_from_wide(cpu, s.encode_utf16().collect())
     }
 
     #[track_caller]
-    pub fn new_string_from_wide(cpu: &CPU, mut bytes: Vec<u16>) -> Self {
+    pub fn new_string_from_wide(cpu: &mut CPU, mut bytes: Vec<u16>) -> Self {
         let mt = unsafe {
             *(cpu
                 .vm_ref()

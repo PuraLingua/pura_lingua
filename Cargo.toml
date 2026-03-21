@@ -18,10 +18,12 @@ members = [
 	"rt_proc_macros",
 	"rt_stdlib",
 	"rt_stdlib_proc_macros",
-	"rt_stdlib_serde",
-	"./rt_stdlib_serde_proc_macros",
 	"runtime",
 	"string_name",
+	"./executables/basic_runner",
+	"c_definitions",
+	"c_basic",
+	"native_exports/runtime",
 ]
 
 [lib]
@@ -32,11 +34,13 @@ global = { workspace = true, optional = true }
 binary = { path = "./binary", package = "pura_lingua_binary", optional = true }
 stdlib_header = { path = "./rt_stdlib", package = "pura_lingua_runtime_stdlib", optional = true }
 dynamic = { path = "./dynamic", package = "pura_lingua_dynamic", optional = true }
-stdlib_header_serde = { path = "./rt_stdlib_serde", package = "pura_lingua_runtime_stdlib_serde", optional = true }
+runtime = { path = "./runtime", package = "pura_lingua_runtime", optional = true }
 
 [workspace.dependencies]
 global = { package = "pura_lingua_global", path = "./global" }
 global_proc_macros = { package = "pura_lingua_proc_macros", path = "./global_proc_macros" }
+
+c_definitions = { package = "pura_lingua_c_definitions", path = "./c_definitions" }
 
 string_name = { package = "pura_lingua_string_name", path = "./string_name" }
 
@@ -70,10 +74,12 @@ sha1 = { version = "0.10.6" }
 sha2 = { version = "0.10.9" }
 blake3 = { version = "1.8.2" }
 indexmap = { version = "2.13" }
+anyhow = { version = "1.0.98", features = ["backtrace"] }
 
 [features]
 default = []
 basic = ["dep:global"]
+runtime = ["basic", "dep:runtime"]
 binary = ["basic", "dep:binary"]
-stdlib_header = ["dep:stdlib_header", "dep:stdlib_header_serde"]
+stdlib_header = ["dep:stdlib_header"]
 dynamic = ["dep:dynamic"]

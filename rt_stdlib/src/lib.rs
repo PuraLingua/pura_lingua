@@ -1,15 +1,28 @@
 #![feature(decl_macro)]
 #![feature(const_trait_impl)]
 #![feature(const_convert)]
+#![feature(core_intrinsics)]
 #![allow(clippy::manual_non_exhaustive)]
 #![allow(nonstandard_style)]
+#![allow(internal_features)]
 
 use global::{AllVariants, AllVariantsName, num_enum::TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 
 pub mod definitions;
 
 #[repr(u32)]
-#[derive(TryFromPrimitive, Clone, Copy, AllVariants, AllVariantsName, PartialEq, Eq)]
+#[derive(
+    TryFromPrimitive,
+    Clone,
+    Copy,
+    AllVariants,
+    AllVariantsName,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+)]
 #[num_enum(crate = ::global::num_enum)]
 pub enum CoreTypeId {
     System_Object,
@@ -62,7 +75,7 @@ pub enum CoreTypeId {
     System_DlErrorException,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CoreTypeRef {
     Core(CoreTypeId),
     WithGeneric(CoreTypeId, Vec<Self>),
@@ -74,6 +87,66 @@ impl const From<CoreTypeId> for CoreTypeRef {
     fn from(value: CoreTypeId) -> Self {
         Self::Core(value)
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
+#[serde(deny_unknown_fields)]
+pub enum CoreTypeKind {
+    Class,
+    Struct,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy)]
+#[serde(deny_unknown_fields)]
+pub struct GenericCount {
+    pub count: u32,
+    pub is_infinite: bool,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CoreTypeInfo {
+    pub id: CoreTypeId,
+    pub kind: crate::CoreTypeKind,
+    pub attr: global::attrs::TypeAttr,
+    pub name: String,
+    pub generic_count: Option<crate::GenericCount>,
+    pub parent: Option<crate::CoreTypeRef>,
+    pub parent_generics: Vec<CoreTypeRef>,
+    pub methods: Vec<MethodInfo>,
+    pub static_methods: Vec<MethodInfo>,
+    pub fields: Vec<FieldInfo>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MethodInfo {
+    pub id: u32,
+    pub name: String,
+    pub generic_count: Option<crate::GenericCount>,
+    pub attr: global::attrs::MethodAttr<crate::CoreTypeRef>,
+    pub args: Vec<(global::attrs::ParameterAttr, crate::CoreTypeRef)>,
+    pub return_type: crate::CoreTypeRef,
+}
+
+impl MethodInfo {
+    /// # Safety:
+    /// [`Self::id`] must be created from `T`
+    pub const unsafe fn get_id<T>(&self) -> T {
+        const {
+            assert!(size_of::<T>() == size_of::<u32>());
+        }
+        unsafe { std::intrinsics::transmute_unchecked(self.id) }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FieldInfo {
+    pub id: u32,
+    pub name: String,
+    pub attr: global::attrs::FieldAttr,
+    pub ty: crate::CoreTypeRef,
 }
 
 impl CoreTypeId {
@@ -127,6 +200,72 @@ impl CoreTypeId {
             Self::System_DlErrorException => "System::DlErrorException",
         }
     }
+}
+
+impl CoreTypeId {
+    pub fn get_core_type_info(self) -> fn() -> CoreTypeInfo {
+        macro aider($($n:ident)*) {
+            match self {
+                $(
+                    Self::$n => $crate::definitions::$n,
+                )*
+            }
+        }
+
+        aider!(
+            System_Object
+            System_ValueType
+
+            System_Void
+
+            System_Nullable_1
+
+            System_Boolean
+
+            System_UInt8
+            System_UInt16
+            System_UInt32
+            System_UInt64
+            System_USize
+
+            System_Int8
+            System_Int16
+            System_Int32
+            System_Int64
+            System_ISize
+
+            System_Char
+
+            System_Pointer
+
+            System_NonPurusCallConfiguration
+            System_NonPurusCallType
+
+            System_DynamicLibrary
+
+            System_Tuple
+
+            System_Array_1
+            System_String
+            System_LargeString
+
+            System_Environment
+
+            System_Exception
+            System_InvalidEnumException
+            System_Win32Exception
+            System_ErrnoException
+            System_DlErrorException
+        )
+    }
+}
+
+pub fn get_all_core_type_info() -> Vec<CoreTypeInfo> {
+    let mut result = Vec::new();
+    for x in CoreTypeId::ALL_VARIANTS {
+        result.push(x.get_core_type_info()());
+    }
+    result
 }
 
 pub const CORE_ASSEMBLY_NAME: &str = "!";

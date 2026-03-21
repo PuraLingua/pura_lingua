@@ -39,6 +39,9 @@ features = [
 	"Win32_System_Console",
 ]
 
+[target.'cfg(windows)'.dependencies]
+windows-result = "0.4.1"
+
 [target.'cfg(unix)'.dependencies.libc]
 version = "0.2.182"
 

@@ -10,12 +10,12 @@ use crate::{
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
-    virtual_machine::{EnsureVirtualMachineInitialized, global_vm},
+    virtual_machine::{EnsureGlobalVirtualMachineInitialized, global_vm},
 };
 
 #[test]
 fn test_layout() {
-    EnsureVirtualMachineInitialized();
+    EnsureGlobalVirtualMachineInitialized();
     let vm = global_vm();
     let assembly_manager = vm.assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(
@@ -30,6 +30,7 @@ fn test_layout() {
                         class Public {}
                     ),
                     None,
+                    Vec::new(),
                     |class| {
                         MethodTable::new(class, |mt| {
                             vec![Box::new(Method::default_sctor(

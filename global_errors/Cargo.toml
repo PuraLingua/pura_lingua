@@ -8,7 +8,7 @@ string_name = { workspace = true }
 
 derive_more = { version = "2.0.1", features = ["display", "std"] }
 thiserror = "2.0.12"
-anyhow = { version = "1.0.98", features = ["backtrace"] }
+anyhow = { workspace = true }
 
 [lib]
 path = "./src/errors.rs"

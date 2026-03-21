@@ -1,9 +1,4 @@
-use std::{
-    ffi::c_void,
-    process::Termination,
-    ptr::{NonNull, Unique},
-    sync::{LockResult, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard},
-};
+use std::{ffi::c_void, pin::Pin, process::Termination, ptr::NonNull, sync::RwLock};
 
 use crate::{
     stdlib::CoreTypeId,
@@ -25,7 +20,10 @@ mod mem_record;
 
 pub use call_stack::{CallStack, CallStackFrame, CommonCallStackFrame, NativeCallStackFrame};
 pub use exception::{ExceptionManager, ThrowHelper};
-use global::dt_println;
+use global::{
+    dt_println,
+    getset::{Getters, MutGetters},
+};
 use line_ending::LineEnding;
 pub use mem_record::MemoryRecord;
 
@@ -34,25 +32,26 @@ mod tests;
 
 mod non_purus_call;
 
+#[derive(Getters, MutGetters)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct CPU {
+    #[getset(skip)]
     vm: NonNull<VirtualMachine>,
 
-    call_stack: RwLock<CallStack>,
+    call_stack: CallStack,
 
-    mem_records: RwLock<Vec<MemoryRecord>>,
-    exception_manager: RwLock<ExceptionManager>,
+    mem_records: Vec<MemoryRecord>,
+    exception_manager: ExceptionManager,
 }
 
 impl CPU {
-    pub fn new(vm: NonNull<VirtualMachine>) -> Unique<Self> {
-        let this = Box::new(Self {
+    pub fn new(vm: NonNull<VirtualMachine>) -> Pin<Box<RwLock<Self>>> {
+        Box::pin(RwLock::new(Self {
             vm,
-            call_stack: RwLock::new(CallStack::new()),
-            mem_records: RwLock::new(Vec::new()),
-            exception_manager: RwLock::new(ExceptionManager::new()),
-        });
-
-        Unique::from_non_null(Box::into_non_null(this))
+            call_stack: CallStack::new(),
+            mem_records: Vec::new(),
+            exception_manager: ExceptionManager::new(),
+        }))
     }
 }
 
@@ -61,30 +60,18 @@ impl CPU {
         unsafe { self.vm.as_ref() }
     }
     #[track_caller]
-    pub fn read_mem_records(&self) -> LockResult<RwLockReadGuard<'_, Vec<MemoryRecord>>> {
-        self.mem_records.read()
-    }
-    #[track_caller]
-    pub fn push_record(
-        &self,
-        record: MemoryRecord,
-    ) -> Result<(), PoisonError<RwLockWriteGuard<'_, Vec<MemoryRecord>>>> {
-        self.mem_records.write()?.push(record);
-
-        Ok(())
-    }
-    #[track_caller]
-    pub fn write_mem_records(&self) -> LockResult<RwLockWriteGuard<'_, Vec<MemoryRecord>>> {
-        self.mem_records.write()
+    pub fn push_record(&mut self, record: MemoryRecord) {
+        self.mem_records.push(record);
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum MainResult {
-    Void,
-    VoidWithException,
-    Custom(u8),
-    SignatureNotMatched,
+    Void = 0,
+    VoidWithException = 1,
+    Custom(u8) = 2,
+    SignatureNotMatched = 3,
 }
 
 impl std::process::Termination for MainResult {
@@ -105,7 +92,7 @@ impl CPU {
     fn default_exception_handler<T>(&self, _method: &Method<T>) {
         use crate::value::managed_reference::StringAccessor;
         use stdlib_header::definitions::System_Exception_FieldId;
-        let exception = self.get_exception().unwrap();
+        let exception = self.get_exception();
         if exception.is_null() {
             return;
         }
@@ -166,7 +153,7 @@ impl CPU {
     }
 
     pub fn invoke_main<T: GetAssemblyRef + GetTypeVars + GetNonGenericTypeHandleKind>(
-        &self,
+        &mut self,
         method: &Method<T>,
         args: Vec<String>,
     ) -> MainResult {
@@ -192,7 +179,7 @@ impl CPU {
             [] => match result_kind {
                 ResultKind::UInt8 => {
                     let res = method.typed_res_call::<u8>(self, None, &[]);
-                    if self.has_exception().unwrap() {
+                    if self.has_exception() {
                         self.default_exception_handler(method);
                         MainResult::Custom(res)
                     } else {
@@ -201,7 +188,7 @@ impl CPU {
                 }
                 ResultKind::Void => {
                     method.typed_res_call::<()>(self, None, &[]);
-                    if self.has_exception().unwrap() {
+                    if self.has_exception() {
                         self.default_exception_handler(method);
                         MainResult::VoidWithException
                     } else {
@@ -267,7 +254,7 @@ impl CPU {
                             None,
                             &[(&raw const arg1_obj).cast_mut().cast()],
                         );
-                        if self.has_exception().unwrap() {
+                        if self.has_exception() {
                             self.default_exception_handler(method);
                             MainResult::Custom(res)
                         } else {
@@ -280,7 +267,7 @@ impl CPU {
                             None,
                             &[(&raw const arg1_obj).cast_mut().cast()],
                         );
-                        if self.has_exception().unwrap() {
+                        if self.has_exception() {
                             self.default_exception_handler(method);
                             MainResult::VoidWithException
                         } else {
@@ -300,7 +287,7 @@ impl CPU {
     }
 
     pub fn invoke_main_and_exit<T: GetAssemblyRef + GetTypeVars + GetNonGenericTypeHandleKind>(
-        &self,
+        &mut self,
         method: &Method<T>,
         args: Vec<String>,
     ) -> ! {
@@ -311,7 +298,7 @@ impl CPU {
 
 impl CPU {
     pub fn new_object(
-        &self,
+        &mut self,
         ty: &MaybeUnloadedTypeHandle,
         ctor_name: &MethodRef,
         args: &[*mut c_void],

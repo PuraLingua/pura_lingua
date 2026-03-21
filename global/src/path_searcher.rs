@@ -8,6 +8,14 @@ pub fn get_stdlib_dir() -> crate::Result<String> {
     Ok(buf.to_str().unwrap().to_owned())
 }
 
+pub fn get_stdlib_prebuilt_dir() -> crate::Result<String> {
+    let home = get_home()?;
+    let mut buf = PathBuf::from_str(&home)?;
+    buf.push("Library");
+    buf.push("__prebuilt");
+    Ok(buf.to_str().unwrap().to_owned())
+}
+
 pub fn get_home() -> crate::Result<String> {
     Ok(std::env::var("PURALINGUA_HOME")?)
 }

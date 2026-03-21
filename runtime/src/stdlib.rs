@@ -17,18 +17,16 @@ use crate::{
 mod System;
 
 #[inline(always)]
+#[allow(unused)]
 fn get_core_class(id: CoreTypeId, assembly: &Assembly) -> NonNull<Class> {
     *assembly.get_class(id as _).unwrap().unwrap()
 }
 
 #[inline(always)]
+#[allow(unused)]
 fn get_core_struct(id: CoreTypeId, assembly: &Assembly) -> NonNull<Struct> {
     *assembly.get_struct(id as _).unwrap().unwrap()
 }
-
-mod definitions;
-
-pub use definitions::*;
 
 pub trait CoreTypeIdExt: Sized {
     fn global_type_handle(self) -> NonGenericTypeHandle;
@@ -161,65 +159,60 @@ impl const CoreTypeIdConstExt for CoreTypeId {
     }
 
     fn get_loader(self) -> fn(&Assembly) -> NonGenericTypeHandle {
-        macro aider($($n:ident)*) {
-            match self {
-                $(
-                    Self::$n => $n,
-                )*
-            }
+        macro of($name:ident) {
+            System::$name::load
         }
+        match self {
+            Self::System_Object => of!(Object),
+            Self::System_ValueType => of!(ValueType),
 
-        aider!(
-            System_Object
-            System_ValueType
+            Self::System_Void => of!(Void),
 
-            System_Void
+            Self::System_Nullable_1 => of!(Nullable_1),
 
-            System_Nullable_1
+            Self::System_Boolean => of!(Boolean),
 
-            System_Boolean
+            Self::System_UInt8 => System::_Integers::System_UInt8,
+            Self::System_UInt16 => System::_Integers::System_UInt16,
+            Self::System_UInt32 => System::_Integers::System_UInt32,
+            Self::System_UInt64 => System::_Integers::System_UInt64,
+            Self::System_USize => System::_Integers::System_USize,
 
-            System_UInt8
-            System_UInt16
-            System_UInt32
-            System_UInt64
-            System_USize
+            Self::System_Int8 => System::_Integers::System_Int8,
+            Self::System_Int16 => System::_Integers::System_Int16,
+            Self::System_Int32 => System::_Integers::System_Int32,
+            Self::System_Int64 => System::_Integers::System_Int64,
+            Self::System_ISize => System::_Integers::System_ISize,
 
-            System_Int8
-            System_Int16
-            System_Int32
-            System_Int64
-            System_ISize
+            Self::System_Char => of!(Char),
 
-            System_Char
+            Self::System_Pointer => of!(Pointer),
 
-            System_Pointer
+            Self::System_NonPurusCallConfiguration => of!(NonPurusCallConfiguration),
+            Self::System_NonPurusCallType => of!(NonPurusCallType),
 
-            System_NonPurusCallConfiguration
-            System_NonPurusCallType
+            Self::System_DynamicLibrary => of!(DynamicLibrary),
 
-            System_DynamicLibrary
+            Self::System_Tuple => of!(Tuple),
 
-            System_Tuple
+            Self::System_Array_1 => of!(Array_1),
+            Self::System_String => of!(String),
+            Self::System_LargeString => of!(LargeString),
 
-            System_Array_1
-            System_String
-            System_LargeString
+            Self::System_Environment => of!(Environment),
 
-            System_Environment
-
-            System_Exception
-            System_InvalidEnumException
-            System_Win32Exception
-            System_ErrnoException
-            System_DlErrorException
-        )
+            Self::System_Exception => of!(Exception),
+            Self::System_InvalidEnumException => of!(InvalidEnumException),
+            Self::System_Win32Exception => of!(Win32Exception),
+            Self::System_ErrnoException => of!(ErrnoException),
+            Self::System_DlErrorException => of!(DlErrorException),
+        }
     }
 }
 
 impl CoreTypeIdExt for CoreTypeId {
     fn global_type_handle(self) -> NonGenericTypeHandle {
-        crate::virtual_machine::EnsureVirtualMachineInitialized();
+        crate::virtual_machine::EnsureGlobalVirtualMachineInitialized();
         crate::virtual_machine::global_vm()
             .assembly_manager()
             .get_core_type(self)
@@ -282,9 +275,9 @@ pub fn load_stdlib(manager: &AssemblyManager) {
         |assembly| {
             let assembly = unsafe { assembly.as_ref() };
             vec![
-                System_Object(assembly),
-                System_ValueType(assembly),
-                System_Void(assembly),
+                System::Object::load(assembly),
+                System::ValueType::load(assembly),
+                System::Void::load(assembly),
             ]
         },
     ));

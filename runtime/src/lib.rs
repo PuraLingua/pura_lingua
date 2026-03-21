@@ -46,6 +46,8 @@
 #![feature(ptr_cast_slice)]
 /* cSpell:disable-next-line */
 #![feature(macro_metavar_expr_concat)]
+/* cSpell:disable-next-line */
+#![feature(macro_metavar_expr)]
 #![feature(closure_track_caller)]
 #![feature(cstr_display)]
 #![feature(doc_cfg)]
@@ -53,6 +55,9 @@
 #![feature(clone_to_uninit)]
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
+#![feature(sync_unsafe_cell)]
+#![feature(box_into_inner)]
+#![feature(pin_ergonomics)]
 //
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]

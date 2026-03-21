@@ -22,15 +22,24 @@ pub struct MemoryRecord {
     pub(crate) to_be_dropped: bool,
 }
 
+#[doc(hidden)]
+pub struct MemoryRecorder<'a>(&'a mut CPU, NonGenericTypeHandleKind);
+
+impl<'a, T> FnOnce<(ManagedReference<T>,)> for MemoryRecorder<'a> {
+    type Output = ();
+    extern "rust-call" fn call_once(self, (ptr,): (ManagedReference<T>,)) -> Self::Output {
+        self.0
+            .mem_records
+            .push(MemoryRecord::new(self.1, ptr.cast()));
+    }
+}
+
 impl CPU {
     /// Used for [`crate::value::managed_reference::ManagedReference::base_common_alloc`]
-    pub fn gen_mem_recorder<T>(
-        &self,
+    pub const fn gen_mem_recorder<'a>(
+        &'a mut self,
         kind: NonGenericTypeHandleKind,
-    ) -> impl FnOnce(ManagedReference<T>) {
-        move |ptr| {
-            let mut records = self.write_mem_records().unwrap();
-            records.push(MemoryRecord::new(kind, ptr.cast()));
-        }
+    ) -> MemoryRecorder<'a> {
+        MemoryRecorder(self, kind)
     }
 }

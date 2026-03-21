@@ -492,11 +492,6 @@ impl Drop for CommonCallStackFrame {
 }
 
 mod getset_cpu {
-    use std::sync::{
-        LockResult, MappedRwLockReadGuard, MappedRwLockWriteGuard, PoisonError, RwLockReadGuard,
-        RwLockWriteGuard,
-    };
-
     use enumflags2::BitFlags;
 
     use crate::type_system::{
@@ -504,103 +499,50 @@ mod getset_cpu {
         method::{Method, MethodDisplayOptions},
     };
 
-    use super::{super::CPU, CallStack, CallStackFrame, CommonCallStackFrame};
+    use super::{super::CPU, CallStackFrame, CommonCallStackFrame};
 
     impl CPU {
-        pub fn read_call_stack(&self) -> LockResult<RwLockReadGuard<'_, CallStack>> {
-            self.call_stack.read()
-        }
-        pub fn write_call_stack(&self) -> LockResult<RwLockWriteGuard<'_, CallStack>> {
-            self.call_stack.write()
-        }
-        pub fn push_call_stack(
-            &self,
-            frame: CallStackFrame,
-        ) -> Result<(), PoisonError<RwLockWriteGuard<'_, CallStack>>> {
-            let mut call_stack = self.write_call_stack()?;
-            call_stack.push(frame);
-
-            Ok(())
+        pub fn push_call_stack(&mut self, frame: CallStackFrame) {
+            self.call_stack.push(frame);
         }
         pub fn push_call_stack_native<T: GetNonGenericTypeHandleKind>(
-            &self,
+            &mut self,
             method: &Method<T>,
-        ) -> Result<(), PoisonError<RwLockWriteGuard<'_, CallStack>>> {
+        ) {
             self.push_call_stack(CallStackFrame::native(method))
         }
-        pub fn pop_call_stack(&self) -> Result<(), PoisonError<RwLockWriteGuard<'_, CallStack>>> {
-            let mut call_stack = self.write_call_stack()?;
-            call_stack.pop();
-
-            Ok(())
+        pub fn pop_call_stack(&mut self) {
+            self.call_stack.pop();
         }
         pub fn prepare_call_stack_for_method<
             T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind,
         >(
-            &self,
+            &mut self,
             method: &Method<T>,
-        ) -> Result<(), PoisonError<RwLockWriteGuard<'_, CallStack>>> {
+        ) {
             self.push_call_stack(CallStackFrame::common_for_method(method))
         }
-        pub fn current_call_frame<'a>(
-            &'a self,
-        ) -> Result<
-            Option<MappedRwLockReadGuard<'a, CallStackFrame>>,
-            PoisonError<RwLockReadGuard<'a, CallStack>>,
-        > {
-            self.read_call_stack()
-                .map(|x| RwLockReadGuard::filter_map(x, |x| x.current()).ok())
+        pub fn current_call_frame<'a>(&'a self) -> Option<&'a CallStackFrame> {
+            self.call_stack.current()
         }
-        pub fn current_call_frame_mut<'a>(
-            &'a self,
-        ) -> Result<
-            Option<MappedRwLockWriteGuard<'a, CallStackFrame>>,
-            PoisonError<RwLockWriteGuard<'a, CallStack>>,
-        > {
-            self.write_call_stack()
-                .map(|x| RwLockWriteGuard::filter_map(x, |x| x.current_mut()).ok())
+        pub fn current_call_frame_mut<'a>(&'a mut self) -> Option<&'a mut CallStackFrame> {
+            self.call_stack.current_mut()
         }
-        pub fn current_common_call_frame<'a>(
-            &'a self,
-        ) -> Result<
-            Option<MappedRwLockReadGuard<'a, CommonCallStackFrame>>,
-            PoisonError<RwLockReadGuard<'a, CallStack>>,
-        > {
-            self.current_call_frame().map(|x| {
-                x.and_then(|x| {
-                    MappedRwLockReadGuard::filter_map(x, |x| x.unwrap_common_ref().ok()).ok()
-                })
-            })
+        pub fn current_common_call_frame<'a>(&'a self) -> Option<&'a CommonCallStackFrame> {
+            self.current_call_frame()
+                .and_then(|x| x.unwrap_common_ref().ok())
         }
         pub fn current_common_call_frame_mut<'a>(
-            &'a self,
-        ) -> Result<
-            Option<MappedRwLockWriteGuard<'a, CommonCallStackFrame>>,
-            PoisonError<RwLockWriteGuard<'a, CallStack>>,
-        > {
-            self.current_call_frame_mut().map(|x| {
-                x.and_then(|x| {
-                    MappedRwLockWriteGuard::filter_map(x, |x| x.unwrap_common_mut().ok()).ok()
-                })
-            })
+            &'a mut self,
+        ) -> Option<&'a mut CommonCallStackFrame> {
+            self.current_call_frame_mut()
+                .and_then(|x| x.unwrap_common_mut().ok())
         }
-        pub fn capture<'a>(
-            &'a self,
-        ) -> Result<Vec<String>, PoisonError<RwLockReadGuard<'a, CallStack>>> {
-            Ok(self
-                .read_call_stack()?
-                .capture()
-                .map(ToOwned::to_owned)
-                .collect())
+        pub fn capture<'a>(&'a self) -> Vec<String> {
+            self.call_stack.capture().map(ToOwned::to_owned).collect()
         }
-        pub fn capture_with_options(
-            &self,
-            options: BitFlags<MethodDisplayOptions>,
-        ) -> Result<Vec<String>, PoisonError<RwLockReadGuard<'_, CallStack>>> {
-            Ok(self
-                .read_call_stack()?
-                .capture_with_options(options)
-                .collect())
+        pub fn capture_with_options(&self, options: BitFlags<MethodDisplayOptions>) -> Vec<String> {
+            self.call_stack.capture_with_options(options).collect()
         }
     }
 }

@@ -1,5 +1,7 @@
+use stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId;
+
 use crate::{
-    stdlib::System_NonPurusCallConfiguration_FieldId,
+    stdlib::System::{_define_class, common_new_method, default_sctor},
     type_system::{class::Class, method::Method},
     value::managed_reference::{FieldAccessor, ManagedReference},
     virtual_machine::cpu::CPU,
@@ -59,3 +61,12 @@ pub extern "system" fn Constructor(
         )
         .unwrap() = arguments;
 }
+
+_define_class!(
+    fn load(assembly, mt, method_info)
+    System_NonPurusCallConfiguration
+#methods(TMethodId):
+    Constructor => common_new_method!(mt TMethodId Constructor Constructor);
+#static_methods(TStaticMethodId):
+    StaticConstructor => default_sctor!(mt TStaticMethodId);
+);

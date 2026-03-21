@@ -15,7 +15,7 @@ use crate::{
 use super::{IAccessor, ManagedReference};
 
 impl ManagedReference<Class> {
-    pub fn alloc_array<T>(cpu: &CPU, element_type: NonNull<MethodTable<T>>, len: usize) -> Self
+    pub fn alloc_array<T>(cpu: &mut CPU, element_type: NonNull<MethodTable<T>>, len: usize) -> Self
     where
         TypeHandle: From<NonNull<T>>,
         T: GetValLayout,
@@ -53,8 +53,7 @@ impl ManagedReference<Class> {
         cpu.push_record(MemoryRecord::new(
             NonGenericTypeHandleKind::Class,
             this.cast(),
-        ))
-        .unwrap();
+        ));
 
         unsafe {
             this.data().unwrap().cast::<usize>().write(len);
@@ -65,7 +64,7 @@ impl ManagedReference<Class> {
 
     /// The T's destructor will not be run, so it's recommended that T: Copy.
     pub fn new_array<TType, T: Copy + 'static>(
-        cpu: &CPU,
+        cpu: &mut CPU,
         element_type: NonNull<MethodTable<TType>>,
         slice: Box<[T]>,
     ) -> Self
@@ -108,8 +107,7 @@ impl ManagedReference<Class> {
         cpu.push_record(MemoryRecord::new(
             NonGenericTypeHandleKind::Class,
             this.cast(),
-        ))
-        .unwrap();
+        ));
 
         unsafe {
             this.data_ptr().cast::<usize>().write(slice.len());
@@ -362,16 +360,17 @@ impl ArrayAccessor {
 
 #[cfg(test)]
 mod tests {
-    use crate::virtual_machine::{EnsureVirtualMachineInitialized, global_vm};
+    use crate::virtual_machine::{EnsureGlobalVirtualMachineInitialized, global_vm};
 
     use super::*;
 
     #[test]
     fn array_test() {
-        EnsureVirtualMachineInitialized();
+        EnsureGlobalVirtualMachineInitialized();
         let vm = global_vm();
         let cpu_id = vm.add_cpu();
         let cpu = vm.get_cpu(cpu_id).unwrap();
+        let mut cpu_write = cpu.write().unwrap();
 
         let u8_t = *unsafe {
             vm.assembly_manager()
@@ -381,7 +380,7 @@ mod tests {
                 .method_table()
         };
 
-        let mut arr = ManagedReference::alloc_array(&cpu, u8_t, 10);
+        let mut arr = ManagedReference::alloc_array(&mut cpu_write, u8_t, 10);
         let arr_mut = unsafe {
             arr.access_mut::<ArrayAccessor>()
                 .unwrap()
@@ -398,10 +397,10 @@ mod tests {
                 .unwrap()
         };
         dbg!(arr_ref);
-        arr.destroy(&cpu);
+        arr.destroy(&mut cpu_write);
 
         let mut arr_by_new = ManagedReference::new_array::<_, u8>(
-            &cpu,
+            &mut cpu_write,
             u8_t,
             Box::new([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
         );
@@ -413,6 +412,6 @@ mod tests {
                 .unwrap()
         };
         dbg!(arr_by_new_ref);
-        arr_by_new.destroy(&cpu);
+        arr_by_new.destroy(&mut cpu_write);
     }
 }

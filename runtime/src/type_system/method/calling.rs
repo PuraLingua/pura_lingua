@@ -85,7 +85,7 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
 
     pub fn untyped_call(
         &self,
-        cpu: &CPU,
+        cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
     ) -> (NonNull<u8>, Layout) {
@@ -95,15 +95,15 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             default_entry_point::__default_entry_point::<T> as *const c_void,
             self.entry_point.as_ptr(),
         ) {
-            cpu.prepare_call_stack_for_method(self).unwrap();
+            cpu.prepare_call_stack_for_method(self);
             let res = default_entry_point::__default_entry_point::<T>(self, cpu, this, args);
-            cpu.pop_call_stack().unwrap();
+            cpu.pop_call_stack();
             return res;
         }
-        cpu.push_call_stack_native(self).unwrap();
+        cpu.push_call_stack_native(self);
         let cif = self.get_cif();
 
-        let mut args = self.handle_args(&cpu, this.as_ref(), args);
+        let mut args = self.handle_args(&&*cpu, this.as_ref(), args);
 
         let mut ret_layout = self.get_return_type().val_layout();
         if ret_layout.size() < size_of::<usize>() {
@@ -129,14 +129,14 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         //     }
         // }
 
-        cpu.pop_call_stack().unwrap();
+        cpu.pop_call_stack();
 
         (result.as_non_null_ptr(), ret_layout)
     }
 
     pub fn typed_res_call<R>(
         &self,
-        cpu: &CPU,
+        cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut std::ffi::c_void],
     ) -> R {
@@ -151,7 +151,7 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
 
     pub fn typed_call<'a, R>(
         &self,
-        cpu: &CPU,
+        cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[libffi::middle::Arg<'a>],
     ) -> R {

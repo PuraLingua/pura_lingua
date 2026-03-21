@@ -1,0 +1,12 @@
+[package]
+name = "pura_lingua_runtime_c"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+c_definitions = { workspace = true }
+pura_lingua = { path = "../..", features = ["runtime"] }
+
+[lib]
+name = "PuralinguaCRuntime"
+crate-type = ["cdylib"]

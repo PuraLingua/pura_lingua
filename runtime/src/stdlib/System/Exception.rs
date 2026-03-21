@@ -1,7 +1,11 @@
 use enumflags2::make_bitflags;
+use stdlib_header::definitions::System_Exception_FieldId;
 
 use crate::{
-    stdlib::{CoreTypeId, System_Exception_FieldId},
+    stdlib::{
+        CoreTypeId,
+        System::{_define_class, common_new_method, default_sctor},
+    },
     type_system::{
         class::Class,
         method::{Method, MethodDisplayOptions},
@@ -11,7 +15,7 @@ use crate::{
 };
 
 pub extern "system" fn Constructor_String(
-    cpu: &CPU,
+    cpu: &mut CPU,
     _: &Method<Class>,
     this: &mut ManagedReference<Class>,
     message: ManagedReference<Class>,
@@ -40,11 +44,9 @@ pub extern "system" fn Constructor_String(
         )
         .unwrap();
 
-    let stack_trace_rs = cpu
-        .capture_with_options(
-            make_bitflags!(MethodDisplayOptions::{WithCallConvention | WithReturn | WithArgs}),
-        )
-        .unwrap();
+    let stack_trace_rs = cpu.capture_with_options(
+        make_bitflags!(MethodDisplayOptions::{WithCallConvention | WithReturn | WithArgs}),
+    );
     *f_stack_trace_mut = ManagedReference::alloc_array(
         cpu,
         unsafe { *string_t.as_ref().method_table() },
@@ -64,32 +66,43 @@ pub extern "system" fn Constructor_String(
 }
 
 pub extern "system" fn ToString(
-    cpu: &CPU,
+    cpu: &mut CPU,
     method: &Method<Class>,
     this: &ManagedReference<Class>,
 ) -> ManagedReference<Class> {
     super::Object::ToString(cpu, method, this)
 }
 
+_define_class!(
+    fn load(assembly, mt, method_info)
+    System_Exception
+#methods(TMethodId):
+    ToString => common_new_method!(mt TMethodId ToString ToString);
+    Constructor_String => common_new_method!(mt TMethodId Constructor_String Constructor_String);
+#static_methods(TStaticMethodId):
+    StaticConstructor => default_sctor!(mt TStaticMethodId);
+);
+
 #[cfg(test)]
 mod tests {
     use std::ptr::NonNull;
 
+    use stdlib_header::definitions::{
+        System_Array_1_MethodId, System_Exception_MethodId, System_Object_MethodId,
+        System_UInt8_StaticMethodId, System_UInt16_StaticMethodId,
+    };
+
     use crate::{
-        stdlib::{
-            CoreTypeId, CoreTypeIdExt as _, System_Array_1_MethodId, System_Exception_FieldId,
-            System_Exception_MethodId, System_Object_MethodId, System_UInt8_StaticMethodId,
-            System_UInt16_StaticMethodId,
-        },
+        stdlib::{CoreTypeId, CoreTypeIdExt as _},
         value::managed_reference::{ArrayAccessor, StringAccessor},
-        virtual_machine::{EnsureVirtualMachineInitialized, global_vm},
+        virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
     };
 
     use super::*;
 
     #[test]
     fn test_construct_exception() {
-        EnsureVirtualMachineInitialized();
+        EnsureGlobalVirtualMachineInitialized();
 
         let vm = global_vm();
         let u8_t = CoreTypeId::System_UInt8
@@ -104,8 +117,7 @@ mod tests {
         let object_t = CoreTypeId::System_Object
             .global_type_handle()
             .unwrap_class();
-        let cpu_id = vm.add_cpu();
-        let cpu = cpu_id.as_global_cpu().unwrap();
+        let mut cpu = CpuID::new_write_global();
         unsafe {
             cpu.push_call_stack_native(
                 u8_t.as_ref()
@@ -113,8 +125,7 @@ mod tests {
                     .get_method(System_UInt8_StaticMethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
-            )
-            .unwrap();
+            );
 
             cpu.push_call_stack_native(
                 u16_t
@@ -123,8 +134,7 @@ mod tests {
                     .get_method(System_UInt16_StaticMethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
-            )
-            .unwrap();
+            );
             cpu.push_call_stack_native(
                 array_t
                     .as_ref()
@@ -132,8 +142,7 @@ mod tests {
                     .get_method(System_Array_1_MethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
-            )
-            .unwrap();
+            );
             cpu.push_call_stack_native(
                 object_t
                     .as_ref()
@@ -141,8 +150,7 @@ mod tests {
                     .get_method(System_Object_MethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
-            )
-            .unwrap();
+            );
         }
 
         let exception_t = vm
@@ -152,17 +160,20 @@ mod tests {
 
         let exception_mt = unsafe { exception_t.as_ref().method_table_ref() };
 
-        let exception_ptr =
-            ManagedReference::<Class>::common_alloc(&cpu, NonNull::from_ref(exception_mt), false);
+        let exception_ptr = ManagedReference::<Class>::common_alloc(
+            &mut cpu,
+            NonNull::from_ref(exception_mt),
+            false,
+        );
 
         let method = exception_mt
             .get_method(System_Exception_MethodId::Constructor_String as _)
             .unwrap();
 
-        let message = ManagedReference::new_string(&cpu, "AAA");
+        let message = ManagedReference::new_string(&mut cpu, "AAA");
         unsafe {
             method.as_ref().typed_res_call::<()>(
-                &cpu,
+                &mut cpu,
                 Some(NonNull::from_ref(&exception_ptr).cast()),
                 &[(&raw const message).cast_mut().cast()],
             );

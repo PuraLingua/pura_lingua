@@ -11,11 +11,10 @@ use global::{
         NonPurusCallConfiguration, NonPurusCallType, ObjectStrategy, StringEncoding,
     },
 };
-use stdlib_header::CoreTypeId;
+use stdlib_header::{CoreTypeId, definitions::System_NonPurusCallType_FieldId};
 
 use crate::{
     error::RuntimeError,
-    stdlib::System_NonPurusCallType_FieldId,
     type_system::class::Class,
     value::managed_reference::{ArrayAccessor, FieldAccessor, ManagedReference, StringAccessor},
     virtual_machine::cpu::CPU,
@@ -53,7 +52,7 @@ fn non_purus_type_arg_to_libffi_type(
 
 // Marshal NonPurus*
 impl CPU {
-    pub fn marshal_non_purus_type(&self, ty: &NonPurusCallType) -> ManagedReference<Class> {
+    pub fn marshal_non_purus_type(&mut self, ty: &NonPurusCallType) -> ManagedReference<Class> {
         let mt = unsafe {
             self.vm_ref()
                 .assembly_manager()
@@ -71,14 +70,13 @@ impl CPU {
             .unwrap() = ty.discriminant();
         match ty {
             NonPurusCallType::Structure(fields) => {
-                let arr = ManagedReference::new_array::<_, ManagedReference<Class>>(
-                    self,
-                    mt,
-                    fields
+                let arr = {
+                    let slice = fields
                         .iter()
                         .map(|x| self.marshal_non_purus_type(x))
-                        .collect(),
-                );
+                        .collect();
+                    ManagedReference::new_array::<_, ManagedReference<Class>>(self, mt, slice)
+                };
                 *obj.const_access_mut::<FieldAccessor<Class>>()
                     .typed_field_mut(
                         System_NonPurusCallType_FieldId::Types as _,
@@ -91,7 +89,7 @@ impl CPU {
         obj
     }
     pub fn marshal_non_purus_configuration(
-        &self,
+        &mut self,
         cfg: &NonPurusCallConfiguration,
     ) -> ManagedReference<Class> {
         let mt = unsafe {
@@ -124,7 +122,7 @@ impl CPU {
 
         macro write_field($T:ty: $val:expr => $field:ident) {
             assert!(obj_fields.write_typed_field::<$T>(
-                $crate::stdlib::System_NonPurusCallConfiguration_FieldId::$field as _,
+                ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$field as _,
                 Default::default(),
                 $val,
             ))
@@ -193,11 +191,13 @@ impl CPU {
         macro get_field($field:ident: $T:ty) {
             accessor
                 .read_typed_field::<$T>(
-                    $crate::stdlib::System_NonPurusCallConfiguration_FieldId::$field as _,
+                    ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$field
+                        as _,
                     Default::default(),
                 )
                 .ok_or(RuntimeError::FailedGetField(
-                    $crate::stdlib::System_NonPurusCallConfiguration_FieldId::$field as _,
+                    ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$field
+                        as _,
                 ))?
         }
 
@@ -205,11 +205,13 @@ impl CPU {
             <$ty>::try_from(
                 accessor
                     .read_typed_field::<u8>(
-                        $crate::stdlib::System_NonPurusCallConfiguration_FieldId::$val as _,
+                        ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$val
+                            as _,
                         Default::default(),
                     )
                     .ok_or(RuntimeError::FailedGetField(
-                        $crate::stdlib::System_NonPurusCallConfiguration_FieldId::$val as _,
+                        ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$val
+                            as _,
                     ))?,
             )?
         }
