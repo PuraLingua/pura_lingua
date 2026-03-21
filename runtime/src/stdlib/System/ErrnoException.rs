@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[cfg(unix)]
-pub fn Constructor(cpu: &CPU, method: &Method<Class>, this: &mut ManagedReference<Class>) {
+pub fn Constructor(cpu: &mut CPU, method: &Method<Class>, this: &mut ManagedReference<Class>) {
     Constructor_I32(cpu, method, this, unsafe {
         *crate::c_ffi::errno_location()
     });
@@ -14,14 +14,16 @@ pub fn Constructor(cpu: &CPU, method: &Method<Class>, this: &mut ManagedReferenc
 
 #[cfg(unix)]
 pub fn Constructor_I32(
-    cpu: &CPU,
+    cpu: &mut CPU,
     method: &Method<Class>,
     this: &mut ManagedReference<Class>,
     code: libc::c_int,
 ) {
     use std::ffi::CString;
 
-    use crate::{stdlib::System_ErrnoException_FieldId, value::managed_reference::FieldAccessor};
+    use stdlib_header::definitions::System_ErrnoException_FieldId;
+
+    use crate::value::managed_reference::FieldAccessor;
 
     assert!(
         this.const_access_mut::<FieldAccessor<Class>>()
@@ -32,18 +34,15 @@ pub fn Constructor_I32(
             )
     );
 
-    super::Exception::Constructor_String(
+    let message = ManagedReference::new_string(
         cpu,
-        method,
-        this,
-        ManagedReference::new_string(
-            cpu,
-            // cSpell:disable-next-line
-            &unsafe { CString::from_raw(libc::strerror(code)) }
-                .into_string()
-                .unwrap(),
-        ),
+        // cSpell:disable-next-line
+        &unsafe { CString::from_raw(libc::strerror(code)) }
+            .into_string()
+            .unwrap(),
     );
+
+    super::Exception::Constructor_String(cpu, method, this, message);
 }
 
 #[cfg(not(unix))]

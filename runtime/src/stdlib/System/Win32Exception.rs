@@ -1,7 +1,7 @@
 use crate::stdlib::System::{_define_class, common_new_method, default_sctor};
 use crate::{
     type_system::{class::Class, method::Method},
-    value::managed_reference::{FieldAccessor, ManagedReference},
+    value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
 };
 
@@ -131,6 +131,8 @@ pub fn Constructor_I32(
     code: i32,
 ) {
     use stdlib_header::definitions::System_Win32Exception_FieldId;
+
+    use crate::value::managed_reference::FieldAccessor;
 
     assert!(
         this.const_access_mut::<FieldAccessor<Class>>()

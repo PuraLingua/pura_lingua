@@ -82,11 +82,12 @@ impl ThrowHelper {
     }
 
     crate::c_ffi::has_errno! {
-        pub fn current_errno(&self) -> bool {
+        pub fn current_errno(&mut self) -> bool {
             let errno = unsafe { *crate::c_ffi::errno_location() };
             self.errno(errno)
         }
     }
+    #[doc(cfg(unix))]
     #[cfg(unix)]
     pub fn errno(&mut self, mut code: i32) -> bool {
         use stdlib_header::definitions::System_ErrnoException_MethodId;
@@ -109,12 +110,14 @@ impl ThrowHelper {
         true
     }
 
+    #[doc(cfg(unix))]
     #[cfg(unix)]
     // cSpell:disable-next-line
     pub fn current_dlerror(&mut self) -> bool {
         // cSpell:disable-next-line
         unsafe { self.dlerror(libc::dlerror()) }
     }
+    #[doc(cfg(unix))]
     #[cfg(unix)]
     // cSpell:disable-next-line
     pub fn dlerror(&mut self, message: *mut libc::c_char) -> bool {
@@ -135,9 +138,7 @@ impl ThrowHelper {
                 .get_core_type(CoreTypeId::System_DlErrorException)
                 .into(),
             &System_Exception_MethodId::Constructor_String.into(),
-            &[(&*message as *const ManagedReference<Class>)
-                .cast_mut()
-                .cast()],
+            &[(&raw const message).cast_mut().cast()],
         ) {
             None => return false,
             Some(exception) => exception,

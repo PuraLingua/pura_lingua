@@ -13,7 +13,7 @@ fn gtest_utf8() -> global::Result<()> {
 
     use crate::{test_utils::LEAK_DETECTOR, virtual_machine::cpu::CPU};
 
-    let cpu = CpuID::new_global();
+    let mut cpu = CpuID::new_write_global();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: global::attrs::CallConvention::CDecl,
@@ -23,7 +23,7 @@ fn gtest_utf8() -> global::Result<()> {
         arguments: vec![(false, NonPurusCallType::String)],
     };
 
-    let s = ManagedReference::new_string(&cpu, "aaa");
+    let s = ManagedReference::new_string(&mut cpu, "aaa");
 
     LEAK_DETECTOR.scope_with(
         |cpu: &CPU, cfg, s| {

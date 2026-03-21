@@ -43,6 +43,7 @@
 #![feature(sync_unsafe_cell)]
 #![feature(box_into_inner)]
 #![feature(pin_ergonomics)]
+#![cfg_attr(all(unix, test), feature(cstr_display))]
 //
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]
