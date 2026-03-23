@@ -9,6 +9,7 @@ use std::{
 use global::{
     attrs::TypeAttr,
     getset::{Getters, MutGetters},
+    non_purus_call_configuration::NonPurusCallType,
 };
 use stdlib_header::CoreTypeId;
 
@@ -217,6 +218,22 @@ impl Struct {
         }
 
         libffi::middle::Type::structure(builder)
+    }
+
+    pub fn non_purus_call_type(&self) -> NonPurusCallType {
+        if let Some(core_type_id) = self.method_table_ref().get_core_type_id()
+            && let Some(gotten_ty) = core_type_id.non_purus_call_type()
+        {
+            std::hint::cold_path(); // It should be handled by caller usually.
+            return gotten_ty;
+        }
+
+        let mut builder = Vec::with_capacity(self.fields.len());
+        for f in self.fields() {
+            builder.push(f.non_purus_call_type_with_type(self));
+        }
+
+        NonPurusCallType::Structure(builder)
     }
 
     pub fn get_method(&self, id: u32) -> Option<MappedRwLockReadGuard<'_, NonNull<Method<Self>>>> {

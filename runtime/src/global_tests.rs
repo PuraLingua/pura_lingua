@@ -95,15 +95,17 @@ fn gtest_utf8() -> global::Result<()> {
 
     LEAK_DETECTOR.scope_with(
         |cpu: &CPU, cfg, stdout_handle, s, s_len, chars_written, reserved| {
+            use crate::virtual_machine::cpu::NonPurusCallArg;
+
             let (res_ptr, res_layout) = cpu.non_purus_call(
                 cfg,
                 WriteConsoleA as _,
                 vec![
-                    (&raw const stdout_handle).cast_mut().cast(),
-                    (&raw const s).cast_mut().cast(),
-                    (&raw const s_len).cast_mut().cast(),
-                    (&raw mut *chars_written).cast(),
-                    (&raw const reserved).cast_mut().cast(),
+                    NonPurusCallArg::new(&stdout_handle, NonPurusCallType::Pointer),
+                    NonPurusCallArg::new(&s, NonPurusCallType::String),
+                    NonPurusCallArg::new(&s_len, NonPurusCallType::C_UInt),
+                    NonPurusCallArg::new(chars_written, NonPurusCallType::C_Int),
+                    NonPurusCallArg::new(&reserved, NonPurusCallType::Pointer),
                 ],
             );
 

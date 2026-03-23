@@ -40,10 +40,10 @@ fn non_purus_type_to_libffi_type(ty: &NonPurusCallType) -> libffi::middle::Type 
     }
 }
 fn non_purus_type_arg_to_libffi_type(
-    (is_by_ref, ty): &(bool, NonPurusCallType),
+    (is_by_ref, ty): (bool, &NonPurusCallType),
 ) -> libffi::middle::Type {
     use libffi::middle::Type as LibffiType;
-    if *is_by_ref {
+    if is_by_ref {
         LibffiType::pointer()
     } else {
         non_purus_type_to_libffi_type(ty)
@@ -266,12 +266,34 @@ impl CPU {
     }
 }
 
+#[derive(Clone, PartialEq, Eq)]
+pub enum NonPurusCallArgType {
+    String,
+    Object,
+    Other,
+}
+
+#[derive(Clone)]
+pub struct NonPurusCallArg {
+    pub val: *mut c_void,
+    pub ty: NonPurusCallType,
+}
+
+impl NonPurusCallArg {
+    pub fn new<T>(val: *const T, ty: NonPurusCallType) -> Self {
+        Self {
+            val: val.cast_mut().cast(),
+            ty,
+        }
+    }
+}
+
 impl CPU {
     pub fn dynamic_non_purus_call(
         &self,
         cfg: ManagedReference<Class>,
         f_ptr: *const u8,
-        args: Vec<*mut c_void>,
+        args: Vec<NonPurusCallArg>,
     ) -> global::Result<(NonNull<u8>, Layout)> {
         self.unmarshal_non_purus_configuration(cfg)
             .map(|cfg| self.non_purus_call(&cfg, f_ptr, args))
@@ -280,15 +302,27 @@ impl CPU {
         &self,
         cfg: &NonPurusCallConfiguration,
         f_ptr: *const u8,
-        mut args: Vec<*mut c_void>,
+        mut args: Vec<NonPurusCallArg>,
     ) -> (NonNull<u8>, Layout) {
         use libffi::middle::Cif;
 
         let abi = crate::libffi_utils::get_abi_by_call_convention(cfg.call_convention);
         let cif = match cfg.call_convention {
             CallConvention::CDeclWithVararg => {
-                let args = cfg.arguments.iter().map(non_purus_type_arg_to_libffi_type);
-                let fixed_args = args.len() - 1;
+                let args = args
+                    .iter()
+                    .enumerate()
+                    .map(|(i, x)| {
+                        if let Some((is_by_ref, _)) = cfg.arguments.get(i)
+                            && *is_by_ref
+                        {
+                            (true, &x.ty)
+                        } else {
+                            (false, &x.ty)
+                        }
+                    })
+                    .map(non_purus_type_arg_to_libffi_type);
+                let fixed_args = cfg.arguments.len();
                 Cif::new_variadic_with_abi(
                     args,
                     fixed_args,
@@ -297,7 +331,10 @@ impl CPU {
                 )
             }
             _ => Cif::new_with_abi(
-                cfg.arguments.iter().map(non_purus_type_arg_to_libffi_type),
+                cfg.arguments
+                    .iter()
+                    .map(|x| (x.0, &x.1))
+                    .map(non_purus_type_arg_to_libffi_type),
                 non_purus_type_to_libffi_type(&cfg.return_type),
                 abi,
             ),
@@ -306,13 +343,14 @@ impl CPU {
         let mut treat_string_as_object = false;
         match cfg.encoding {
             global::non_purus_call_configuration::StringEncoding::Utf8 => {
-                for (i, (is_by_ref, ty)) in cfg.arguments.iter().enumerate() {
-                    if *is_by_ref {
+                for (i, arg) in args.iter_mut().enumerate() {
+                    if cfg.arguments.get(i).is_some_and(|x| x.0) {
                         continue;
                     }
-                    if *ty == NonPurusCallType::String {
+
+                    if arg.ty == NonPurusCallType::String {
                         let data =
-                            unsafe { args[i].cast::<ManagedReference<Class>>().as_ref_unchecked() }
+                            unsafe { arg.val.cast::<ManagedReference<Class>>().as_ref_unchecked() }
                                 .access::<StringAccessor>()
                                 .unwrap()
                                 .to_string()
@@ -327,20 +365,21 @@ impl CPU {
                             data.as_ptr().cast_const().cast::<u8>(),
                             &allocate_guard,
                         ));
-                        args[i] = data_ptr.cast().as_ptr();
+                        arg.val = data_ptr.cast().as_ptr();
                     }
                 }
             }
             global::non_purus_call_configuration::StringEncoding::C_Utf16
             | global::non_purus_call_configuration::StringEncoding::Utf16 => {
-                for (i, (is_by_ref, ty)) in cfg.arguments.iter().enumerate() {
-                    if *is_by_ref {
+                for (i, arg) in args.iter_mut().enumerate() {
+                    if cfg.arguments.get(i).is_some_and(|x| x.0) {
                         continue;
                     }
-                    if *ty == NonPurusCallType::String {
+
+                    if arg.ty == NonPurusCallType::String {
                         let ptr = GuardedBox::into_non_null(GuardedBox::new(
                             unsafe {
-                                args[i]
+                                arg.val
                                     .cast::<ManagedReference<Class>>()
                                     .as_ref_unchecked()
                                     .data_ptr()
@@ -349,18 +388,19 @@ impl CPU {
                             },
                             &allocate_guard,
                         ));
-                        args[i] = ptr.cast().as_ptr();
+                        arg.val = ptr.cast().as_ptr();
                     }
                 }
             }
             global::non_purus_call_configuration::StringEncoding::C_Utf8 => {
-                for (i, (is_by_ref, ty)) in cfg.arguments.iter().enumerate() {
-                    if *is_by_ref {
+                for (i, arg) in args.iter_mut().enumerate() {
+                    if cfg.arguments.get(i).is_some_and(|x| x.0) {
                         continue;
                     }
-                    if *ty == NonPurusCallType::String {
+
+                    if arg.ty == NonPurusCallType::String {
                         let data = CString::new(
-                            unsafe { args[i].cast::<ManagedReference<Class>>().as_ref_unchecked() }
+                            unsafe { arg.val.cast::<ManagedReference<Class>>().as_ref_unchecked() }
                                 .access::<StringAccessor>()
                                 .unwrap()
                                 .to_string()
@@ -379,7 +419,7 @@ impl CPU {
                                 data.as_ptr().cast_const().cast::<std::ffi::c_char>(),
                                 &allocate_guard,
                             ));
-                            args[i] = ptr.cast().as_ptr();
+                            arg.val = ptr.cast().as_ptr();
                         }
                         #[cfg(not(windows))]
                         {
@@ -395,26 +435,27 @@ impl CPU {
         match cfg.object_strategy {
             ObjectStrategy::Remain => (),
             ObjectStrategy::PointToData => {
-                for (i, (is_by_ref, ty)) in cfg.arguments.iter().enumerate() {
-                    if *is_by_ref {
+                for (i, arg) in args.iter_mut().enumerate() {
+                    if cfg.arguments.get(i).is_some_and(|x| x.0) {
                         continue;
                     }
-                    if (*ty == NonPurusCallType::Object)
-                        || ((*ty == NonPurusCallType::String) && treat_string_as_object)
+
+                    if (arg.ty == NonPurusCallType::Object)
+                        || ((arg.ty == NonPurusCallType::String) && treat_string_as_object)
                     {
                         let ptr = GuardedBox::into_non_null(GuardedBox::new(
-                            unsafe { args[i].cast::<ManagedReference<Class>>().read().data_ptr() },
+                            unsafe { arg.val.cast::<ManagedReference<Class>>().read().data_ptr() },
                             &allocate_guard,
                         ));
-                        args[i] = ptr.as_ptr().cast();
+                        arg.val = ptr.as_ptr().cast();
                     }
                 }
             }
         }
-        for (i, (is_by_ref, _)) in cfg.arguments.iter().enumerate() {
-            if *is_by_ref {
-                let p = GuardedBox::into_non_null(GuardedBox::new(args[i], &allocate_guard));
-                args[i] = p.as_ptr().cast();
+        for (i, arg) in args.iter_mut().enumerate() {
+            if cfg.arguments.get(i).is_some_and(|x| x.0) {
+                let p = GuardedBox::into_non_null(GuardedBox::new(arg.val, &allocate_guard));
+                arg.val = p.as_ptr().cast();
             }
         }
         let fun = libffi::low::CodePtr::from_ptr(f_ptr.cast());
@@ -422,12 +463,14 @@ impl CPU {
         let result_ptr =
             std::alloc::Allocator::allocate_zeroed(&std::alloc::Global, result_layout).unwrap();
 
+        let mut args_to_pass = args.iter().map(|x| x.val).collect::<Vec<_>>();
+
         unsafe {
             libffi::raw::ffi_call(
                 cif.as_raw_ptr(),
                 Some(*fun.as_safe_fun()),
                 result_ptr.as_non_null_ptr().cast::<c_void>().as_ptr(),
-                args.as_mut_ptr(),
+                args_to_pass.as_mut_ptr(),
             );
         }
 

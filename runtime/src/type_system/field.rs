@@ -1,6 +1,6 @@
 use std::{alloc::Layout, cell::Cell, ptr::NonNull};
 
-use global::{attrs::FieldAttr, getset::Getters};
+use global::{attrs::FieldAttr, getset::Getters, non_purus_call_configuration::NonPurusCallType};
 
 use crate::{
     memory::GetLayoutOptions,
@@ -142,5 +142,34 @@ impl Field {
         }
 
         th.as_non_generic().unwrap().val_libffi_type()
+    }
+
+    pub fn non_purus_call_type_with_type<T: GetTypeVars + GetAssemblyRef>(
+        &self,
+        ty: &T,
+    ) -> NonPurusCallType {
+        let mut th = self
+            .load_type(ty.__get_assembly_ref().manager_ref())
+            .unwrap();
+
+        let type_vars = ty.__get_type_vars();
+
+        if type_vars.is_none() && matches!(th, TypeHandle::Generic(_)) {
+            unimplemented!()
+        }
+
+        let Some(type_vars) = type_vars.as_ref() else {
+            unreachable!()
+        };
+
+        while let TypeHandle::Generic(g_index) = th {
+            if let Some(t) = type_vars.get(g_index as usize) {
+                th = t.load(ty.__get_assembly_ref().manager_ref()).unwrap();
+            } else {
+                break; // It leads to panicking at the unwrap method
+            }
+        }
+
+        th.as_non_generic().unwrap().non_purus_call_type()
     }
 }

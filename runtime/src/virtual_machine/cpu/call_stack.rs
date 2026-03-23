@@ -16,6 +16,7 @@ use crate::{
         type_handle::{NonGenericTypeHandle, NonGenericTypeHandleKind},
     },
     value::managed_reference::ManagedReference,
+    virtual_machine::cpu::NonPurusCallArg,
 };
 
 pub struct CallStack {
@@ -308,6 +309,13 @@ impl LocalVariable {
     }
     pub const fn ptr(&self) -> NonNull<u8> {
         self.ptr
+    }
+
+    pub fn into_non_purus_call_arg(self) -> NonPurusCallArg {
+        NonPurusCallArg {
+            val: self.ptr.cast().as_ptr(),
+            ty: self.ty.non_purus_call_type(),
+        }
     }
 }
 

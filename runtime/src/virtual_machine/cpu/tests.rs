@@ -2,17 +2,23 @@ use std::alloc::{Allocator, Layout};
 
 use global::{
     attrs::CallConvention,
-    instruction::{IRegisterAddr, Instruction, Instruction_Call, Instruction_Load, Instruction_New, LoadContent, RegisterAddr},
-    non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType, ObjectStrategy, StringEncoding},
+    instruction::{
+        IRegisterAddr, Instruction, Instruction_Calculate, Instruction_Call, Instruction_Load,
+        Instruction_New, Instruction_UntypedCalculate, LoadContent, RegisterAddr,
+    },
+    non_purus_call_configuration::{
+        NonPurusCallConfiguration, NonPurusCallType, ObjectStrategy, StringEncoding,
+    },
 };
-use stdlib_header::definitions::{System_Array_1_MethodId, System_NonPurusCallConfiguration_MethodId, System_NonPurusCallType_StaticMethodId};
+use stdlib_header::definitions::{
+    System_Array_1_MethodId, System_NonPurusCallConfiguration_MethodId,
+    System_NonPurusCallType_StaticMethodId,
+};
 use widestring::U16CStr;
 
 use crate::{
-    stdlib::{
-        CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _
-    },
-    test_utils::{LEAK_DETECTOR, g_core_type},
+    stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _},
+    test_utils::{LEAK_DETECTOR, g_core_type, try_invoke_instructions},
     type_system::{
         assembly::Assembly,
         class::Class,
@@ -161,10 +167,10 @@ fn static_non_purus_call() {
         &cfg,
         f_ptr,
         vec![
-            (&raw const a).cast_mut().cast(),
-            (&raw const b).cast_mut().cast(),
-            (&raw const c).cast_mut().cast(),
-            (&raw const d).cast_mut().cast(),
+            NonPurusCallArg::new(&a, NonPurusCallType::U64),
+            NonPurusCallArg::new(&b, NonPurusCallType::U32),
+            NonPurusCallArg::new(&c, NonPurusCallType::U8),
+            NonPurusCallArg::new(&d, NonPurusCallType::String),
         ],
     );
     unsafe {
@@ -210,10 +216,10 @@ fn non_purus_call_marshal() {
         &cfg,
         f_ptr,
         vec![
-            (&raw const a).cast_mut().cast(),
-            (&raw const b).cast_mut().cast(),
-            (&raw const c).cast_mut().cast(),
-            (&raw const d).cast_mut().cast(),
+            NonPurusCallArg::new(&a, NonPurusCallType::U64),
+            NonPurusCallArg::new(&b, NonPurusCallType::U32),
+            NonPurusCallArg::new(&c, NonPurusCallType::U8),
+            NonPurusCallArg::new(&d, NonPurusCallType::String),
         ],
     );
     unsafe {
@@ -234,302 +240,207 @@ fn dynamic_non_purus_call() -> global::Result<()> {
         0
     }
 
-    global_vm()
-        .assembly_manager()
-        .add_assembly(Assembly::new_for_adding(
-            "Test".to_owned(),
-            false,
-            |assembly| {
-                vec![
-                    Class::new(
-                        assembly,
-                        "Test::Test".to_owned(),
-                        global::attr!(
-                            class Public {}
-                        ),
-                        Some(
-                            global_vm()
-                                .assembly_manager()
-                                .get_core_type(CoreTypeId::System_Object)
-                                .unwrap_class(),
-                        ),
-                        vec![],
-                        |class| {
-                            MethodTable::new(class, |mt| {
-                                vec![
-                                    Box::new(Method::new(
-                                        mt,
-                                        "TestFn".to_owned(),
-                                        global::attr!(
-                                            method Public {Static}
-                                            /* 0 */ g_core_type!(System_USize), // Pointer to function
+    let (result_ptr, result_layout) = try_invoke_instructions(
+        vec![
+            /* 0 */ g_core_type!(System_USize), // Pointer to function
+            /* 1 */ g_core_type!(System_UInt64), // a
+            /* 2 */ g_core_type!(System_UInt32), // b
+            /* 3 */ g_core_type!(System_UInt8), // c
+            /* 4 */ g_core_type!(System_String), // d
+            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
+            /* 6 */ g_core_type!(System_UInt8), // Call convention
+            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
+            /* 8 */ g_core_type!(System_UInt8), // Encoding
+            /* 9 */ g_core_type!(System_UInt8), // Object strategy
+            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
+            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
+            /* 12 */ g_core_type!(System_USize), // Index for setting
+            /* 13 */ g_core_type!(System_USize), // For 10
+            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
+            /* 15 */ g_core_type!(System_Void),
+            /* 16 */ g_core_type!(System_UInt64), // RET
+        ],
+        g_core_type!(System_UInt64),
+        vec![
+            // Load function pointer
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(0),
+                content: LoadContent::U64(test as *const u8 as usize as u64),
+            }),
+            /* #region Arguments */
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(1),
+                content: LoadContent::U64(0x1ff1),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(2),
+                content: LoadContent::U32(10),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(3),
+                content: LoadContent::U8(15),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(4),
+                content: LoadContent::String("aaa".to_owned()),
+            }),
+            /* #endregion */
 
-                                            /* 1 */ g_core_type!(System_UInt64),
-                                            /* 2 */ g_core_type!(System_UInt32),
-                                            /* 3 */ g_core_type!(System_UInt8),
-                                            /* 4 */ g_core_type!(System_String),
-
-                                            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
-                                            /* 6 */ g_core_type!(System_UInt8), // Call convention
-                                            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
-                                            /* 8 */ g_core_type!(System_UInt8), // Encoding
-                                            /* 9 */ g_core_type!(System_UInt8), // Object strategy
-                                            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
-                                            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
-                                            /* 12 */ g_core_type!(System_USize), // Index for setting
-                                            /* 13 */ g_core_type!(System_USize), // For 10
-                                            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
-                                            /* 15 */ g_core_type!(System_Void),
-
-                                            /* 16 */ g_core_type!(System_UInt64), // RET
-                                        ),
-                                        vec![],
-                                        g_core_type!(System_UInt64),
-                                        CallConvention::PlatformDefault,
-                                        None,
-                                        vec![
-                                            // Load function pointer
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(0),
-                                                content: LoadContent::U64(test as *const u8 as usize as u64),
-                                            }),
-                                            /* #region Arguments */
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(1),
-                                                content: LoadContent::U64(0x1ff1),
-                                            }),
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(2),
-                                                content: LoadContent::U32(10),
-                                            }),
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(3),
-                                                content: LoadContent::U8(15),
-                                            }),
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(4),
-                                                content: LoadContent::String("aaa".to_owned()),
-                                            }),
-                                            /* #endregion */
-                                            
-                                            /* #region Config Setup */
-                                            // Call convention
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(6),
-                                                content: LoadContent::U8(CallConvention::PlatformDefault.into()),
-                                            }),
-                                            // Return type
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method: System_NonPurusCallType_StaticMethodId::CreateU64.into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(7),
-                                            }),
-                                            // Encoding
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(8),
-                                                content: LoadContent::U8(StringEncoding::C_Utf16.into()),
-                                            }),
-                                            // Object strategy
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(9),
-                                                content: LoadContent::U8(ObjectStrategy::PointToData.into()),
-                                            }),
-                                            // New by ref argument array
-                                            Instruction::New(Instruction_New::NewArray {
-                                                element_type: CoreTypeId::System_USize
-                                                    .static_type_ref()
-                                                    .into(),
-                                                len: 1,
-                                                output: RegisterAddr::new(10),
-                                            }),
-                                            // New argument array
-                                            Instruction::New(Instruction_New::NewArray {
-                                                element_type: CoreTypeId::System_USize
-                                                    .static_type_ref()
-                                                    .into(),
-                                                len: 4,
-                                                output: RegisterAddr::new(11),
-                                            }),
-                                            // Set Index
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(0),
-                                            }),
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(13),
-                                                content: LoadContent::U64(1),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(10),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(13),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            // Arg0
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreateU64
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            // Arg 1
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(1),
-                                            }),
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreateU32
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            // Arg 2
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(2),
-                                            }),
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreateU8
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            // Arg 3
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(3),
-                                            }),
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreateString
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            /* #endregion */
-                                            // Construct
-                                            Instruction::New(Instruction_New::NewObject {
-                                                ty: CoreTypeId::System_NonPurusCallConfiguration
-                                                    .static_type_ref()
-                                                    .into(),
-                                                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(6),
-                                                    RegisterAddr::new(7),
-                                                    RegisterAddr::new(8),
-                                                    RegisterAddr::new(9),
-                                                    RegisterAddr::new(10),
-                                                    RegisterAddr::new(11),
-                                                ],
-                                                output: RegisterAddr::new(5),
-                                            }),
-                                            Instruction::Call(Instruction_Call::DynamicNonPurusCall {
-                                                f_pointer: RegisterAddr::new(0),
-                                                config: RegisterAddr::new(5),
-                                                args: vec![
-                                                    RegisterAddr::new(1),
-                                                    RegisterAddr::new(2),
-                                                    RegisterAddr::new(3),
-                                                    RegisterAddr::new(4),
-                                                ],
-                                                ret_at: RegisterAddr::new(16),
-                                            }),
-                                            Instruction::ReturnVal {
-                                                register_addr: RegisterAddr::new(16),
-                                            },
-                                        ],
-                                    )),
-                                    Box::new(
-                                        Method::default_sctor(
-                                            Some(mt),
-                                            global::attr!(method Public {Static}),
-                                        ),
-                                    ),
-                                ]
-                            })
-                            .as_non_null_ptr()
-                        },
-                        vec![],
-                        None,
-                        None,
-                    )
+            /* #region Config Setup */
+            // Call convention
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(6),
+                content: LoadContent::U8(CallConvention::PlatformDefault.into()),
+            }),
+            // Return type
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateU64.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(7),
+            }),
+            // Encoding
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(8),
+                content: LoadContent::U8(StringEncoding::C_Utf16.into()),
+            }),
+            // Object strategy
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(9),
+                content: LoadContent::U8(ObjectStrategy::PointToData.into()),
+            }),
+            // New by ref argument array
+            Instruction::New(Instruction_New::NewArray {
+                element_type: CoreTypeId::System_USize.static_type_ref().into(),
+                len: 1,
+                output: RegisterAddr::new(10),
+            }),
+            // New argument array
+            Instruction::New(Instruction_New::NewArray {
+                element_type: CoreTypeId::System_USize.static_type_ref().into(),
+                len: 4,
+                output: RegisterAddr::new(11),
+            }),
+            // Set Index
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(12),
+                content: LoadContent::U64(0),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(13),
+                content: LoadContent::U64(1),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(10),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(13)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            // Arg0
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateU64.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            // Arg 1
+            Instruction::Calculate(Instruction_Calculate::U64(
+                Instruction_UntypedCalculate::AddOne {
+                    target: RegisterAddr::new(12),
+                },
+            )),
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateU32.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            // Arg 2
+            Instruction::Calculate(Instruction_Calculate::U64(
+                Instruction_UntypedCalculate::AddOne {
+                    target: RegisterAddr::new(12),
+                },
+            )),
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateU8.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            // Arg 3
+            Instruction::Calculate(Instruction_Calculate::U64(
+                Instruction_UntypedCalculate::AddOne {
+                    target: RegisterAddr::new(12),
+                },
+            )),
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            /* #endregion */
+            // Construct
+            Instruction::New(Instruction_New::NewObject {
+                ty: CoreTypeId::System_NonPurusCallConfiguration
+                    .static_type_ref()
                     .into(),
-                ]
+                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
+                args: vec![
+                    RegisterAddr::new(6),
+                    RegisterAddr::new(7),
+                    RegisterAddr::new(8),
+                    RegisterAddr::new(9),
+                    RegisterAddr::new(10),
+                    RegisterAddr::new(11),
+                ],
+                output: RegisterAddr::new(5),
+            }),
+            Instruction::Call(Instruction_Call::DynamicNonPurusCall {
+                f_pointer: RegisterAddr::new(0),
+                config: RegisterAddr::new(5),
+                args: vec![
+                    RegisterAddr::new(1),
+                    RegisterAddr::new(2),
+                    RegisterAddr::new(3),
+                    RegisterAddr::new(4),
+                ],
+                ret_at: RegisterAddr::new(16),
+            }),
+            Instruction::ReturnVal {
+                register_addr: RegisterAddr::new(16),
             },
-        ));
+        ],
+    );
 
-    let mut cpu = CpuID::new_write_global();
-
-    let assem = global_vm()
-        .assembly_manager()
-        .get_assembly_by_name("Test")
-        .unwrap()
-        .unwrap();
-
-    let class = assem.get_class(0).unwrap().unwrap();
-    let mt = unsafe { class.as_ref().method_table_ref() };
-    let test_fn = mt.find_first_method_by_name("TestFn").unwrap();
     let result = unsafe {
-        test_fn
-            .as_ref()
-            .typed_res_call::<u64>(&mut cpu, None, &[])
+        let data = result_ptr.cast::<u64>().read();
+        std::alloc::Allocator::deallocate(&std::alloc::Global, result_ptr, result_layout);
+        data
     };
     dbg!(result);
 
@@ -537,9 +448,44 @@ fn dynamic_non_purus_call() -> global::Result<()> {
 }
 
 #[test]
+fn non_purus_call_va_arg() {
+    unsafe extern "C" {
+        safe fn wprintf(format: *const u16, ...) -> std::ffi::c_int;
+    }
+
+    let f_ptr = wprintf as *const u8;
+    let mut cpu = CpuID::new_write_global();
+
+    let cfg = NonPurusCallConfiguration {
+        call_convention: CallConvention::CDeclWithVararg,
+        return_type: NonPurusCallType::I32,
+        encoding: global::non_purus_call_configuration::StringEncoding::C_Utf16,
+        object_strategy: global::non_purus_call_configuration::ObjectStrategy::PointToData,
+        arguments: vec![(false, NonPurusCallType::String)],
+    };
+
+    let formatting = ManagedReference::new_string(&mut cpu, "%ls: %d\n");
+    let info = ManagedReference::new_string(&mut cpu, "AAA");
+    let i_data: std::ffi::c_int = 10;
+
+    let (result, result_layout) = cpu.non_purus_call(
+        &cfg,
+        f_ptr,
+        vec![
+            NonPurusCallArg::new(&formatting, NonPurusCallType::String),
+            NonPurusCallArg::new(&info, NonPurusCallType::String),
+            NonPurusCallArg::new(&i_data, NonPurusCallType::C_Int),
+        ],
+    );
+    unsafe {
+        std::alloc::Allocator::deallocate(&std::alloc::Global, result, result_layout);
+    }
+}
+
+#[test]
 #[cfg(windows)]
 // cSpell:disable
-fn message_box() {
+fn static_message_box() {
     windows::core::link!(
         "user32.dll" "system" fn MessageBoxW(
             hwnd : windows::Win32::Foundation::HWND,
@@ -572,10 +518,10 @@ fn message_box() {
         &cfg,
         f_ptr,
         vec![
-            (&raw const hwnd).cast_mut().cast(),
-            (&raw const lptext).cast_mut().cast(),
-            (&raw const lpcaption).cast_mut().cast(),
-            (&raw const utype).cast_mut().cast(),
+            NonPurusCallArg::new(&hwnd, NonPurusCallType::Pointer),
+            NonPurusCallArg::new(&lptext, NonPurusCallType::String),
+            NonPurusCallArg::new(&lpcaption, NonPurusCallType::String),
+            NonPurusCallArg::new(&utype, NonPurusCallType::U32),
         ],
     );
     unsafe {
@@ -588,6 +534,8 @@ fn message_box() {
 #[cfg(windows)]
 // cSpell:disable
 fn dynamic_message_box() -> global::Result<()> {
+    use crate::test_utils::try_invoke_instructions;
+
     windows::core::link!(
         "user32.dll" "system" fn MessageBoxW(
             hwnd : windows::Win32::Foundation::HWND,
@@ -597,288 +545,193 @@ fn dynamic_message_box() -> global::Result<()> {
         ) -> windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT
     );
 
-    global_vm()
-        .assembly_manager()
-        .add_assembly(Assembly::new_for_adding(
-            "Test".to_owned(),
-            false,
-            |assembly| {
-                vec![
-                    Class::new(
-                        assembly,
-                        "Test::Test".to_owned(),
-                        global::attr!(
-                            class Public {}
-                        ),
-                        Some(
-                            global_vm()
-                                .assembly_manager()
-                                .get_core_type(CoreTypeId::System_Object)
-                                .unwrap_class(),
-                        ),
-                        vec![],
-                        |class| {
-                            MethodTable::new(class, |mt| {
-                                vec![
-                                    Box::new(Method::new(
-                                        mt,
-                                        "TestFn".to_owned(),
-                                        global::attr!(
-                                            method Public {Static}
-                                            /* 0 */ g_core_type!(System_USize), // Pointer to function
+    let (result_ptr, result_layout) = try_invoke_instructions(
+        vec![
+            /* 0 */ g_core_type!(System_USize), // Pointer to function
+            /* 1 */ g_core_type!(System_Pointer),
+            /* 2 */ g_core_type!(System_String),
+            /* 3 */ g_core_type!(System_String),
+            /* 4 */ g_core_type!(System_UInt32),
+            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
+            /* 6 */ g_core_type!(System_UInt8), // Call convention
+            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
+            /* 8 */ g_core_type!(System_UInt8), // Encoding
+            /* 9 */ g_core_type!(System_UInt8), // Object strategy
+            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
+            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
+            /* 12 */ g_core_type!(System_USize), // Index for setting
+            /* 13 */ g_core_type!(System_USize), // For 10
+            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
+            /* 15 */ g_core_type!(System_Void),
+            /* 16 */ g_core_type!(System_Int32), // RET
+        ],
+        g_core_type!(System_Int32),
+        vec![
+            // Load function pointer
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(0),
+                content: LoadContent::U64(MessageBoxW as *const u8 as usize as u64),
+            }),
+            /* #region Arguments */
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(1),
+                content: LoadContent::U64(0),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(2),
+                content: LoadContent::String("TEXT".to_owned()),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(3),
+                content: LoadContent::String("CAPTION".to_owned()),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(4),
+                content: LoadContent::U32(windows::Win32::UI::WindowsAndMessaging::MB_ICONERROR.0),
+            }),
+            /* #endregion */
 
-                                            /* 1 */ g_core_type!(System_Pointer),
-                                            /* 2 */ g_core_type!(System_String),
-                                            /* 3 */ g_core_type!(System_String),
-                                            /* 4 */ g_core_type!(System_UInt32),
-
-                                            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
-                                            /* 6 */ g_core_type!(System_UInt8), // Call convention
-                                            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
-                                            /* 8 */ g_core_type!(System_UInt8), // Encoding
-                                            /* 9 */ g_core_type!(System_UInt8), // Object strategy
-                                            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
-                                            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
-                                            /* 12 */ g_core_type!(System_USize), // Index for setting
-                                            /* 13 */ g_core_type!(System_USize), // For 10
-                                            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
-                                            /* 15 */ g_core_type!(System_Void),
-
-                                            /* 16 */ g_core_type!(System_Int32), // RET
-                                        ),
-                                        vec![],
-                                        g_core_type!(System_Int32),
-                                        CallConvention::PlatformDefault,
-                                        None,
-                                        vec![
-                                            // Load function pointer
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(0),
-                                                content: LoadContent::U64(MessageBoxW as *const u8 as usize as u64),
-                                            }),
-                                            /* #region Arguments */
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(1),
-                                                content: LoadContent::U64(0),
-                                            }),
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(2),
-                                                content: LoadContent::String("TEXT".to_owned()),
-                                            }),
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(3),
-                                                content: LoadContent::String("CAPTION".to_owned()),
-                                            }),
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(4),
-                                                content: LoadContent::U32(windows::Win32::UI::WindowsAndMessaging::MB_ICONERROR.0),
-                                            }),
-                                            /* #endregion */
-                                            
-                                            /* #region Config Setup */
-                                            // Call convention
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(6),
-                                                content: LoadContent::U8(CallConvention::PlatformDefault.into()),
-                                            }),
-                                            // Return type
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method: System_NonPurusCallType_StaticMethodId::CreateI32.into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(7),
-                                            }),
-                                            // Encoding
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(8),
-                                                content: LoadContent::U8(StringEncoding::C_Utf16.into()),
-                                            }),
-                                            // Object strategy
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(9),
-                                                content: LoadContent::U8(ObjectStrategy::PointToData.into()),
-                                            }),
-                                            // New by ref argument array
-                                            Instruction::New(Instruction_New::NewArray {
-                                                element_type: CoreTypeId::System_USize
-                                                    .static_type_ref()
-                                                    .into(),
-                                                len: 0,
-                                                output: RegisterAddr::new(10),
-                                            }),
-                                            // New argument array
-                                            Instruction::New(Instruction_New::NewArray {
-                                                element_type: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                len: 4,
-                                                output: RegisterAddr::new(11),
-                                            }),
-                                            // Arg0
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(0),
-                                            }),
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreatePointer
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            // Arg 1
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(1),
-                                            }),
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreateString
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            // Arg 2
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(2),
-                                            }),
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreateString
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            // Arg 3
-                                            Instruction::Load(Instruction_Load {
-                                                addr: RegisterAddr::new(12),
-                                                content: LoadContent::U64(3),
-                                            }),
-                                            Instruction::Call(Instruction_Call::StaticCall {
-                                                ty: CoreTypeId::System_NonPurusCallType
-                                                    .static_type_ref()
-                                                    .into(),
-                                                method:
-                                                    System_NonPurusCallType_StaticMethodId::CreateU32
-                                                        .into(),
-                                                args: vec![],
-                                                ret_at: RegisterAddr::new(14),
-                                            }),
-                                            Instruction::Call(Instruction_Call::InstanceCall {
-                                                val: RegisterAddr::new(11),
-                                                method: System_Array_1_MethodId::set_Index.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(12),
-                                                    RegisterAddr::new(14),
-                                                ],
-                                                ret_at: RegisterAddr::new(15),
-                                            }),
-                                            /* #endregion */
-                                            // Construct
-                                            Instruction::New(Instruction_New::NewObject {
-                                                ty: CoreTypeId::System_NonPurusCallConfiguration
-                                                    .static_type_ref()
-                                                    .into(),
-                                                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
-                                                args: vec![
-                                                    RegisterAddr::new(6),
-                                                    RegisterAddr::new(7),
-                                                    RegisterAddr::new(8),
-                                                    RegisterAddr::new(9),
-                                                    RegisterAddr::new(10),
-                                                    RegisterAddr::new(11),
-                                                ],
-                                                output: RegisterAddr::new(5),
-                                            }),
-                                            Instruction::Call(Instruction_Call::DynamicNonPurusCall {
-                                                f_pointer: RegisterAddr::new(0),
-                                                config: RegisterAddr::new(5),
-                                                args: vec![
-                                                    RegisterAddr::new(1),
-                                                    RegisterAddr::new(2),
-                                                    RegisterAddr::new(3),
-                                                    RegisterAddr::new(4),
-                                                ],
-                                                ret_at: RegisterAddr::new(16),
-                                            }),
-                                            Instruction::ReturnVal {
-                                                register_addr: RegisterAddr::new(16),
-                                            },
-                                        ],
-                                    )),
-                                    Box::new(
-                                        Method::default_sctor(
-                                            Some(mt),
-                                            global::attr!(method Public {Static}),
-                                        ),
-                                    ),
-                                ]
-                            })
-                            .as_non_null_ptr()
-                        },
-                        vec![],
-                        None,
-                        None,
-                    )
+            /* #region Config Setup */
+            // Call convention
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(6),
+                content: LoadContent::U8(CallConvention::PlatformDefault.into()),
+            }),
+            // Return type
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateI32.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(7),
+            }),
+            // Encoding
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(8),
+                content: LoadContent::U8(StringEncoding::C_Utf16.into()),
+            }),
+            // Object strategy
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(9),
+                content: LoadContent::U8(ObjectStrategy::PointToData.into()),
+            }),
+            // New by ref argument array
+            Instruction::New(Instruction_New::NewArray {
+                element_type: CoreTypeId::System_USize.static_type_ref().into(),
+                len: 0,
+                output: RegisterAddr::new(10),
+            }),
+            // New argument array
+            Instruction::New(Instruction_New::NewArray {
+                element_type: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                len: 4,
+                output: RegisterAddr::new(11),
+            }),
+            // Arg0
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(12),
+                content: LoadContent::U64(0),
+            }),
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreatePointer.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            // Arg 1
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(12),
+                content: LoadContent::U64(1),
+            }),
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            // Arg 2
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(12),
+                content: LoadContent::U64(2),
+            }),
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            // Arg 3
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(12),
+                content: LoadContent::U64(3),
+            }),
+            Instruction::Call(Instruction_Call::StaticCall {
+                ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
+                method: System_NonPurusCallType_StaticMethodId::CreateU32.into(),
+                args: vec![],
+                ret_at: RegisterAddr::new(14),
+            }),
+            Instruction::Call(Instruction_Call::InstanceCall {
+                val: RegisterAddr::new(11),
+                method: System_Array_1_MethodId::set_Index.into(),
+                args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
+                ret_at: RegisterAddr::new(15),
+            }),
+            /* #endregion */
+            // Construct
+            Instruction::New(Instruction_New::NewObject {
+                ty: CoreTypeId::System_NonPurusCallConfiguration
+                    .static_type_ref()
                     .into(),
-                ]
+                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
+                args: vec![
+                    RegisterAddr::new(6),
+                    RegisterAddr::new(7),
+                    RegisterAddr::new(8),
+                    RegisterAddr::new(9),
+                    RegisterAddr::new(10),
+                    RegisterAddr::new(11),
+                ],
+                output: RegisterAddr::new(5),
+            }),
+            Instruction::Call(Instruction_Call::DynamicNonPurusCall {
+                f_pointer: RegisterAddr::new(0),
+                config: RegisterAddr::new(5),
+                args: vec![
+                    RegisterAddr::new(1),
+                    RegisterAddr::new(2),
+                    RegisterAddr::new(3),
+                    RegisterAddr::new(4),
+                ],
+                ret_at: RegisterAddr::new(16),
+            }),
+            Instruction::ReturnVal {
+                register_addr: RegisterAddr::new(16),
             },
-        ));
+        ],
+    );
 
-    let mut cpu = CpuID::new_write_global();
-
-    let assem = global_vm()
-        .assembly_manager()
-        .get_assembly_by_name("Test")
-        .unwrap()
-        .unwrap();
-
-    let class = assem.get_class(0).unwrap().unwrap();
-    let mt = unsafe { class.as_ref().method_table_ref() };
-    let test_fn = mt.find_first_method_by_name("TestFn").unwrap();
     let result = unsafe {
-        test_fn
-            .as_ref()
-            .typed_res_call::<i32>(&mut cpu, None, &[])
+        let data = result_ptr.cast::<i32>().read();
+        std::alloc::Allocator::deallocate(&std::alloc::Global, result_ptr, result_layout);
+        data
     };
     dbg!(result);
 

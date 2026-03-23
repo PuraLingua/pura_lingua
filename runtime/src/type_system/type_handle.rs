@@ -1,10 +1,10 @@
 use std::{alloc::Layout, fmt::Debug, ptr::NonNull};
 
 use derive_more::Display;
-use global::UnwrapEnum;
+use global::{UnwrapEnum, non_purus_call_configuration::NonPurusCallType};
 
 use crate::{
-    stdlib::CoreTypeId,
+    stdlib::{CoreTypeId, CoreTypeIdExt},
     type_system::{
         assembly_manager::AssemblyManager, class::Class, r#struct::Struct, type_ref::TypeRef,
     },
@@ -89,6 +89,19 @@ impl NonGenericTypeHandle {
         match self {
             Self::Class(ty) => unsafe { ty.as_ref().val_libffi_type() },
             Self::Struct(ty) => unsafe { ty.as_ref().val_libffi_type() },
+        }
+    }
+
+    pub fn non_purus_call_type(&self) -> NonPurusCallType {
+        if let Some(core_type_id) = self.get_core_type_id()
+            && let Some(gotten_ty) = core_type_id.non_purus_call_type()
+        {
+            return gotten_ty;
+        }
+
+        match self {
+            Self::Class(_) => NonPurusCallType::Object,
+            Self::Struct(ty) => unsafe { ty.as_ref().non_purus_call_type() },
         }
     }
 

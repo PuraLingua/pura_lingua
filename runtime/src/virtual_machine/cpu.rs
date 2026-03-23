@@ -32,6 +32,8 @@ mod tests;
 
 mod non_purus_call;
 
+pub use non_purus_call::{NonPurusCallArg, NonPurusCallArgType};
+
 #[derive(Getters, MutGetters)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct CPU {

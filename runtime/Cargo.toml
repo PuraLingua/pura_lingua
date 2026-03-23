@@ -14,7 +14,7 @@ proc_macros = { package = "pura_lingua_runtime_proc_macros", path = "../rt_proc_
 binary = { package = "pura_lingua_binary", path = "../binary" }
 stdlib_header = { package = "pura_lingua_runtime_stdlib", path = "../rt_stdlib" }
 
-libffi = "5.0.0"
+libffi = "5.1.0"
 parking_lot = "0.12.5"
 bon = "3.6.5"
 inkwell = { version = "0.8.0", features = ["llvm18-1-prefer-static"] }

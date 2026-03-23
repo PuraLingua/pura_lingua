@@ -30,8 +30,10 @@ fn get_core_struct(id: CoreTypeId, assembly: &Assembly) -> NonNull<Struct> {
 
 pub trait CoreTypeIdExt: Sized {
     fn global_type_handle(self) -> NonGenericTypeHandle;
-    /// Some type could not be passed in libffi and for those type it returns None
+    /// Some types are not specified and for those types it returns None
     fn val_libffi_type(self) -> Option<libffi::middle::Type>;
+    /// Some types are not specified and for those types it returns None
+    fn non_purus_call_type(self) -> Option<NonPurusCallType>;
 }
 
 pub const trait CoreTypeIdConstExt: Sized {
@@ -40,6 +42,7 @@ pub const trait CoreTypeIdConstExt: Sized {
     fn val_layout(self) -> Option<Layout>;
     fn get_loader(self) -> fn(&Assembly) -> NonGenericTypeHandle;
 }
+use global::non_purus_call_configuration::NonPurusCallType;
 pub use stdlib_header::CoreTypeId;
 
 impl const CoreTypeIdConstExt for CoreTypeId {
@@ -222,7 +225,7 @@ impl CoreTypeIdExt for CoreTypeId {
         use libffi::middle::Type;
         match self {
             Self::System_Object => Some(Type::pointer()),
-            Self::System_ValueType => None,
+            Self::System_ValueType => Some(Type::void()),
 
             Self::System_Void => Some(Type::void()),
 
@@ -264,6 +267,53 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_Win32Exception => Some(Type::pointer()),
             Self::System_ErrnoException => Some(Type::pointer()),
             Self::System_DlErrorException => Some(Type::pointer()),
+        }
+    }
+    fn non_purus_call_type(self) -> Option<NonPurusCallType> {
+        match self {
+            Self::System_Object => Some(NonPurusCallType::Object),
+            Self::System_ValueType => None,
+
+            Self::System_Void => Some(NonPurusCallType::Void),
+
+            Self::System_Nullable_1 => Some(NonPurusCallType::Object),
+
+            Self::System_Boolean => Some(NonPurusCallType::U8),
+
+            Self::System_UInt8 => Some(NonPurusCallType::U8),
+            Self::System_UInt16 => Some(NonPurusCallType::U16),
+            Self::System_UInt32 => Some(NonPurusCallType::U32),
+            Self::System_UInt64 => Some(NonPurusCallType::U64),
+            Self::System_USize => Some(NonPurusCallType::USize),
+
+            Self::System_Int8 => Some(NonPurusCallType::I8),
+            Self::System_Int16 => Some(NonPurusCallType::I16),
+            Self::System_Int32 => Some(NonPurusCallType::I32),
+            Self::System_Int64 => Some(NonPurusCallType::I64),
+            Self::System_ISize => Some(NonPurusCallType::ISize),
+
+            Self::System_Char => Some(NonPurusCallType::U16),
+
+            Self::System_Pointer => Some(NonPurusCallType::Pointer),
+
+            Self::System_NonPurusCallConfiguration => Some(NonPurusCallType::Object),
+            Self::System_NonPurusCallType => Some(NonPurusCallType::Object),
+
+            Self::System_DynamicLibrary => Some(NonPurusCallType::Object),
+
+            Self::System_Tuple => None,
+
+            Self::System_Array_1 => Some(NonPurusCallType::Object),
+            Self::System_String => Some(NonPurusCallType::String),
+            Self::System_LargeString => Some(NonPurusCallType::Object),
+
+            Self::System_Environment => Some(NonPurusCallType::Object),
+
+            Self::System_Exception => Some(NonPurusCallType::Object),
+            Self::System_InvalidEnumException => Some(NonPurusCallType::Object),
+            Self::System_Win32Exception => Some(NonPurusCallType::Object),
+            Self::System_ErrnoException => Some(NonPurusCallType::Object),
+            Self::System_DlErrorException => Some(NonPurusCallType::Object),
         }
     }
 }

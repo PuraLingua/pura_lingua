@@ -143,14 +143,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             };
             let args = args
                 .iter()
-                .map(|x| {
-                    call_frame(cpu)
-                        .get(*x)
-                        .unwrap()
-                        .ptr()
-                        .cast::<c_void>()
-                        .as_ptr()
-                })
+                .map(|x| call_frame(cpu).get(*x).unwrap().into_non_purus_call_arg())
                 .collect::<Vec<_>>();
             let (ret_ptr, ret_layout) = cpu.non_purus_call(config, f_pointer, args);
             let Some(ret_out) = call_frame(cpu).get(*ret_at) else {
@@ -177,14 +170,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             };
             let args = args
                 .iter()
-                .map(|x| {
-                    call_frame(cpu)
-                        .get(*x)
-                        .unwrap()
-                        .ptr()
-                        .cast::<c_void>()
-                        .as_ptr()
-                })
+                .map(|x| call_frame(cpu).get(*x).unwrap().into_non_purus_call_arg())
                 .collect::<Vec<_>>();
             let cfg = match cpu.unmarshal_non_purus_configuration(config) {
                 Ok(x) => x,

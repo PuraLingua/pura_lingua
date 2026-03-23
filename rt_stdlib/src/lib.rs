@@ -47,10 +47,10 @@ pub enum CoreTypeId {
     System_Int64,
     System_ISize,
 
-    /// It differs from rust's [`char`],
+    /// It differs from rust's [`prim@char`],
     /// which stores a Unicode scalar value.
     ///
-    /// It stores a [`u16`]
+    /// It stores a [`prim@u16`]
     System_Char,
 
     System_Pointer,
