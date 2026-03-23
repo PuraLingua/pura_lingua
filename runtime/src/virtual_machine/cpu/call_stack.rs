@@ -392,6 +392,13 @@ impl CommonCallStackFrame {
     pub fn get_typed<T, TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr) -> Option<&T> {
         self.get(i).map(|x| LocalVariable::as_ref_typed::<T>(&x))
     }
+    pub fn get_mut_typed<T, TRegisterAddr: IRegisterAddr>(
+        &self,
+        i: TRegisterAddr,
+    ) -> Option<&mut T> {
+        self.get(i)
+            .map(|mut x| LocalVariable::as_mut_typed::<T>(&mut x))
+    }
 
     pub fn read_typed<T, TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr) -> Option<T> {
         self.get(i).map(LocalVariable::read_typed)

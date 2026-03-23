@@ -18,6 +18,7 @@
 #![feature(const_result_trait_fn)]
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
+#![feature(core_intrinsics)]
 //
 #![allow(internal_features)]
 #![allow(static_mut_refs)]
@@ -47,8 +48,6 @@ pub mod traits;
 
 pub mod color;
 pub mod path_searcher;
-
-pub mod std2c;
 
 // Re-exports
 pub use anyhow::{Error, Result};

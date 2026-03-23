@@ -1,4 +1,10 @@
+use global::instruction::{
+    IRegisterAddr, Instruction, Instruction_Load, Instruction_UntypedCalculate, LoadContent,
+    RegisterAddr,
+};
+
 use crate::{
+    test_utils::{g_core_type, try_invoke_instructions},
     type_system::class::Class,
     value::managed_reference::{ManagedReference, StringAccessor},
     virtual_machine::{CpuID, global_vm},
@@ -280,4 +286,75 @@ fn gtest_middle_ir_simple_console() -> global::Result<()> {
     }
 
     Ok(())
+}
+
+#[test]
+fn calculating() {
+    let (res_ptr, res_layout) = try_invoke_instructions(
+        vec![
+            g_core_type!(System_UInt64),
+            g_core_type!(System_UInt64),
+            g_core_type!(System_UInt64),
+            g_core_type!(System_UInt64),
+            g_core_type!(System_UInt64),
+        ],
+        g_core_type!(System_UInt64),
+        vec![
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(0),
+                content: LoadContent::U64(0),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(1),
+                content: LoadContent::U64(1),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(2),
+                content: LoadContent::U64(2),
+            }),
+            Instruction::Load(Instruction_Load {
+                addr: RegisterAddr::new(3),
+                content: LoadContent::U64(3),
+            }),
+            Instruction::Calculate(
+                Instruction_UntypedCalculate::<_, u64>::Add {
+                    lhs: RegisterAddr::new(0),
+                    rhs: RegisterAddr::new(4),
+                    target: RegisterAddr::new(4),
+                }
+                .into(),
+            ),
+            Instruction::Calculate(
+                Instruction_UntypedCalculate::<_, u64>::Add {
+                    lhs: RegisterAddr::new(1),
+                    rhs: RegisterAddr::new(4),
+                    target: RegisterAddr::new(4),
+                }
+                .into(),
+            ),
+            Instruction::Calculate(
+                Instruction_UntypedCalculate::<_, u64>::Add {
+                    lhs: RegisterAddr::new(2),
+                    rhs: RegisterAddr::new(4),
+                    target: RegisterAddr::new(4),
+                }
+                .into(),
+            ),
+            Instruction::Calculate(
+                Instruction_UntypedCalculate::<_, u64>::Add {
+                    lhs: RegisterAddr::new(3),
+                    rhs: RegisterAddr::new(4),
+                    target: RegisterAddr::new(4),
+                }
+                .into(),
+            ),
+            Instruction::ReturnVal {
+                register_addr: RegisterAddr::new(4),
+            },
+        ],
+    );
+    unsafe {
+        assert_eq!(res_ptr.cast::<u64>().read(), 0 + 1 + 2 + 3);
+        std::alloc::Allocator::deallocate(&std::alloc::Global, res_ptr, res_layout);
+    }
 }

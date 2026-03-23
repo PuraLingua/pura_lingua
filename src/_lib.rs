@@ -1,5 +1,7 @@
 #[cfg(feature = "binary")]
 pub extern crate binary;
+#[cfg(feature = "basic")]
+pub extern crate c_definitions;
 #[cfg(feature = "dynamic")]
 pub extern crate dynamic;
 #[cfg(feature = "basic")]

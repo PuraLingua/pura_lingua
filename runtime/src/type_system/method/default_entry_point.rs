@@ -60,6 +60,8 @@ mod set;
 
 mod jump;
 
+mod calculate;
+
 fn eval_throw<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
     #[allow(unused)] method: &Method<T>,
     #[allow(unused)] cpu: &mut CPU,
@@ -160,6 +162,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             Instruction::Set(ins) => _eval!(ins by set),
             Instruction::SSet(ins) => _eval!(ins by set),
 
+            Instruction::Calculate(ins) => _eval!(ins by calculate),
+            Instruction::SCalculate(ins) => _eval!(ins by calculate),
+
             Instruction::Throw { exception_addr } => {
                 eval_throw(method, cpu, this, args, result_ptr, pc, exception_addr)
             }
@@ -226,9 +231,19 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                     t_println!("NULL PTR at {location}");
                 }
                 Termination::AllInstructionExecuted => unsafe {
-                    result_ptr
-                        .as_non_null_ptr()
-                        .write_bytes(0, result_ptr.len());
+                    #[cfg(debug_assertions)]
+                    {
+                        if !method
+                            .get_return_type()
+                            .is_certain_core_type(stdlib_header::CoreTypeId::System_Void)
+                        {
+                            panic!("Not-return-void method returns nothing");
+                        }
+
+                        result_ptr
+                            .as_non_null_ptr()
+                            .write_bytes(0, result_ptr.len());
+                    }
                 },
                 Termination::LoadTypeHandleFailed(_) => {
                     t_println!("Cannot load TypeHandle");

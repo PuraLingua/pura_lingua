@@ -19,16 +19,13 @@ pub struct StringName {
     s: FastStr,
 }
 
-const fn __assert_layout() {
-    const {
-        assert!(size_of::<StringName>() == size_of::<[u8; 32]>());
-        assert!(align_of::<StringName>() == 0x8);
-    }
-}
+const _: () = {
+    assert!(size_of::<StringName>() == size_of::<[u8; 32]>());
+    assert!(align_of::<StringName>() == 0x8);
+};
 
 impl StringName {
     pub const fn from_static_str(s: &'static str) -> Self {
-        __assert_layout();
         Self {
             s: FastStr::from_static_str(s),
         }

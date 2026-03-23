@@ -14,6 +14,7 @@ pub use jumping::*;
 mod register_addr;
 pub use register_addr::*;
 
+mod calculate;
 mod call;
 mod check;
 mod jump;
@@ -22,6 +23,7 @@ mod new;
 mod read_write_pointer;
 mod set;
 
+pub use calculate::*;
 pub use call::*;
 pub use check::*;
 pub use jump::*;
@@ -56,6 +58,9 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
 
     Set(Instruction_Set<TTypeRef, TFieldRef, RegisterAddr>),
     SSet(Instruction_Set<TTypeRef, TFieldRef, ShortRegisterAddr>),
+
+    Calculate(Instruction_Calculate<RegisterAddr>),
+    SCalculate(Instruction_Calculate<ShortRegisterAddr>),
 
     Throw { exception_addr: RegisterAddr },
     SThrow { exception_addr: ShortRegisterAddr },
@@ -112,6 +117,9 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
             Set(ins) => ins.transpose().map(Set),
             SSet(ins) => ins.transpose().map(SSet),
 
+            Calculate(ins) => Some(Calculate(ins)),
+            SCalculate(ins) => Some(SCalculate(ins)),
+
             Throw { exception_addr } => Some(Throw { exception_addr }),
             SThrow { exception_addr } => Some(SThrow { exception_addr }),
 
@@ -162,6 +170,9 @@ impl<TString, E1, TTypeRef, E2, TMethodRef, E3, TFieldRef, E4>
 
             Set(ins) => ins.transpose().map(Set),
             SSet(ins) => ins.transpose().map(SSet),
+
+            Calculate(ins) => Ok(Calculate(ins)),
+            SCalculate(ins) => Ok(SCalculate(ins)),
 
             Throw { exception_addr } => Ok(Throw { exception_addr }),
             SThrow { exception_addr } => Ok(SThrow { exception_addr }),
@@ -229,6 +240,9 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
             Set(ins) => Set(ins.map(f_TTypeRef, f_TFieldRef, noop)),
             SSet(ins) => SSet(ins.map(f_TTypeRef, f_TFieldRef, noop)),
 
+            Calculate(ins) => Calculate(ins),
+            SCalculate(ins) => SCalculate(ins),
+
             Throw { exception_addr } => Throw { exception_addr },
             SThrow { exception_addr } => SThrow { exception_addr },
 
@@ -289,6 +303,9 @@ where
 
             Instruction::Set(ins) => f.write_fmt(format_args!("{NAME}::Set{ins}")),
             Instruction::SSet(ins) => f.write_fmt(format_args!("{NAME}::SSet{ins}")),
+
+            Instruction::Calculate(ins) => f.write_fmt(format_args!("{NAME}::Caclulate{ins}")),
+            Instruction::SCalculate(ins) => f.write_fmt(format_args!("{NAME}::SCaclulate{ins}")),
 
             Instruction::Throw { exception_addr } => {
                 f.write_fmt(format_args!("{NAME}::Throw {exception_addr:#x}"))
@@ -652,6 +669,12 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                 },
             },
             SSet(ins) => SSet(ins),
+
+            Calculate(ins) => match ins.try_into_short() {
+                Some(ins) => SCalculate(ins),
+                None => Calculate(ins),
+            },
+            SCalculate(ins) => SCalculate(ins),
 
             Throw { exception_addr } => match exception_addr.try_into_short() {
                 Some(exception_addr) => SThrow { exception_addr },

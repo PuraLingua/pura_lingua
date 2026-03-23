@@ -31,6 +31,7 @@ path = "./src/_lib.rs"
 
 [dependencies]
 global = { workspace = true, optional = true }
+c_definitions = { workspace = true, optional = true }
 binary = { path = "./binary", package = "pura_lingua_binary", optional = true }
 stdlib_header = { path = "./rt_stdlib", package = "pura_lingua_runtime_stdlib", optional = true }
 dynamic = { path = "./dynamic", package = "pura_lingua_dynamic", optional = true }
@@ -78,7 +79,7 @@ anyhow = { version = "1.0.98", features = ["backtrace"] }
 
 [features]
 default = []
-basic = ["dep:global"]
+basic = ["dep:global", "dep:c_definitions"]
 runtime = ["basic", "dep:runtime"]
 binary = ["basic", "dep:binary"]
 stdlib_header = ["dep:stdlib_header"]
