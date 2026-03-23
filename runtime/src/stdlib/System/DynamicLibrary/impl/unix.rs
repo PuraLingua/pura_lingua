@@ -10,10 +10,12 @@ use crate::{
 
 // cSpell:disable
 
+pub(in super::super) type LibraryPointer = NonNull<c_void>;
+
 pub(in super::super) fn LoadLibraryImpl(
     cpu: &mut CPU,
     file: ManagedReference<Class>,
-) -> Option<NonNull<c_void>> {
+) -> Option<LibraryPointer> {
     let handle = LoadLibraryInner(file.access::<StringAccessor>().unwrap().get_str().unwrap());
     match NonNull::new(handle) {
         Some(x) => Some(x),

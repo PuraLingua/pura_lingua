@@ -117,17 +117,20 @@ impl StringAccessor {
     #[doc(cfg(windows))]
     #[cfg(windows)]
     pub fn to_multi_byte(&self) -> Option<(Vec<u8>, Option<std::num::NonZero<i32>>)> {
+        type UINT = u32;
+        type DWORD = u32;
+
         windows::core::link!(
             "kernel32.dll" "system" fn WideCharToMultiByte(
-                CodePage: u32,
-                dwFlags: u32,
+                CodePage: UINT,
+                dwFlags: DWORD,
                 lpWideCharStr: windows::core::PCWSTR,
-                cchWideChar: i32,
+                cchWideChar: std::ffi::c_int,
                 lpMultiByteStr: windows::core::PSTR,
-                cbMultiByte: i32,
+                cbMultiByte: std::ffi::c_int,
                 lpDefaultChar: windows::core::PCSTR,
                 lpUsedDefaultChar: *mut windows::core::BOOL
-            ) -> i32
+            ) -> std::ffi::c_int
         );
 
         let name_wide = self.get_str()?;

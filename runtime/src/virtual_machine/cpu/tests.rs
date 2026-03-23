@@ -539,9 +539,9 @@ fn dynamic_message_box() -> global::Result<()> {
     windows::core::link!(
         "user32.dll" "system" fn MessageBoxW(
             hwnd : windows::Win32::Foundation::HWND,
-            lptext : windows::core::PCWSTR,
-            lpcaption : windows::core::PCWSTR,
-            utype : windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_STYLE,
+            lpText : windows::core::PCWSTR,
+            lpCaption : windows::core::PCWSTR,
+            uType : windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_STYLE,
         ) -> windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT
     );
 

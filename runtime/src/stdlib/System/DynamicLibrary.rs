@@ -30,7 +30,7 @@ pub extern "system" fn Constructor_String(
     );
     let handle_out = this
         .const_access_mut::<FieldAccessor<Class>>()
-        .typed_field_mut::<*mut c_void>(
+        .typed_field_mut::<LibraryPointer>(
             System_DynamicLibrary_FieldId::Handle as _,
             Default::default(),
         )
@@ -38,7 +38,7 @@ pub extern "system" fn Constructor_String(
     let Some(handle) = LoadLibraryImpl(cpu, file) else {
         return;
     };
-    *handle_out = handle.as_ptr();
+    *handle_out = handle;
     println!("finish loading successfully");
 }
 
