@@ -423,7 +423,7 @@ impl CPU {
                         }
                         #[cfg(not(windows))]
                         {
-                            args[i] = data.cast().as_ptr();
+                            arg.val = data.cast().as_ptr();
                         }
                     }
                 }

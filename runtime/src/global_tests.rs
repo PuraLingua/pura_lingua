@@ -33,8 +33,13 @@ fn gtest_utf8() -> global::Result<()> {
 
     LEAK_DETECTOR.scope_with(
         |cpu: &CPU, cfg, s| {
-            let (res_ptr, res_layout) =
-                cpu.non_purus_call(cfg, libc::puts as _, vec![(&raw const s).cast_mut().cast()]);
+            use crate::virtual_machine::cpu::NonPurusCallArg;
+
+            let (res_ptr, res_layout) = cpu.non_purus_call(
+                cfg,
+                libc::puts as _,
+                vec![NonPurusCallArg::new(&s, NonPurusCallType::String)],
+            );
 
             if unsafe { res_ptr.cast::<c_int>().read() } == libc::EOF {
                 panic!("Failed to call puts");

@@ -35,7 +35,7 @@ pub extern "system" fn Constructor_String(
             Default::default(),
         )
         .unwrap();
-    let Some(handle) = LoadLibrary(cpu, file) else {
+    let Some(handle) = LoadLibraryImpl(cpu, file) else {
         return;
     };
     *handle_out = handle.as_ptr();
@@ -70,7 +70,7 @@ pub extern "system" fn Destructor(
             Default::default(),
         )
         .unwrap();
-    if !FreeLibrary(cpu, handle) {
+    if !FreeLibraryImpl(cpu, handle) {
         return;
     }
     ClearHandlePtr(this);
@@ -87,145 +87,9 @@ fn ClearHandlePtr(this: &mut ManagedReference<Class>) {
     );
 }
 
-// cSpell:disable
-#[cfg(windows)]
-fn LoadLibrary(cpu: &mut CPU, file: ManagedReference<Class>) -> Option<NonNull<c_void>> {
-    match unsafe {
-        windows::Win32::System::LibraryLoader::LoadLibraryW(windows::core::PCWSTR::from_raw(
-            file.access::<StringAccessor>()
-                .unwrap()
-                .get_str()
-                .unwrap()
-                .as_ptr(),
-        ))
-    } {
-        Ok(x) => Some(unsafe { NonNull::new_unchecked(x.0) }),
-        Err(e) => {
-            println!("WIN32 API ERROR: {}", e.message());
-            assert!(cpu.throw_helper_mut().win32(e.code().0));
-            None
-        }
-    }
-}
+mod r#impl;
 
-#[cfg(windows)]
-fn GetSymbolImpl(
-    cpu: &mut CPU,
-    handle: *mut c_void,
-    name: ManagedReference<Class>,
-) -> Option<NonNull<c_void>> {
-    windows::core::link!(
-        "kernel32.dll" "system" fn WideCharToMultiByte(
-            codepage: u32,
-            dwflags: u32,
-            lpwidecharstr: windows::core::PCWSTR,
-            cchwidechar: i32,
-            lpmultibytestr: windows::core::PSTR,
-            cbmultibyte: i32,
-            lpdefaultchar: windows::core::PCSTR,
-            lpuseddefaultchar: *mut windows::core::BOOL
-        ) -> i32
-    );
-
-    let hModule = windows::Win32::Foundation::HMODULE(handle);
-
-    unsafe {
-        let (name_out, used_len) = name
-            .access::<StringAccessor>()
-            .unwrap()
-            .to_multi_byte()
-            .unwrap();
-
-        if used_len.is_none() {
-            assert!(cpu.throw_helper_mut().current_win32());
-            return None;
-        }
-        match windows::Win32::System::LibraryLoader::GetProcAddress(
-            hModule,
-            windows::core::PCSTR::from_raw(name_out.as_ptr()),
-        ) {
-            Some(x) => Some(NonNull::new_unchecked(x as _)),
-            None => {
-                assert!(cpu.throw_helper_mut().current_win32());
-                None
-            }
-        }
-    }
-}
-
-#[cfg(windows)]
-#[must_use]
-fn FreeLibrary(cpu: &mut CPU, handle: *mut c_void) -> bool {
-    let hLibModule = windows::Win32::Foundation::HMODULE(handle);
-    match unsafe { windows::Win32::Foundation::FreeLibrary(hLibModule) } {
-        Ok(_) => true,
-        Err(e) => {
-            println!("WIN32 API ERROR: {}", e.message());
-            assert!(cpu.throw_helper_mut().win32(e.code().0));
-            false
-        }
-    }
-}
-
-#[cfg(unix)]
-fn LoadLibrary(cpu: &mut CPU, file: ManagedReference<Class>) -> Option<NonNull<c_void>> {
-    let file_path = std::ffi::CString::new(
-        file.access::<StringAccessor>()
-            .unwrap()
-            .to_string()
-            .unwrap()
-            .unwrap(),
-    )
-    .unwrap();
-    let handle = unsafe { libc::dlopen(file_path.as_ptr(), libc::RTLD_LAZY) };
-    match NonNull::new(handle) {
-        Some(x) => Some(x),
-        None => {
-            assert!(cpu.throw_helper_mut().current_dlerror());
-            None
-        }
-    }
-}
-
-#[cfg(unix)]
-fn GetSymbolImpl(
-    cpu: &mut CPU,
-    handle: *mut c_void,
-    name: ManagedReference<Class>,
-) -> Option<NonNull<c_void>> {
-    let c_name = std::ffi::CString::new(
-        name.access::<StringAccessor>()
-            .unwrap()
-            .to_string()
-            .unwrap()
-            .unwrap(),
-    )
-    .unwrap();
-    match NonNull::new(unsafe { libc::dlsym(handle, c_name.as_ptr()) }) {
-        Some(x) => Some(x),
-        None => {
-            assert!(cpu.throw_helper_mut().current_dlerror());
-            None
-        }
-    }
-}
-
-#[cfg(unix)]
-#[must_use]
-fn FreeLibrary(cpu: &mut CPU, handle: *mut c_void) -> bool {
-    if handle.is_null() {
-        return true;
-    }
-    unsafe {
-        if libc::dlclose(handle) != 0 {
-            assert!(cpu.throw_helper_mut().current_dlerror());
-            false
-        } else {
-            true
-        }
-    }
-}
-// cSpell:enable
+use r#impl::*;
 
 _define_class!(
     fn load(assembly, mt, method_info)
