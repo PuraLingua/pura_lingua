@@ -14,9 +14,3 @@ serde_json = { version = "1.0.149", features = ["indexmap"] }
 [[bin]]
 name = "puralingua_output_core_header"
 path = "./src/bin/output.rs"
-
-[features]
-default = ["__when_not_impl"]
-__when_impl = []
-__when_not_impl = []
-__when_serialize = []

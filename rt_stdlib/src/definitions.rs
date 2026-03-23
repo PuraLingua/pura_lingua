@@ -1,48 +1,6 @@
-#![allow(unused)]
-use std::ptr::NonNull;
-
-use global::{attrs::CallConvention, instruction::RegisterAddr};
-
 use proc_macros::{define_core_class, define_core_struct};
 
-#[cfg(feature = "__when_impl")]
-use either::Either;
-
-#[cfg(feature = "__when_impl")]
-use stdlib_header::CoreTypeId;
-#[cfg(any(feature = "__when_impl"))]
-use stdlib_header::CoreTypeRef;
-
-#[cfg(feature = "__when_impl")]
-use super::{CoreTypeIdConstExt, System, get_core_class, get_core_struct};
-
-#[cfg(feature = "__when_impl")]
-use crate::type_system::{
-    assembly_manager::AssemblyRef,
-    method::{Method, Parameter},
-    method_table::MethodTable,
-    r#struct::Struct,
-    type_handle::{MaybeUnloadedTypeHandle, TypeHandle},
-    type_ref::TypeRef,
-};
-
-#[cfg(feature = "__when_not_impl")]
-#[allow(unused)]
 use crate::{CoreTypeId, CoreTypeRef};
-
-#[cfg(feature = "__when_impl")]
-macro common_new_method($mt:ident $TMethodId:ident $id:ident $f:path) {
-    Box::new(Method::native(
-        Some($mt),
-        $TMethodId::$id.get_name().to_owned(),
-        $TMethodId::$id.get_attr(),
-        $TMethodId::$id.get_parameters(),
-        $TMethodId::$id.get_return_type(),
-        CallConvention::PlatformDefault,
-        None,
-        $f as _,
-    ))
-}
 
 define_core_class! {
     #[Public {}] assembly
@@ -150,59 +108,7 @@ proc_macros::define_core_struct! {
 }
 
 mod integer {
-    #[cfg(feature = "__when_not_impl")]
-    use crate::{CoreTypeId, CoreTypeInfo, CoreTypeRef, FieldInfo, MethodInfo};
-
-    #[cfg(feature = "__when_impl")]
-    use std::ptr::NonNull;
-
-    #[cfg(feature = "__when_impl")]
-    use stdlib_header::{CoreTypeId, CoreTypeRef};
-
-    #[cfg(feature = "__when_impl")]
-    use crate::stdlib::CoreTypeIdConstExt;
-    #[cfg(feature = "__when_impl")]
-    use crate::type_system::{
-        method::Method, method_table::MethodTable, r#struct::Struct,
-        type_handle::MaybeUnloadedTypeHandle,
-    };
-
-    #[cfg(feature = "__when_impl")]
-    use super::System;
-
-    #[cfg(feature = "__when_impl")]
-    fn get_int_initializer<T: 'static + std::fmt::Display>(
-        id: CoreTypeId,
-    ) -> impl Fn(NonNull<MethodTable<Struct>>) -> Vec<Box<Method<Struct>>> {
-        move |mt| {
-            use crate::type_system::method::{Method, Parameter};
-
-            vec![
-                // Statics
-                Box::new(Method::default_sctor(
-                    Some(mt),
-                    global::attr!(
-                        method Public {Static}
-                    ),
-                )),
-                Box::new(Method::native(
-                    Some(mt),
-                    "ToString".to_owned(),
-                    global::attr!(
-                        method Public {Static}
-                    ),
-                    vec![Parameter::new(
-                        MaybeUnloadedTypeHandle::Unloaded(id.static_type_ref()),
-                        global::attr!(parameter { ByRef }),
-                    )],
-                    MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_String.static_type_ref()),
-                    global::attrs::CallConvention::PlatformDefault,
-                    None,
-                    System::_Integers::ToString::<T> as _,
-                )),
-            ]
-        }
-    }
+    use crate::{CoreTypeId, CoreTypeRef};
 
     proc_macros::define_core_struct! {
         #[Public {}] assembly

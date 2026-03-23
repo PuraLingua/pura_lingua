@@ -10,7 +10,6 @@ bitfields = { workspace = true }
 sealed = { workspace = true }
 enumflags2 = { workspace = true }
 
-proc_macros = { package = "pura_lingua_runtime_proc_macros", path = "../rt_proc_macros" }
 binary = { package = "pura_lingua_binary", path = "../binary" }
 stdlib_header = { package = "pura_lingua_runtime_stdlib", path = "../rt_stdlib" }
 
@@ -43,9 +42,3 @@ windows-result = "0.4.1"
 
 [target.'cfg(unix)'.dependencies.libc]
 version = "0.2.182"
-
-[features]
-default = ["__when_impl"]
-__when_impl = []
-__when_not_impl = []
-__when_serialize = []

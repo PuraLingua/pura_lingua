@@ -18,7 +18,6 @@ getset = { git = "https://github.com/ExPuritate/getset.git" }
 
 faststr = { version = "0.2.31" }
 bon = "3.6.5"
-const_format = "0.2.34"
 cfg-if = "1.0.1"
 log = { version = "0.4" }
 
@@ -28,7 +27,6 @@ konst = { workspace = true }
 derive_more = { workspace = true }
 enumflags2 = { workspace = true }
 string-interner = { workspace = true }
-unicode-xid = { workspace = true }
 sealed = { workspace = true }
 bitfields = { workspace = true }
 

@@ -15,7 +15,6 @@ members = [
 	"global_errors",
 	"proc_macro_utils",
 	"rt_proc_macro_shared",
-	"rt_proc_macros",
 	"rt_stdlib",
 	"rt_stdlib_proc_macros",
 	"runtime",
@@ -62,18 +61,9 @@ either = { version = "1.15" }
 enumflags2 = { version = "0.7.11", features = ["std", "serde"] }
 derive_more = { version = "2.0.1", features = ["full", "std"] }
 paste = "1.0.15"
-const_format = "0.2.35"
 ctor = "0.6.0"
-scopeguard-lite = "1.0.0"
 string-interner = "0.19.0"
-walkdir = "2.5.0"
-unicode-xid = "0.2.0"
 sealed = "0.6"
-digest = { version = "0.11.0-rc.2" }
-md-5 = { version = "0.10.6" }
-sha1 = { version = "0.10.6" }
-sha2 = { version = "0.10.9" }
-blake3 = { version = "1.8.2" }
 indexmap = { version = "2.13" }
 anyhow = { version = "1.0.98", features = ["backtrace"] }
 

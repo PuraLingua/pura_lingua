@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 use std::ptr::NonNull;
 
-use global::t_println;
+use global::dt_println;
 use stdlib_header::definitions::System_DynamicLibrary_FieldId;
 
 use crate::{
@@ -20,7 +20,7 @@ pub extern "system" fn Constructor_String(
     this: &mut ManagedReference<Class>,
     file: ManagedReference<Class>,
 ) {
-    t_println!(
+    dt_println!(
         "Loading lib: {}",
         file.access::<StringAccessor>()
             .unwrap()
