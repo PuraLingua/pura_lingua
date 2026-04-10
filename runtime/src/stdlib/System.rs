@@ -90,13 +90,13 @@ macro _define_class(
         $StaticMethodName:ident => $static_f:expr;
     )*
 ) {
-    impl From<::stdlib_header::definitions::${concat($id, _MethodId)}> for $crate::type_system::method::MethodRef {
-        fn from(value: ::stdlib_header::definitions::${concat($id, _MethodId)}) -> Self {
+    impl From<::stdlib_header::System::$id::MethodId> for $crate::type_system::method::MethodRef {
+        fn from(value: ::stdlib_header::System::$id::MethodId) -> Self {
             Self::Index(value as u32)
         }
     }
-    impl From<::stdlib_header::definitions::${concat($id, _StaticMethodId)}> for $crate::type_system::method::MethodRef {
-        fn from(value: ::stdlib_header::definitions::${concat($id, _StaticMethodId)}) -> Self {
+    impl From<::stdlib_header::System::$id::StaticMethodId> for $crate::type_system::method::MethodRef {
+        fn from(value: ::stdlib_header::System::$id::StaticMethodId) -> Self {
             Self::Index(value as u32)
         }
     }
@@ -104,10 +104,10 @@ macro _define_class(
         $assembly: &$crate::type_system::assembly::Assembly,
     )
     -> $crate::type_system::type_handle::NonGenericTypeHandle {
-        type $TMethodId = ::stdlib_header::definitions::${concat($id, _MethodId)};
-        type $TStaticMethodId = ::stdlib_header::definitions::${concat($id, _StaticMethodId)};
+        type $TMethodId = ::stdlib_header::System::$id::MethodId;
+        type $TStaticMethodId = ::stdlib_header::System::$id::StaticMethodId;
         $crate::stdlib::System::define_class(
-            ::stdlib_header::CoreTypeId::$id,
+            ::stdlib_header::CoreTypeId::${concat(System_, $id)},
             |#[allow(unused)] $mt, #[allow(unused)] $method_info| match unsafe { $method_info.get_id::<$TMethodId>() } {
                 $(
                     $TMethodId::$MethodName => $f,
@@ -136,13 +136,13 @@ macro _define_struct(
         $StaticMethodName:ident => $static_f:expr;
     )*
 ) {
-    impl From<::stdlib_header::definitions::${concat($id, _MethodId)}> for $crate::type_system::method::MethodRef {
-        fn from(value: ::stdlib_header::definitions::${concat($id, _MethodId)}) -> Self {
+    impl From<::stdlib_header::System::$id::MethodId> for $crate::type_system::method::MethodRef {
+        fn from(value: ::stdlib_header::System::$id::MethodId) -> Self {
             Self::Index(value as u32)
         }
     }
-    impl From<::stdlib_header::definitions::${concat($id, _StaticMethodId)}> for $crate::type_system::method::MethodRef {
-        fn from(value: ::stdlib_header::definitions::${concat($id, _StaticMethodId)}) -> Self {
+    impl From<::stdlib_header::System::$id::StaticMethodId> for $crate::type_system::method::MethodRef {
+        fn from(value: ::stdlib_header::System::$id::StaticMethodId) -> Self {
             Self::Index(value as u32)
         }
     }
@@ -150,10 +150,10 @@ macro _define_struct(
         $assembly: &$crate::type_system::assembly::Assembly,
     )
     -> $crate::type_system::type_handle::NonGenericTypeHandle {
-        type $TMethodId = ::stdlib_header::definitions::${concat($id, _MethodId)};
-        type $TStaticMethodId = ::stdlib_header::definitions::${concat($id, _StaticMethodId)};
+        type $TMethodId = ::stdlib_header::System::$id::MethodId;
+        type $TStaticMethodId = ::stdlib_header::System::$id::StaticMethodId;
         $crate::stdlib::System::define_struct(
-            ::stdlib_header::CoreTypeId::$id,
+            ::stdlib_header::CoreTypeId::${concat(System_, $id)},
             |#[allow(unused)] $mt, #[allow(unused)] $method_info| match unsafe { $method_info.get_id::<$TMethodId>() } {
                 $(
                     $TMethodId::$MethodName => $f,

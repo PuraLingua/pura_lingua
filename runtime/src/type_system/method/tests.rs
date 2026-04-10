@@ -1,7 +1,6 @@
 #![allow(nonstandard_style, unused)]
 
 use global::string_name;
-use stdlib_header::definitions::{System_String_MethodId, System_UInt8_StaticMethodId};
 
 use crate::{
     stdlib::CoreTypeId,
@@ -34,7 +33,7 @@ fn test_call() {
     let u8_t_mt = unsafe { u8_t.as_ref().method_table_ref() };
 
     let u8_ToString = u8_t_mt
-        .get_method(System_UInt8_StaticMethodId::ToString as u32)
+        .get_method(stdlib_header::StaticMethodId!(UInt8::ToString) as u32)
         .unwrap();
 
     let u8_v = 10u8;
@@ -57,7 +56,7 @@ fn test_call() {
         .unwrap_class();
     let string_t_mt = unsafe { string_t.as_ref().method_table_ref() };
     let string_ToString = string_t_mt
-        .get_method(System_String_MethodId::ToString as u32)
+        .get_method(stdlib_header::MethodId!(String::ToString) as u32)
         .unwrap();
     let ret2 = unsafe { string_ToString.as_ref() }.typed_call::<ManagedReference<Class>>(
         &mut cpu,

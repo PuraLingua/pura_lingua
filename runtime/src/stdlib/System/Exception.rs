@@ -1,5 +1,5 @@
 use enumflags2::make_bitflags;
-use stdlib_header::definitions::System_Exception_FieldId;
+use stdlib_header::System::Exception::FieldId;
 
 use crate::{
     stdlib::{
@@ -28,20 +28,14 @@ pub extern "system" fn Constructor_String(
 
     let f_message_mut = this
         .const_access_mut::<FieldAccessor<_>>()
-        .typed_field_mut::<ManagedReference<Class>>(
-            System_Exception_FieldId::Message as _,
-            Default::default(),
-        )
+        .typed_field_mut::<ManagedReference<Class>>(FieldId::Message as _, Default::default())
         .unwrap();
 
     *f_message_mut = message;
 
     let f_stack_trace_mut = this
         .const_access_mut::<FieldAccessor<_>>()
-        .typed_field_mut::<ManagedReference<Class>>(
-            System_Exception_FieldId::StackTrace as _,
-            Default::default(),
-        )
+        .typed_field_mut::<ManagedReference<Class>>(FieldId::StackTrace as _, Default::default())
         .unwrap();
 
     let stack_trace_rs = cpu.capture_with_options(
@@ -75,7 +69,7 @@ pub extern "system" fn ToString(
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_Exception
+    Exception
 #methods(TMethodId):
     ToString => common_new_method!(mt TMethodId ToString ToString);
     Constructor_String => common_new_method!(mt TMethodId Constructor_String Constructor_String);
@@ -87,10 +81,7 @@ _define_class!(
 mod tests {
     use std::ptr::NonNull;
 
-    use stdlib_header::definitions::{
-        System_Array_1_MethodId, System_Exception_MethodId, System_Object_MethodId,
-        System_UInt8_StaticMethodId, System_UInt16_StaticMethodId,
-    };
+    use stdlib_header::System::Exception::MethodId;
 
     use crate::{
         stdlib::{CoreTypeId, CoreTypeIdExt as _},
@@ -122,7 +113,7 @@ mod tests {
             cpu.push_call_stack_native(
                 u8_t.as_ref()
                     .method_table_ref()
-                    .get_method(System_UInt8_StaticMethodId::ToString as _)
+                    .get_method(stdlib_header::System::UInt8::StaticMethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
             );
@@ -131,7 +122,7 @@ mod tests {
                 u16_t
                     .as_ref()
                     .method_table_ref()
-                    .get_method(System_UInt16_StaticMethodId::ToString as _)
+                    .get_method(stdlib_header::System::UInt16::StaticMethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
             );
@@ -139,7 +130,7 @@ mod tests {
                 array_t
                     .as_ref()
                     .method_table_ref()
-                    .get_method(System_Array_1_MethodId::ToString as _)
+                    .get_method(stdlib_header::System::Array_1::MethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
             );
@@ -147,7 +138,7 @@ mod tests {
                 object_t
                     .as_ref()
                     .method_table_ref()
-                    .get_method(System_Object_MethodId::ToString as _)
+                    .get_method(stdlib_header::System::Object::MethodId::ToString as _)
                     .unwrap()
                     .as_ref(),
             );
@@ -167,7 +158,7 @@ mod tests {
         );
 
         let method = exception_mt
-            .get_method(System_Exception_MethodId::Constructor_String as _)
+            .get_method(MethodId::Constructor_String as _)
             .unwrap();
 
         let message = ManagedReference::new_string(&mut cpu, "AAA");
@@ -180,10 +171,7 @@ mod tests {
         }
         let f_message = exception_ptr
             .const_access::<FieldAccessor<_>>()
-            .typed_field::<ManagedReference<Class>>(
-                System_Exception_FieldId::Message as _,
-                Default::default(),
-            )
+            .typed_field::<ManagedReference<Class>>(FieldId::Message as _, Default::default())
             .unwrap();
 
         dbg!(
@@ -196,10 +184,7 @@ mod tests {
 
         let f_stack_trace = exception_ptr
             .const_access::<FieldAccessor<_>>()
-            .typed_field::<ManagedReference<Class>>(
-                System_Exception_FieldId::StackTrace as _,
-                Default::default(),
-            )
+            .typed_field::<ManagedReference<Class>>(FieldId::StackTrace as _, Default::default())
             .unwrap();
         unsafe {
             for stack in f_stack_trace

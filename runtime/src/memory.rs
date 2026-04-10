@@ -1,6 +1,7 @@
 use std::{
     alloc::{AllocError, Allocator, Layout},
-    ptr::{Alignment, NonNull},
+    mem::Alignment,
+    ptr::NonNull,
 };
 
 use bon::Builder;

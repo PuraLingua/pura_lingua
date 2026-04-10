@@ -11,7 +11,7 @@ use global::{
         NonPurusCallConfiguration, NonPurusCallType, ObjectStrategy, StringEncoding,
     },
 };
-use stdlib_header::{CoreTypeId, definitions::System_NonPurusCallType_FieldId};
+use stdlib_header::CoreTypeId;
 
 use crate::{
     error::RuntimeError,
@@ -64,7 +64,7 @@ impl CPU {
         let mut obj = ManagedReference::common_alloc(self, mt, false);
         *obj.const_access_mut::<FieldAccessor<Class>>()
             .typed_field_mut(
-                System_NonPurusCallType_FieldId::Discriminant as _,
+                stdlib_header::FieldId!(NonPurusCallType::Discriminant) as _,
                 Default::default(),
             )
             .unwrap() = ty.discriminant();
@@ -79,7 +79,7 @@ impl CPU {
                 };
                 *obj.const_access_mut::<FieldAccessor<Class>>()
                     .typed_field_mut(
-                        System_NonPurusCallType_FieldId::Types as _,
+                        stdlib_header::FieldId!(NonPurusCallType::Types) as _,
                         Default::default(),
                     )
                     .unwrap() = arr;
@@ -122,7 +122,7 @@ impl CPU {
 
         macro write_field($T:ty: $val:expr => $field:ident) {
             assert!(obj_fields.write_typed_field::<$T>(
-                ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$field as _,
+                ::stdlib_header::System::NonPurusCallConfiguration::FieldId::$field as _,
                 Default::default(),
                 $val,
             ))
@@ -163,12 +163,12 @@ impl CPU {
     pub fn unmarshal_non_purus_type(ty: ManagedReference<Class>) -> Option<NonPurusCallType> {
         let accessor = ty.const_access::<FieldAccessor<Class>>();
         let discriminant = accessor.read_typed_field::<u8>(
-            System_NonPurusCallType_FieldId::Discriminant as _,
+            stdlib_header::FieldId!(NonPurusCallType::Discriminant) as _,
             Default::default(),
         )?;
         NonPurusCallType::from_u8(discriminant, || {
             let field_types = accessor.typed_field::<ManagedReference<Class>>(
-                System_NonPurusCallType_FieldId::Types as _,
+                stdlib_header::FieldId!(NonPurusCallType::Types) as _,
                 Default::default(),
             )?;
             unsafe {
@@ -191,13 +191,11 @@ impl CPU {
         macro get_field($field:ident: $T:ty) {
             accessor
                 .read_typed_field::<$T>(
-                    ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$field
-                        as _,
+                    ::stdlib_header::System::NonPurusCallConfiguration::FieldId::$field as _,
                     Default::default(),
                 )
                 .ok_or(RuntimeError::FailedGetField(
-                    ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$field
-                        as _,
+                    ::stdlib_header::System::NonPurusCallConfiguration::FieldId::$field as _,
                 ))?
         }
 
@@ -205,13 +203,11 @@ impl CPU {
             <$ty>::try_from(
                 accessor
                     .read_typed_field::<u8>(
-                        ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$val
-                            as _,
+                        ::stdlib_header::System::NonPurusCallConfiguration::FieldId::$val as _,
                         Default::default(),
                     )
                     .ok_or(RuntimeError::FailedGetField(
-                        ::stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId::$val
-                            as _,
+                        ::stdlib_header::System::NonPurusCallConfiguration::FieldId::$val as _,
                     ))?,
             )?
         }

@@ -1,10 +1,9 @@
 use std::sync::OnceLock;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
-use quote::format_ident;
 use syn::{
-    Expr, ExprBinary, ExprCast, Ident, LitInt, LitStr, PathSegment, Token, TypePath, parenthesized,
-    parse::Parse, spanned::Spanned, token::Bracket,
+    Expr, ExprBinary, ExprCast, Ident, LitInt, LitStr, Path, PathSegment, Token, TypePath,
+    parenthesized, parse::Parse, spanned::Spanned, token::Bracket,
 };
 
 use crate::common::{Attr, GenericCount, Parameter, keywords};
@@ -109,14 +108,13 @@ pub struct DefineCoreClassAst {
     pub name: LitStr,
     pub parent: Option<Expr>,
     pub generic_bounds: Option<Expr>,
-    pub field_parent: Option<Ident>,
+    pub field_parent: Option<Path>,
     pub fields: Vec<FieldAst>,
 
-    pub method_parent: Option<Ident>,
+    pub method_parent: Option<Path>,
     pub method_ids: Vec<MethodAst>,
     pub overriding_method_ids: Vec<MethodAst>,
     pub static_method_ids: Vec<MethodAst>,
-    pub method_generator: Expr,
 }
 
 impl Parse for DefineCoreClassAst {
@@ -190,8 +188,7 @@ impl Parse for DefineCoreClassAst {
         while !static_method_ids_buf.is_empty() {
             static_method_ids.push(static_method_ids_buf.parse()?);
         }
-        input.parse::<keywords::with>()?;
-        let method_generator = input.parse()?;
+
         Ok(Self {
             attr,
             assembly_name,
@@ -214,7 +211,6 @@ impl Parse for DefineCoreClassAst {
                 .cloned()
                 .collect(),
             static_method_ids,
-            method_generator,
         })
     }
 }
@@ -253,20 +249,13 @@ impl DefineCoreClassAst {
                         attrs: Vec::new(),
                         // cSpell:disable-next-line
                         qself: None,
-                        path: syn::Path {
-                            leading_colon: None,
-                            segments: vec![
-                                PathSegment {
-                                    ident: parent.clone(),
-                                    arguments: syn::PathArguments::None,
-                                },
-                                PathSegment {
-                                    ident: id.id.clone(),
-                                    arguments: syn::PathArguments::None,
-                                },
-                            ]
-                            .into_iter()
-                            .collect(),
+                        path: {
+                            let mut parent = parent.clone();
+                            parent.segments.push(PathSegment {
+                                ident: id.id.clone(),
+                                arguments: syn::PathArguments::None,
+                            });
+                            parent
                         },
                     })),
                     as_token: Token![as](Span::call_site().resolved_at(parent.span())),
@@ -316,23 +305,16 @@ impl DefineCoreClassAst {
                                     attrs: Vec::new(),
                                     // cSpell:disable-next-line
                                     qself: None,
-                                    path: syn::Path {
-                                        leading_colon: None,
-                                        segments: vec![
-                                            PathSegment {
-                                                ident: parent.clone(),
-                                                arguments: syn::PathArguments::None,
-                                            },
-                                            PathSegment {
-                                                ident: Ident::new(
-                                                    "__END",
-                                                    Span::call_site().resolved_at(parent.span()),
-                                                ),
-                                                arguments: syn::PathArguments::None,
-                                            },
-                                        ]
-                                        .into_iter()
-                                        .collect(),
+                                    path: {
+                                        let mut path = parent.clone();
+                                        path.segments.push(PathSegment {
+                                            ident: Ident::new(
+                                                "__END",
+                                                Span::call_site().resolved_at(parent.span()),
+                                            ),
+                                            arguments: syn::PathArguments::None,
+                                        });
+                                        path
                                     },
                                 })),
                                 as_token: Token![as](Span::call_site().resolved_at(parent.span())),
@@ -362,7 +344,7 @@ impl DefineCoreClassAst {
     }
 
     pub fn field_id_enum_ident(&self) -> Ident {
-        format_ident!("{}_FieldId", self.id)
+        Ident::new("FieldId", Span::call_site())
     }
     pub fn define_fields(&self, attrs: &[TokenStream]) -> TokenStream {
         let field_id_enum_ident = self.field_id_enum_ident();
@@ -386,7 +368,7 @@ impl DefineCoreClassAst {
     }
 
     pub fn method_id_enum_ident(&self) -> Ident {
-        format_ident!("{}_MethodId", self.id)
+        Ident::new("MethodId", Span::call_site())
     }
     pub fn define_methods(&self, attrs: &[TokenStream]) -> syn::Result<TokenStream> {
         let method_id_enum_ident = self.method_id_enum_ident();
@@ -433,7 +415,7 @@ impl DefineCoreClassAst {
     }
 
     pub fn static_method_id_enum_ident(&self) -> Ident {
-        format_ident!("{}_StaticMethodId", self.id)
+        Ident::new("StaticMethodId", Span::call_site())
     }
     pub fn define_static_methods(&self, attrs: &[TokenStream]) -> TokenStream {
         let static_method_id_enum_ident = self.static_method_id_enum_ident();

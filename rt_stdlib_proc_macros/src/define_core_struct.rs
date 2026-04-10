@@ -263,9 +263,9 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
             }
         }
 
-        pub fn #id() -> #stdlib_header_crate::CoreTypeInfo {
+        pub fn load() -> #stdlib_header_crate::CoreTypeInfo {
             #stdlib_header_crate::CoreTypeInfo {
-                id: CoreTypeId::#id,
+                id: #stdlib_header_crate::CoreTypeId::#id,
                 kind: #stdlib_header_crate::CoreTypeKind::Struct,
                 attr: #global_crate::attr!(struct #attr),
                 name: #name.to_owned(),

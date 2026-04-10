@@ -8,12 +8,7 @@ use global::{
         LoadContent, RegisterAddr,
     },
 };
-use stdlib_header::{
-    CoreTypeId,
-    definitions::{
-        System_Exception_MethodId, System_Object_MethodId, System_UInt64_StaticMethodId,
-    },
-};
+use stdlib_header::{CoreTypeId, System};
 
 use crate::{
     assembly::ExtraHeader,
@@ -39,8 +34,8 @@ macro impl_into_method_token($t:ty) {
     }
 }
 
-impl_into_method_token!(System_UInt64_StaticMethodId);
-impl_into_method_token!(System_Exception_MethodId);
+impl_into_method_token!(System::UInt64::StaticMethodId);
+impl_into_method_token!(System::Exception::MethodId);
 
 #[test]
 fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
@@ -110,7 +105,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                                 .with_ty(TypeType::TypeRef)
                                 .with_index(2)
                                 .build(),
-                            method: System_UInt64_StaticMethodId::ToString.into(),
+                            method: System::UInt64::StaticMethodId::ToString.into(),
                             args: vec![RegisterAddr::new(0)],
                             ret_at: RegisterAddr::new(1),
                         }),
@@ -119,7 +114,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                                 .with_ty(TypeType::TypeRef)
                                 .with_index(4)
                                 .build(),
-                            ctor_name: System_Exception_MethodId::Constructor_String.into(),
+                            ctor_name: System::Exception::MethodId::Constructor_String.into(),
                             args: vec![RegisterAddr::new(1)],
                             output: RegisterAddr::new(2),
                         }),
@@ -155,7 +150,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                             .build(),
                         method: MethodTokenBuilder::new()
                             .with_ty(MethodType::Method)
-                            .with_index(System_Object_MethodId::__END as u32)
+                            .with_index(System::Object::MethodId::__END as u32)
                             .build(),
                         args: vec![],
                         ret_at: RegisterAddr::new(1),

@@ -67,7 +67,9 @@ impl CpuID {
         global_vm().get_cpu(*self)
     }
     pub fn as_global_write_cpu(&self) -> Option<RwLockWriteGuard<'static, CPU>> {
-        self.as_global_cpu().map(|x| x.get_ref().write().unwrap())
+        self.as_global_cpu()
+            .map(Pin::get_ref)
+            .map(|x| x.write().unwrap())
     }
 }
 
@@ -146,7 +148,7 @@ impl VirtualMachine {
     }
 
     pub fn write_cpu<'a>(&'a self, index: CpuID) -> Option<LockResult<RwLockWriteGuard<'a, CPU>>> {
-        self.get_cpu(index).map(|x| x.get_ref().write())
+        self.get_cpu(index).map(Pin::get_ref).map(|x| x.write())
     }
 
     pub fn load_class_static(&self, class: NonNull<Class>) -> ManagedReference<Class> {

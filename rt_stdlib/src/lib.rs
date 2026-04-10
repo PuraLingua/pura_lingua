@@ -5,10 +5,12 @@
 #![allow(clippy::manual_non_exhaustive)]
 #![allow(nonstandard_style)]
 #![allow(internal_features)]
+#![deny(unreachable_pub)]
 
 use global::{AllVariants, AllVariantsName, num_enum::TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
+pub mod System;
 pub mod definitions;
 
 #[repr(u32)]
@@ -204,58 +206,59 @@ impl CoreTypeId {
 
 impl CoreTypeId {
     pub fn get_core_type_info(self) -> fn() -> CoreTypeInfo {
-        macro aider($($n:ident)*) {
+        macro aider($($n:ident in $p:path)*) {
             match self {
                 $(
-                    Self::$n => $crate::definitions::$n,
+                    Self::$n => $p,
                 )*
             }
         }
 
         aider!(
-            System_Object
-            System_ValueType
+            System_Object in System::Object::load
+            System_ValueType in System::ValueType::load
 
-            System_Void
+            System_Void in System::Void::load
 
-            System_Nullable_1
+            System_Nullable_1 in System::Nullable_1::load
 
-            System_Boolean
+            System_Boolean in System::Boolean::load
 
-            System_UInt8
-            System_UInt16
-            System_UInt32
-            System_UInt64
-            System_USize
+            System_UInt8 in System::UInt8::load
+            System_UInt16 in System::UInt16::load
+            System_UInt32 in System::UInt32::load
+            System_UInt64 in System::UInt64::load
+            System_USize in System::USize::load
 
-            System_Int8
-            System_Int16
-            System_Int32
-            System_Int64
-            System_ISize
+            System_Int8 in System::Int8::load
+            System_Int16 in System::Int16::load
+            System_Int32 in System::Int32::load
+            System_Int64 in System::Int64::load
+            System_ISize in System::ISize::load
 
-            System_Char
+            System_Char in System::Char::load
 
-            System_Pointer
+            System_Pointer in System::Pointer::load
 
-            System_NonPurusCallConfiguration
-            System_NonPurusCallType
+            System_NonPurusCallConfiguration in System::NonPurusCallConfiguration::load
+            System_NonPurusCallType in System::NonPurusCallType::load
 
-            System_DynamicLibrary
+            System_DynamicLibrary in System::DynamicLibrary::load
 
-            System_Tuple
+            System_Tuple in System::Tuple::load
 
-            System_Array_1
-            System_String
-            System_LargeString
+            System_Array_1 in System::Array_1::load
 
-            System_Environment
+            System_String in System::String::load
+            System_LargeString in System::LargeString::load
 
-            System_Exception
-            System_InvalidEnumException
-            System_Win32Exception
-            System_ErrnoException
-            System_DlErrorException
+            System_Environment in System::Environment::load
+
+            System_Exception in System::Exception::load
+            System_InvalidEnumException in System::InvalidEnumException::load
+            System_Win32Exception in System::Win32Exception::load
+            System_ErrnoException in System::ErrnoException::load
+            System_DlErrorException in System::DlErrorException::load
         )
     }
 }
@@ -269,3 +272,15 @@ pub fn get_all_core_type_info() -> Vec<CoreTypeInfo> {
 }
 
 pub const CORE_ASSEMBLY_NAME: &str = "!";
+
+pub macro MethodId($Name:ident :: $id:ident) {
+    $crate::System::$Name::MethodId::$id
+}
+
+pub macro StaticMethodId($Name:ident :: $id:ident) {
+    $crate::System::$Name::StaticMethodId::$id
+}
+
+pub macro FieldId($Name:ident :: $id:ident) {
+    $crate::System::$Name::FieldId::$id
+}

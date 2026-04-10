@@ -1,4 +1,4 @@
-use stdlib_header::definitions::System_NonPurusCallConfiguration_FieldId;
+use stdlib_header::System::NonPurusCallConfiguration::FieldId;
 
 use crate::{
     stdlib::System::{_define_class, common_new_method, default_sctor},
@@ -20,51 +20,33 @@ pub extern "system" fn Constructor(
 ) {
     let accessor = this.const_access_mut::<FieldAccessor<Class>>();
     *accessor
-        .typed_field_mut(
-            System_NonPurusCallConfiguration_FieldId::CallConvention as _,
-            Default::default(),
-        )
+        .typed_field_mut(FieldId::CallConvention as _, Default::default())
         .unwrap() = call_convention;
 
     *accessor
-        .typed_field_mut(
-            System_NonPurusCallConfiguration_FieldId::ReturnType as _,
-            Default::default(),
-        )
+        .typed_field_mut(FieldId::ReturnType as _, Default::default())
         .unwrap() = return_type;
 
     *accessor
-        .typed_field_mut(
-            System_NonPurusCallConfiguration_FieldId::Encoding as _,
-            Default::default(),
-        )
+        .typed_field_mut(FieldId::Encoding as _, Default::default())
         .unwrap() = encoding;
 
     *accessor
-        .typed_field_mut(
-            System_NonPurusCallConfiguration_FieldId::ObjectStrategy as _,
-            Default::default(),
-        )
+        .typed_field_mut(FieldId::ObjectStrategy as _, Default::default())
         .unwrap() = object_strategy;
 
     *accessor
-        .typed_field_mut(
-            System_NonPurusCallConfiguration_FieldId::ByRefArguments as _,
-            Default::default(),
-        )
+        .typed_field_mut(FieldId::ByRefArguments as _, Default::default())
         .unwrap() = by_ref_arguments;
 
     *accessor
-        .typed_field_mut(
-            System_NonPurusCallConfiguration_FieldId::Arguments as _,
-            Default::default(),
-        )
+        .typed_field_mut(FieldId::Arguments as _, Default::default())
         .unwrap() = arguments;
 }
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_NonPurusCallConfiguration
+    NonPurusCallConfiguration
 #methods(TMethodId):
     Constructor => common_new_method!(mt TMethodId Constructor Constructor);
 #static_methods(TStaticMethodId):

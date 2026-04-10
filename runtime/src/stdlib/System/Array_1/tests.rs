@@ -39,7 +39,7 @@ fn test_to_string() {
 
     let ToString_m = unsafe {
         arr.method_table_ref_unchecked()
-            .get_method(System_Object_MethodId::ToString as _)
+            .get_method(stdlib_header::MethodId!(Object::ToString) as _)
             .unwrap()
     };
 
@@ -131,7 +131,7 @@ fn array_get_set() -> global::Result<()> {
                                         }),
 										Instruction::Call(Instruction_Call::InstanceCall {
 											val: RegisterAddr::new(0),
-											method: System_Array_1_MethodId::set_Index.into(),
+											method: stdlib_header::MethodId!(Array_1::set_Index).into(),
 											args: vec![RegisterAddr::new(3), RegisterAddr::new(1)],
 											ret_at: RegisterAddr::new(4),
 										}),
@@ -142,7 +142,7 @@ fn array_get_set() -> global::Result<()> {
                                         }),
 										Instruction::Call(Instruction_Call::InstanceCall {
 											val: RegisterAddr::new(0),
-											method: System_Array_1_MethodId::set_Index.into(),
+											method: stdlib_header::MethodId!(Array_1::set_Index).into(),
 											args: vec![RegisterAddr::new(3), RegisterAddr::new(2)],
 											ret_at: RegisterAddr::new(4),
 										}),

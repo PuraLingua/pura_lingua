@@ -28,7 +28,6 @@ pub use for_array::ArrayAccessor;
 pub use for_field::FieldAccessor;
 pub use for_large_string::LargeStringAccessor;
 pub use for_string::StringAccessor;
-use stdlib_header::definitions::System_Object_MethodId;
 
 #[repr(transparent)]
 pub struct ManagedReference<T> {
@@ -375,7 +374,7 @@ impl CallDestructorSpec for Class {
         unsafe {
             let destructor = *r
                 .method_table_ref_unchecked()
-                .get_method(System_Object_MethodId::Destructor as _)
+                .get_method(stdlib_header::MethodId!(Object::Destructor) as _)
                 .unwrap();
             destructor
                 .as_ref()

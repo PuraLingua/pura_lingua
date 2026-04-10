@@ -2,7 +2,7 @@ use std::ffi::c_void;
 use std::ptr::NonNull;
 
 use global::dt_println;
-use stdlib_header::definitions::System_DynamicLibrary_FieldId;
+use stdlib_header::System::DynamicLibrary::FieldId;
 
 use crate::{
     stdlib::System::{_define_class, common_new_method, default_sctor},
@@ -30,10 +30,7 @@ pub extern "system" fn Constructor_String(
     );
     let handle_out = this
         .const_access_mut::<FieldAccessor<Class>>()
-        .typed_field_mut::<LibraryPointer>(
-            System_DynamicLibrary_FieldId::Handle as _,
-            Default::default(),
-        )
+        .typed_field_mut::<LibraryPointer>(FieldId::Handle as _, Default::default())
         .unwrap();
     let Some(handle) = LoadLibraryImpl(cpu, file) else {
         return;
@@ -50,10 +47,7 @@ pub extern "system" fn GetSymbol(
 ) -> Option<NonNull<c_void>> {
     let handle = this
         .const_access_mut::<FieldAccessor<Class>>()
-        .read_typed_field::<*mut c_void>(
-            System_DynamicLibrary_FieldId::Handle as _,
-            Default::default(),
-        )
+        .read_typed_field::<*mut c_void>(FieldId::Handle as _, Default::default())
         .unwrap();
     GetSymbolImpl(cpu, handle, name)
 }
@@ -65,10 +59,7 @@ pub extern "system" fn Destructor(
 ) {
     let handle = this
         .const_access_mut::<FieldAccessor<Class>>()
-        .read_typed_field::<*mut c_void>(
-            System_DynamicLibrary_FieldId::Handle as _,
-            Default::default(),
-        )
+        .read_typed_field::<*mut c_void>(FieldId::Handle as _, Default::default())
         .unwrap();
     if !FreeLibraryImpl(cpu, handle) {
         return;
@@ -80,7 +71,7 @@ fn ClearHandlePtr(this: &mut ManagedReference<Class>) {
     assert!(
         this.const_access_mut::<FieldAccessor<Class>>()
             .write_typed_field::<*mut c_void>(
-                System_DynamicLibrary_FieldId::Handle as _,
+                FieldId::Handle as _,
                 Default::default(),
                 std::ptr::null_mut()
             )
@@ -93,7 +84,7 @@ use r#impl::*;
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_DynamicLibrary
+    DynamicLibrary
 #methods(TMethodId):
     Destructor => common_new_method!(mt TMethodId Destructor Destructor);
     Constructor_String => common_new_method!(mt TMethodId Constructor_String Constructor_String);

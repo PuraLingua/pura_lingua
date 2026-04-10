@@ -8,7 +8,6 @@ use global::{
         LoadContent,
     },
 };
-use stdlib_header::definitions::{System_Array_1_MethodId, System_Object_MethodId};
 
 use crate::{
     stdlib::System::{_define_class, common_new_method, default_sctor},
@@ -65,7 +64,7 @@ pub extern "system" fn ToString(
 
                 let mt = unsafe { ele.method_table_ref_unchecked() };
                 let method = mt
-                    .get_method(System_Object_MethodId::ToString as _)
+                    .get_method(stdlib_header::System::Object::MethodId::ToString as _)
                     .unwrap();
 
                 let mut res = unsafe {
@@ -134,7 +133,7 @@ macro define_registers($($name:ident)*) {$(
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_Array_1
+    Array_1
 #methods(TMethodId):
     Destructor => common_new_method!(mt TMethodId Destructor Destructor);
     ToString => common_new_method!(mt TMethodId ToString ToString);
@@ -172,7 +171,7 @@ _define_class!(
                         }),
                         Instruction::SCall(global::instruction::Instruction_Call::InstanceCall {
                             val: this_addr,
-                            method: System_Array_1_MethodId::GetPointerOfIndex.into(),
+                            method: TMethodId::GetPointerOfIndex.into(),
                             args: vec![arg_Index],
                             ret_at: ptr2result,
                         }),
@@ -227,7 +226,7 @@ _define_class!(
 
                         Instruction::SCall(Instruction_Call::InstanceCall {
                             val: this_addr,
-                            method: System_Array_1_MethodId::GetPointerOfIndex.into(),
+                            method: TMethodId::GetPointerOfIndex.into(),
                             args: vec![arg_Index],
                             ret_at: pointer2target,
                         }),

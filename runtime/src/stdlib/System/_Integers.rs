@@ -27,7 +27,7 @@ pub extern "system" fn ToString<T: Display>(
 macro define(
 $assembly:ident, $mt:ident, $method_info:ident, $RustT:ident $(,)?:
     $(
-        $Name:ident => $inner:ident;
+        $Name:ident of $HeaderName:ident => $inner:ident;
     )*
 @StaticConstructor => $StaticConstructor:expr;
 @ToString => $ToString:expr;
@@ -44,18 +44,18 @@ $assembly:ident, $mt:ident, $method_info:ident, $RustT:ident $(,)?:
             ) -> Box<Method<Struct>> {
                 type $RustT = $inner;
                 match unsafe {
-                    std::mem::transmute::<_, stdlib_header::definitions::${concat($Name, _StaticMethodId)}>($method_info.id)
+                    std::mem::transmute::<_, stdlib_header::System::$HeaderName::StaticMethodId>($method_info.id)
                 } {
-                    stdlib_header::definitions::${concat($Name, _StaticMethodId)}::StaticConstructor => $StaticConstructor,
-                    stdlib_header::definitions::${concat($Name, _StaticMethodId)}::ToString => $ToString,
+                    stdlib_header::System::$HeaderName::StaticMethodId::StaticConstructor => $StaticConstructor,
+                    stdlib_header::System::$HeaderName::StaticMethodId::ToString => $ToString,
                 }
             }
             define_struct(
                 CoreTypeId::$Name,
                 |_mt, method_info| match unsafe {
-                    std::mem::transmute::<_, stdlib_header::definitions::${concat($Name, _MethodId)}>(method_info.id)
+                    std::mem::transmute::<_, stdlib_header::System::$HeaderName::MethodId>(method_info.id)
                 } {
-                    stdlib_header::definitions::${concat($Name, _MethodId)}::__END => unreachable!(),
+                    stdlib_header::System::$HeaderName::MethodId::__END => unreachable!(),
                 },
                 |mt, method_info| __get_int_static_methods(assembly, mt, method_info),
             )(assembly)
@@ -65,17 +65,17 @@ $assembly:ident, $mt:ident, $method_info:ident, $RustT:ident $(,)?:
 
 define! {
 assembly, mt, method_info, RustT:
-    System_UInt8 => u8;
-    System_UInt16 => u16;
-    System_UInt32 => u32;
-    System_UInt64 => u64;
-    System_USize => usize;
+    System_UInt8 of UInt8 => u8;
+    System_UInt16 of UInt16 => u16;
+    System_UInt32 of UInt32 => u32;
+    System_UInt64 of UInt64 => u64;
+    System_USize of USize => usize;
 
-    System_Int8 => i8;
-    System_Int16 => i16;
-    System_Int32 => i32;
-    System_Int64 => i64;
-    System_ISize => isize;
+    System_Int8 of Int8 => i8;
+    System_Int16 of Int16 => i16;
+    System_Int32 of Int32 => i32;
+    System_Int64 of Int64 => i64;
+    System_ISize of ISize => isize;
 @StaticConstructor =>
     Box::new(Method::default_sctor(
         Some(mt),

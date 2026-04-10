@@ -1,5 +1,5 @@
 use global::non_purus_call_configuration::NonPurusCallType;
-use stdlib_header::{CoreTypeId, definitions::System_NonPurusCallType_FieldId};
+use stdlib_header::{CoreTypeId, System::NonPurusCallType::FieldId};
 
 use crate::{
     stdlib::System::{_define_class, common_new_method, default_sctor},
@@ -36,8 +36,7 @@ macro define_common(
             managed
                 .const_access_mut::<$crate::value::managed_reference::FieldAccessor<Class>>()
                 .write_typed_field(
-                    ::stdlib_header::definitions::System_NonPurusCallType_FieldId::Discriminant
-                        as _,
+                    ::stdlib_header::System::NonPurusCallType::FieldId::Discriminant as _,
                     Default::default(),
                     ::global::non_purus_call_configuration::NonPurusCallType::$ToBeCreated
                         .discriminant(),
@@ -76,7 +75,7 @@ pub extern "system" fn CreateStructure(
         managed
             .const_access_mut::<FieldAccessor<Class>>()
             .write_typed_field(
-                System_NonPurusCallType_FieldId::Discriminant as _,
+                FieldId::Discriminant as _,
                 Default::default(),
                 NonPurusCallType::STRUCTURE_DISCRIMINANT,
             )
@@ -84,11 +83,7 @@ pub extern "system" fn CreateStructure(
     assert!(
         managed
             .const_access_mut::<FieldAccessor<Class>>()
-            .write_typed_field(
-                System_NonPurusCallType_FieldId::Types as _,
-                Default::default(),
-                fields,
-            )
+            .write_typed_field(FieldId::Types as _, Default::default(), fields,)
     );
     managed
 }
@@ -104,7 +99,7 @@ macro make_common($TMethodId:ident $mt:ident $x:ident) {
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_NonPurusCallType
+    NonPurusCallType
 #methods(TMethodId):
 #static_methods(TStaticMethodId):
     StaticConstructor => default_sctor!(mt TStaticMethodId);

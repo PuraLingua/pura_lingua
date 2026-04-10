@@ -21,17 +21,13 @@ pub fn Constructor_I32(
 ) {
     use std::ffi::CString;
 
-    use stdlib_header::definitions::System_ErrnoException_FieldId;
+    use stdlib_header::System::ErrnoException::FieldId;
 
     use crate::value::managed_reference::FieldAccessor;
 
     assert!(
         this.const_access_mut::<FieldAccessor<Class>>()
-            .write_typed_field(
-                System_ErrnoException_FieldId::Code as _,
-                Default::default(),
-                code,
-            )
+            .write_typed_field(FieldId::Code as _, Default::default(), code,)
     );
 
     let message = ManagedReference::new_string(
@@ -62,7 +58,7 @@ pub fn Constructor_I32(
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_ErrnoException
+    ErrnoException
 #methods(TMethodId):
     Constructor => common_new_method!(mt TMethodId Constructor Constructor);
     Constructor_I32 => common_new_method!(mt TMethodId Constructor_I32 Constructor_I32);

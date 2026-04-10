@@ -347,13 +347,13 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
             }
         }
 
-        pub fn #id() -> #stdlib_header_crate::CoreTypeInfo {
+        pub fn load() -> #stdlib_header_crate::CoreTypeInfo {
             let (parent, parent_generics) = match #parent {
                 Some((parent, parent_generics)) => (Some(parent), parent_generics),
                 None => (None, Vec::new()),
             };
             #stdlib_header_crate::CoreTypeInfo {
-                id: CoreTypeId::#id,
+                id: #stdlib_header_crate::CoreTypeId::#id,
                 kind: #stdlib_header_crate::CoreTypeKind::Class,
                 attr: #global_crate::attr!(class #attr),
                 name: #name.to_owned(),

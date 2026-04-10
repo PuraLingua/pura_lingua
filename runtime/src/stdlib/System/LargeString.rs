@@ -21,7 +21,7 @@ pub extern "system" fn ToString(
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_LargeString
+    LargeString
 #methods(TMethodId):
     ToString => common_new_method!(mt TMethodId ToString ToString);
 #static_methods(TStaticMethodId):

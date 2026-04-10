@@ -1,6 +1,7 @@
 use std::{
     alloc::{Allocator, Layout},
-    ptr::{Alignment, NonNull},
+    mem::Alignment,
+    ptr::NonNull,
     sync::{
         MappedRwLockReadGuard, MappedRwLockWriteGuard, OnceLock, RwLock, RwLockReadGuard,
         RwLockWriteGuard,

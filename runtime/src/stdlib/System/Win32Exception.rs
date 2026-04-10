@@ -130,17 +130,13 @@ pub fn Constructor_I32(
     this: &mut ManagedReference<Class>,
     code: i32,
 ) {
-    use stdlib_header::definitions::System_Win32Exception_FieldId;
+    use stdlib_header::System::Win32Exception::FieldId;
 
     use crate::value::managed_reference::FieldAccessor;
 
     assert!(
         this.const_access_mut::<FieldAccessor<Class>>()
-            .write_typed_field(
-                System_Win32Exception_FieldId::Code as _,
-                Default::default(),
-                code,
-            )
+            .write_typed_field(FieldId::Code as _, Default::default(), code,)
     );
 
     let message = ManagedReference::new_string_from_wide(cpu, format_hresult(code));
@@ -160,7 +156,7 @@ pub fn Constructor_I32(_: &CPU, _: &Method<Class>, _: &mut ManagedReference<Clas
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_Win32Exception
+    Win32Exception
 #methods(TMethodId):
     Constructor => common_new_method!(mt TMethodId Constructor Constructor);
     Constructor_I32 => common_new_method!(mt TMethodId Constructor_I32 Constructor_I32);

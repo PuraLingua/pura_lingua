@@ -10,10 +10,6 @@ use global::{
         NonPurusCallConfiguration, NonPurusCallType, ObjectStrategy, StringEncoding,
     },
 };
-use stdlib_header::definitions::{
-    System_Array_1_MethodId, System_NonPurusCallConfiguration_MethodId,
-    System_NonPurusCallType_StaticMethodId,
-};
 use widestring::U16CStr;
 
 use crate::{
@@ -295,7 +291,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
             // Return type
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateU64.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateU64).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(7),
             }),
@@ -332,20 +328,20 @@ fn dynamic_non_purus_call() -> global::Result<()> {
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(10),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(13)],
                 ret_at: RegisterAddr::new(15),
             }),
             // Arg0
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateU64.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateU64).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -357,13 +353,13 @@ fn dynamic_non_purus_call() -> global::Result<()> {
             )),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateU32.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateU32).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -375,13 +371,13 @@ fn dynamic_non_purus_call() -> global::Result<()> {
             )),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateU8.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateU8).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -393,13 +389,13 @@ fn dynamic_non_purus_call() -> global::Result<()> {
             )),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateString).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -409,7 +405,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
                 ty: CoreTypeId::System_NonPurusCallConfiguration
                     .static_type_ref()
                     .into(),
-                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
+                ctor_name: stdlib_header::MethodId!(NonPurusCallConfiguration::Constructor).into(),
                 args: vec![
                     RegisterAddr::new(6),
                     RegisterAddr::new(7),
@@ -600,7 +596,7 @@ fn dynamic_message_box() -> global::Result<()> {
             // Return type
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateI32.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateI32).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(7),
             }),
@@ -633,13 +629,13 @@ fn dynamic_message_box() -> global::Result<()> {
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreatePointer.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreatePointer).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -650,13 +646,13 @@ fn dynamic_message_box() -> global::Result<()> {
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateString).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -667,13 +663,13 @@ fn dynamic_message_box() -> global::Result<()> {
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateString).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -684,13 +680,13 @@ fn dynamic_message_box() -> global::Result<()> {
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateU32.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateU32).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -700,7 +696,7 @@ fn dynamic_message_box() -> global::Result<()> {
                 ty: CoreTypeId::System_NonPurusCallConfiguration
                     .static_type_ref()
                     .into(),
-                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
+                ctor_name: stdlib_header::MethodId!(NonPurusCallConfiguration::Constructor).into(),
                 args: vec![
                     RegisterAddr::new(6),
                     RegisterAddr::new(7),

@@ -1,4 +1,4 @@
-use stdlib_header::{CoreTypeId, definitions::System_InvalidEnumException_MethodId};
+use stdlib_header::CoreTypeId;
 
 use crate::{
     type_system::class::Class, value::managed_reference::ManagedReference,
@@ -44,7 +44,7 @@ impl ThrowHelper {
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_InvalidEnumException)
                 .into(),
-            &System_InvalidEnumException_MethodId::Constructor_String_String.into(),
+            &stdlib_header::MethodId!(InvalidEnumException::Constructor_String_String).into(),
             &[(&raw mut enum_name).cast(), (&raw mut message).cast()],
         ) {
             None => return false,
@@ -61,8 +61,6 @@ impl ThrowHelper {
     }
     #[cfg(windows)]
     pub fn win32(&mut self, mut code: i32) -> bool {
-        use stdlib_header::definitions::System_Win32Exception_MethodId;
-
         let exception = match self.0.new_object(
             &self
                 .0
@@ -70,7 +68,7 @@ impl ThrowHelper {
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_Win32Exception)
                 .into(),
-            &System_Win32Exception_MethodId::Constructor_I32.into(),
+            &stdlib_header::MethodId!(Win32Exception::Constructor_I32).into(),
             &[(&raw mut code).cast()],
         ) {
             None => return false,

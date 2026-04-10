@@ -1,5 +1,4 @@
-use proc_macro2::TokenStream;
-use quote::format_ident;
+use proc_macro2::{Span, TokenStream};
 use syn::{Expr, Ident, LitStr, Token, parse::Parse, token::Bracket};
 
 use crate::common::{Attr, GenericCount, Parameter, keywords};
@@ -88,7 +87,6 @@ pub struct DefineCoreStructAst {
     pub fields: Vec<FieldAst>,
     pub method_ids: Vec<MethodAst>,
     pub static_method_ids: Vec<MethodAst>,
-    pub method_generator: Expr,
 }
 
 impl Parse for DefineCoreStructAst {
@@ -134,8 +132,7 @@ impl Parse for DefineCoreStructAst {
             let id = static_method_ids_buf.parse()?;
             static_method_ids.push(id);
         }
-        input.parse::<keywords::with>()?;
-        let method_generator = input.parse()?;
+
         Ok(Self {
             attr,
             assembly_name,
@@ -146,14 +143,13 @@ impl Parse for DefineCoreStructAst {
             fields,
             method_ids,
             static_method_ids,
-            method_generator,
         })
     }
 }
 
 impl DefineCoreStructAst {
     pub fn field_id_enum_ident(&self) -> Ident {
-        format_ident!("{}_FieldId", self.id)
+        Ident::new("FieldId", Span::call_site())
     }
     pub fn define_fields(&self, attrs: &[TokenStream]) -> TokenStream {
         let field_id_enum_ident = self.field_id_enum_ident();
@@ -174,7 +170,7 @@ impl DefineCoreStructAst {
         }
     }
     pub fn method_id_enum_ident(&self) -> Ident {
-        format_ident!("{}_MethodId", self.id)
+        Ident::new("MethodId", Span::call_site())
     }
     pub fn define_methods(&self, attrs: &[TokenStream]) -> TokenStream {
         let method_id_enum_ident = self.method_id_enum_ident();
@@ -195,7 +191,7 @@ impl DefineCoreStructAst {
         }
     }
     pub fn static_method_id_enum_ident(&self) -> Ident {
-        format_ident!("{}_StaticMethodId", self.id)
+        Ident::new("StaticMethodId", Span::call_site())
     }
     pub fn define_static_methods(&self, attrs: &[TokenStream]) -> TokenStream {
         let static_method_id_enum_ident = self.static_method_id_enum_ident();

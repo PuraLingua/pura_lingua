@@ -93,7 +93,6 @@ impl std::process::Termination for MainResult {
 impl CPU {
     fn default_exception_handler<T>(&self, _method: &Method<T>) {
         use crate::value::managed_reference::StringAccessor;
-        use stdlib_header::definitions::System_Exception_FieldId;
         let exception = self.get_exception();
         if exception.is_null() {
             return;
@@ -102,7 +101,7 @@ impl CPU {
         let message = exception
             .const_access::<FieldAccessor<_>>()
             .typed_field::<ManagedReference<Class>>(
-                System_Exception_FieldId::Message as _,
+                stdlib_header::FieldId!(Exception::Message) as _,
                 Default::default(),
             )
             .unwrap();
@@ -110,7 +109,7 @@ impl CPU {
         let stack_trace = exception
             .const_access::<FieldAccessor<_>>()
             .typed_field::<ManagedReference<Class>>(
-                System_Exception_FieldId::StackTrace as _,
+                stdlib_header::FieldId!(Exception::StackTrace) as _,
                 Default::default(),
             )
             .unwrap();

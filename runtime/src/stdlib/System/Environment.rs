@@ -1,7 +1,7 @@
 use std::alloc::Layout;
 
 use line_ending::LineEnding;
-use stdlib_header::definitions::System_Environment_FieldId;
+use stdlib_header::System::Environment::FieldId;
 
 use crate::{
     stdlib::System::_define_class,
@@ -15,7 +15,7 @@ pub extern "system" fn StaticConstructor(cpu: &mut CPU, method: &Method<Class>) 
         .vm_ref()
         .get_static_field(
             method.require_method_table_ref().ty.into(),
-            System_Environment_FieldId::NewLine as _,
+            FieldId::NewLine as _,
         )
         .unwrap();
 
@@ -32,7 +32,7 @@ pub extern "system" fn StaticConstructor(cpu: &mut CPU, method: &Method<Class>) 
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_Environment
+    Environment
 #methods(TMethodId):
 #static_methods(TStaticMethodId):
     StaticConstructor => Box::new(Method::create_sctor(

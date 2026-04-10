@@ -35,7 +35,7 @@ pub fn Constructor_String_String(
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_InvalidEnumException
+    InvalidEnumException
 #methods(TMethodId):
     Constructor_String_String => common_new_method!(mt TMethodId Constructor_String_String Constructor_String_String);
 #static_methods(TStaticMethodId):

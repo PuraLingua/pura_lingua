@@ -1,7 +1,5 @@
 use std::alloc::Layout;
 
-use stdlib_header::definitions::System_Pointer_FieldId;
-
 use crate::{
     stdlib::System::_define_struct,
     type_system::{method::Method, r#struct::Struct},
@@ -13,7 +11,7 @@ pub extern "system" fn StaticConstructor(cpu: &mut CPU, method: &Method<Struct>)
         .vm_ref()
         .get_static_field(
             method.require_method_table_ref().ty.into(),
-            System_Pointer_FieldId::Null as u32,
+            stdlib_header::System::Pointer::FieldId::Null as u32,
         )
         .unwrap();
     debug_assert_eq!(null_layout, Layout::new::<*const u8>());
@@ -24,7 +22,7 @@ pub extern "system" fn StaticConstructor(cpu: &mut CPU, method: &Method<Struct>)
 
 _define_struct!(
     fn load(assembly, mt, method_info)
-    System_Pointer
+    Pointer
 #methods(TMethodId):
 #static_methods(TStaticMethodId):
     StaticConstructor => Box::new(

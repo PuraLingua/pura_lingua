@@ -26,7 +26,7 @@ pub extern "system" fn ToString(
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_Object
+    Object
 #methods(TMethodId):
     Destructor => common_new_method!(
         mt TMethodId Destructor Destructor

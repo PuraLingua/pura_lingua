@@ -8,7 +8,7 @@ use global::{
     },
     non_purus_call_configuration, string_name,
 };
-use stdlib_header::{CoreTypeId, definitions::System_DynamicLibrary_MethodId};
+use stdlib_header::CoreTypeId;
 
 use crate::{
     test_utils::g_core_type,
@@ -81,7 +81,7 @@ fn simple_dynamic_lib_test() {
                                     Instruction::New(Instruction_New::NewObject {
                                         ty: g_core_type!(System_DynamicLibrary),
                                         ctor_name:
-                                            System_DynamicLibrary_MethodId::Constructor_String
+                                            stdlib_header::System::DynamicLibrary::MethodId::Constructor_String
                                                 .into(),
                                         args: vec![RegisterAddr::new(0)],
                                         output: RegisterAddr::new(1),
@@ -163,10 +163,6 @@ fn gen_simple_dynamic_lib_to_invoke(
     mt: NonNull<MethodTable<Class>>,
 ) -> Box<Method<Class>> {
     use global::instruction::Instruction_Call;
-    use stdlib_header::definitions::{
-        System_Array_1_MethodId, System_NonPurusCallConfiguration_MethodId,
-        System_NonPurusCallType_StaticMethodId,
-    };
 
     use crate::stdlib::CoreTypeIdConstExt as _;
 
@@ -224,7 +220,7 @@ fn gen_simple_dynamic_lib_to_invoke(
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(17),
-                method: MethodRef::from(System_DynamicLibrary_MethodId::GetSymbol),
+                method: MethodRef::from(stdlib_header::MethodId!(DynamicLibrary::GetSymbol)),
                 args: vec![RegisterAddr::new(18)],
                 ret_at: RegisterAddr::new(0),
             }),
@@ -258,7 +254,7 @@ fn gen_simple_dynamic_lib_to_invoke(
             // Return type
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateI32.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateI32).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(7),
             }),
@@ -295,13 +291,13 @@ fn gen_simple_dynamic_lib_to_invoke(
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreatePointer.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreatePointer).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -312,13 +308,13 @@ fn gen_simple_dynamic_lib_to_invoke(
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateString).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -329,13 +325,13 @@ fn gen_simple_dynamic_lib_to_invoke(
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateString.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateString).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -346,13 +342,13 @@ fn gen_simple_dynamic_lib_to_invoke(
             }),
             Instruction::Call(Instruction_Call::StaticCall {
                 ty: CoreTypeId::System_NonPurusCallType.static_type_ref().into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateU32.into(),
+                method: stdlib_header::StaticMethodId!(NonPurusCallType::CreateU32).into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(14),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(11),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
                 args: vec![RegisterAddr::new(12), RegisterAddr::new(14)],
                 ret_at: RegisterAddr::new(15),
             }),
@@ -362,7 +358,7 @@ fn gen_simple_dynamic_lib_to_invoke(
                 ty: CoreTypeId::System_NonPurusCallConfiguration
                     .static_type_ref()
                     .into(),
-                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
+                ctor_name: stdlib_header::MethodId!(NonPurusCallConfiguration::Constructor).into(),
                 args: vec![
                     RegisterAddr::new(6),
                     RegisterAddr::new(7),

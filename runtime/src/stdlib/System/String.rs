@@ -49,7 +49,7 @@ pub extern "system" fn get_U32Length(
 
 _define_class!(
     fn load(assembly, mt, method_info)
-    System_String
+    String
 #methods(TMethodId):
     ToString => common_new_method!(mt TMethodId ToString ToString);
     get_Length => common_new_method!(mt TMethodId get_Length get_Length);
