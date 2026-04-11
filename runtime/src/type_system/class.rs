@@ -11,6 +11,7 @@ use global::getset::{Getters, MutGetters};
 
 use crate::memory::GetFieldOffsetOptions;
 use crate::type_system::assembly_manager::AssemblyManager;
+use crate::type_system::interface::InterfaceImplementation;
 use crate::type_system::{
     assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
     type_handle::MaybeUnloadedTypeHandle,
@@ -108,6 +109,8 @@ pub struct Class {
     generic_bounds: Option<NonNull<[GenericBounds]>>,
     type_vars: Option<Box<[MaybeUnloadedTypeHandle]>>,
 
+    implemented_interfaces: Vec<InterfaceImplementation>,
+
     static_instance: RwLock<Option<ManagedReference<Class>>>,
 }
 
@@ -174,6 +177,8 @@ impl Class {
             generic_bounds: None,
             type_vars: Some(Box::clone_from_ref(type_vars)),
 
+            implemented_interfaces: self.implemented_interfaces.clone(),
+
             static_instance: RwLock::new(None),
         });
 
@@ -206,6 +211,8 @@ impl Class {
         mt_generator: F,
         mut fields: Vec<Field>,
         sctor: Option<u32>,
+
+        implemented_interfaces: Vec<InterfaceImplementation>,
 
         generic_bounds: Option<Vec<GenericBounds>>,
     ) -> Unique<Self> {
@@ -243,6 +250,8 @@ impl Class {
                 .map(|x| Box::into_non_null(x.into_boxed_slice())),
             type_vars: None,
 
+            implemented_interfaces,
+
             static_instance: RwLock::new(None),
         });
 
@@ -267,6 +276,8 @@ impl Class {
     pub(crate) fn new_for_binary<F: FnOnce(NonNull<Self>) -> NonNull<MethodTable<Self>>>(
         assembly: NonNull<Assembly>,
 
+        main: Option<u32>,
+
         name: String,
         attr: TypeAttr,
 
@@ -275,6 +286,8 @@ impl Class {
         mt_generator: F,
         fields: Vec<Field>,
         sctor: Option<u32>,
+
+        implemented_interfaces: Vec<InterfaceImplementation>,
 
         generic_bounds: Option<Vec<GenericBounds>>,
     ) -> Unique<Self> {
@@ -294,7 +307,7 @@ impl Class {
             assembly,
             generic: None,
             load_state,
-            main: None,
+            main,
 
             name: name.into_boxed_str(),
             attr,
@@ -312,6 +325,8 @@ impl Class {
                 .filter(|x| !x.is_empty())
                 .map(|x| Box::into_non_null(x.into_boxed_slice())),
             type_vars: None,
+
+            implemented_interfaces,
 
             static_instance: RwLock::new(None),
         });

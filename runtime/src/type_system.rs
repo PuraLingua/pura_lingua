@@ -4,6 +4,7 @@ pub mod class;
 pub mod field;
 pub mod generics;
 pub mod get_traits;
+pub mod interface;
 pub mod method;
 pub mod method_table;
 pub mod r#struct;

@@ -4,7 +4,6 @@ use std::{
     ptr::NonNull,
 };
 
-use enumflags2::BitFlags;
 use global::attrs::CallConvention;
 
 use crate::{
@@ -89,7 +88,11 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
     ) -> (NonNull<u8>, Layout) {
-        println!("Calling Method: {}", self.display(BitFlags::all()));
+        #[cfg(feature = "print_invoke_and_call")]
+        println!(
+            "Calling Method: {}",
+            self.display(enumflags2::BitFlags::all())
+        );
 
         if std::ptr::addr_eq(
             default_entry_point::__default_entry_point::<T> as *const c_void,

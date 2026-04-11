@@ -278,6 +278,7 @@ impl VirtualMachine {
                     .static_field_mem_info(field, Default::default(), Default::default())
                     .map(|x| (unsafe { obj_p.byte_add(x.offset).cast() }, x.layout))
             }
+            NonGenericTypeHandle::Interface(_) => None,
         }
     }
 }

@@ -11,7 +11,7 @@ impl CPU {
         // Little hack
         for mem_record in self.mem_records.iter() {
             match mem_record.kind {
-                NonGenericTypeHandleKind::Class => {
+                NonGenericTypeHandleKind::Class | NonGenericTypeHandleKind::Interface => {
                     let mut ptr = mem_record.ptr.cast::<Class>();
                     if ptr.header().is_some_and(|x| !x.is_marked()) {
                         ptr.destroy(unsafe { NonNull::from_ref(self).as_mut() });

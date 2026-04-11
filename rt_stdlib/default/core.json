@@ -898,6 +898,158 @@
         ]
     },
     {
+        "id": "System_Reference_1",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Reference`1",
+        "generic_count": {
+            "count": 1,
+            "is_infinite": false
+        },
+        "parent": null,
+        "parent_generics": [],
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 1,
+                "name": "Read",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": [
+                        {
+                            "WithGeneric": [
+                                "System_Reference_1",
+                                [
+                                    {
+                                        "Generic": 0
+                                    }
+                                ]
+                            ]
+                        },
+                        {
+                            "Core": "System_USize"
+                        },
+                        {
+                            "Generic": 0
+                        }
+                    ]
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 1
+                        },
+                        {
+                            "WithGeneric": [
+                                "System_Reference_1",
+                                [
+                                    {
+                                        "Generic": 0
+                                    }
+                                ]
+                            ]
+                        }
+                    ]
+                ],
+                "return_type": {
+                    "Generic": 0
+                }
+            },
+            {
+                "id": 2,
+                "name": "Write",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": [
+                        {
+                            "WithGeneric": [
+                                "System_Reference_1",
+                                [
+                                    {
+                                        "Generic": 0
+                                    }
+                                ]
+                            ]
+                        },
+                        {
+                            "Generic": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 1
+                        },
+                        {
+                            "WithGeneric": [
+                                "System_Reference_1",
+                                [
+                                    {
+                                        "Generic": 0
+                                    }
+                                ]
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Generic": 0
+                        }
+                    ]
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "Data",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_Pointer"
+                }
+            }
+        ]
+    },
+    {
         "id": "System_NonPurusCallConfiguration",
         "kind": "Class",
         "attr": {
@@ -1704,6 +1856,65 @@
         "fields": []
     },
     {
+        "id": "System_Span_1",
+        "kind": "Struct",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Struct": 0
+            }
+        },
+        "name": "System::Span`1",
+        "generic_count": {
+            "count": 1,
+            "is_infinite": false
+        },
+        "parent": null,
+        "parent_generics": [],
+        "methods": [],
+        "static_methods": [
+            {
+                "id": 0,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": [
+            {
+                "id": 0,
+                "name": "Data",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_Pointer"
+                }
+            },
+            {
+                "id": 1,
+                "name": "Length",
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0
+                },
+                "ty": {
+                    "Core": "System_USize"
+                }
+            }
+        ]
+    },
+    {
         "id": "System_String",
         "kind": "Class",
         "attr": {
@@ -1836,7 +2047,7 @@
         "fields": []
     },
     {
-        "id": "System_Environment",
+        "id": "System_RuntimeBasic",
         "kind": "Class",
         "attr": {
             "vis": "Public",
@@ -1844,7 +2055,7 @@
                 "Class": 0
             }
         },
-        "name": "System::Environment",
+        "name": "System::RuntimeBasic",
         "generic_count": null,
         "parent": {
             "Core": "System_Object"
@@ -1863,6 +2074,278 @@
                     "local_variable_types": []
                 },
                 "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 3,
+                "name": "Global_Allocate([!]System::USize,[!]System::USize)",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
+                "return_type": {
+                    "Core": "System_Pointer"
+                }
+            },
+            {
+                "id": 4,
+                "name": "Global_AllocateZeroed([!]System::USize,[!]System::USize)",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
+                "return_type": {
+                    "Core": "System_Pointer"
+                }
+            },
+            {
+                "id": 5,
+                "name": "Global_Deallocate([!]System::Pointer,[!]System::USize,[!]System::USize)",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_Pointer"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 6,
+                "name": "Global_Grow([!]System::Pointer,[!]System::USize,[!]System::USize,[!]System::USize,[!]System::USize)",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_Pointer"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 7,
+                "name": "Global_GrowZeroed([!]System::Pointer,[!]System::USize,[!]System::USize,[!]System::USize,[!]System::USize)",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_Pointer"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            },
+            {
+                "id": 8,
+                "name": "Global_Shrink([!]System::Pointer,[!]System::USize,[!]System::USize,[!]System::USize,[!]System::USize)",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_Pointer"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ],
+                    [
+                        {
+                            "impl_flags": 0
+                        },
+                        {
+                            "Core": "System_USize"
+                        }
+                    ]
+                ],
                 "return_type": {
                     "Core": "System_Void"
                 }
@@ -2006,6 +2489,57 @@
         ]
     },
     {
+        "id": "System_DlErrorException",
+        "kind": "Class",
+        "attr": {
+            "vis": "Public",
+            "specific": {
+                "Class": 0
+            }
+        },
+        "name": "System::DlErrorException",
+        "generic_count": null,
+        "parent": {
+            "Core": "System_Exception"
+        },
+        "parent_generics": [],
+        "methods": [
+            {
+                "id": 3,
+                "name": ".ctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 0,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "static_methods": [
+            {
+                "id": 4,
+                "name": ".sctor",
+                "generic_count": null,
+                "attr": {
+                    "vis": "Public",
+                    "impl_flags": 1,
+                    "overrides": null,
+                    "local_variable_types": []
+                },
+                "args": [],
+                "return_type": {
+                    "Core": "System_Void"
+                }
+            }
+        ],
+        "fields": []
+    },
+    {
         "id": "System_InvalidEnumException",
         "kind": "Class",
         "attr": {
@@ -2106,7 +2640,7 @@
             },
             {
                 "id": 4,
-                "name": ".ctor",
+                "name": ".ctor([!]System::Int32)",
                 "generic_count": null,
                 "attr": {
                     "vis": "Public",
@@ -2193,7 +2727,7 @@
             },
             {
                 "id": 4,
-                "name": ".ctor",
+                "name": ".ctor([!]System::Int32)",
                 "generic_count": null,
                 "attr": {
                     "vis": "Public",

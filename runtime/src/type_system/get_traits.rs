@@ -1,5 +1,5 @@
 mod _sealed {
-    use crate::type_system::{class::Class, r#struct::Struct};
+    use crate::type_system::{class::Class, interface::Interface, r#struct::Struct};
 
     pub trait TypeSealed {}
 
@@ -10,10 +10,13 @@ mod _sealed {
     default_impl! {
         Class
         Struct
+        Interface
     }
 }
 
 use std::{alloc::Layout, ptr::NonNull};
+
+use crate::type_system::interface::Interface;
 
 use super::{
     assembly::Assembly,
@@ -140,6 +143,22 @@ type_default_impls! {
     Struct
 }
 
+impl const GetAssemblyRef for Interface {
+    fn __get_assembly_ref(&self) -> &Assembly {
+        self.assembly_ref()
+    }
+}
+impl GetTypeVars for Interface {
+    fn __get_type_vars(&self) -> &Option<Box<[MaybeUnloadedTypeHandle]>> {
+        self.type_vars()
+    }
+}
+impl GetMethodTableRef for Interface {
+    fn __get_method_table_ref(&self) -> &MethodTable<Self> {
+        self.method_table_ref()
+    }
+}
+
 impl<T> GetTypeVars for Method<T> {
     fn __get_type_vars(&self) -> &Option<Box<[MaybeUnloadedTypeHandle]>> {
         self.type_vars()
@@ -159,6 +178,13 @@ impl GetParent for Struct {
     }
 }
 
+impl GetParent for Interface {
+    /// Interfaces do not have parents
+    fn __get_parent(&self) -> Option<NonNull<Self>> {
+        None
+    }
+}
+
 impl const GetValLayout for Class {
     fn __get_val_layout(&self) -> Layout {
         self.val_layout()
@@ -166,6 +192,12 @@ impl const GetValLayout for Class {
 }
 
 impl GetValLayout for Struct {
+    fn __get_val_layout(&self) -> Layout {
+        self.val_layout()
+    }
+}
+
+impl const GetValLayout for Interface {
     fn __get_val_layout(&self) -> Layout {
         self.val_layout()
     }
@@ -190,6 +222,12 @@ impl const GetGeneric for Class {
 }
 
 impl const GetGeneric for Struct {
+    fn __get_generic(&self) -> Option<NonNull<Self>> {
+        *self.generic()
+    }
+}
+
+impl const GetGeneric for Interface {
     fn __get_generic(&self) -> Option<NonNull<Self>> {
         *self.generic()
     }

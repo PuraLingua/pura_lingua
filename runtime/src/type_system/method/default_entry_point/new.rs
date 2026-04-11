@@ -70,6 +70,9 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 NonGenericTypeHandle::Struct(ty) => unsafe {
                     ManagedReference::alloc_array(cpu, ty.as_ref().method_table, (*len) as usize)
                 },
+                NonGenericTypeHandle::Interface(ty) => unsafe {
+                    ManagedReference::alloc_array(cpu, ty.as_ref().method_table, (*len) as usize)
+                },
             };
             if !call_frame(cpu).write_typed(*output, arr) {
                 load_register_failed!(*output);
@@ -92,6 +95,9 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                     ManagedReference::alloc_array(cpu, ty.as_ref().method_table, len)
                 },
                 NonGenericTypeHandle::Struct(ty) => unsafe {
+                    ManagedReference::alloc_array(cpu, ty.as_ref().method_table, len)
+                },
+                NonGenericTypeHandle::Interface(ty) => unsafe {
                     ManagedReference::alloc_array(cpu, ty.as_ref().method_table, len)
                 },
             };

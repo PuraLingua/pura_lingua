@@ -38,7 +38,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 load_register_failed!(*val);
             };
             match container.ty {
-                NonGenericTypeHandle::Class(_) => {
+                NonGenericTypeHandle::Class(_) | NonGenericTypeHandle::Interface(_) => {
                     let Some((out, out_layout)) = container
                         .as_ref_typed::<ManagedReference<Class>>()
                         .const_access::<FieldAccessor<Class>>()

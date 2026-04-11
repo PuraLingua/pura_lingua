@@ -77,6 +77,7 @@ fn test_static() {
                             g_core_type!(System_UInt64),
                         )],
                         None,
+                        vec![],
                         None,
                     )
                     .as_non_null_ptr(),

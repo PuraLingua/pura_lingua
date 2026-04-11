@@ -51,7 +51,7 @@ pub extern "system" fn ToString(
     };
     let mut strings = Vec::with_capacity(elements.len());
     match element_type {
-        NonGenericTypeHandle::Class(_) => {
+        NonGenericTypeHandle::Class(_) | NonGenericTypeHandle::Interface(_) => {
             for ele_b in elements {
                 let ele = unsafe {
                     ele_b

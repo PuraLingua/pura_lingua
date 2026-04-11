@@ -410,6 +410,10 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                         addr,
                         content: LoadContent::Arg(x),
                     }),
+                    LoadContent::ArgValue(x) => SLoad(Instruction_Load {
+                        addr,
+                        content: LoadContent::ArgValue(x),
+                    }),
 
                     LoadContent::Static { ty, field } => SLoad(Instruction_Load {
                         addr,
@@ -573,6 +577,39 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                     }),
                     None => Instruction::Call(Instruction_Call::StaticCall {
                         ty,
+                        method,
+                        args,
+                        ret_at,
+                    }),
+                },
+                Instruction_Call::InterfaceCall {
+                    interface,
+                    val,
+                    method,
+                    args,
+                    ret_at,
+                } => match val.try_into_short().and_then(|val| {
+                    args.iter()
+                        .copied()
+                        .map(RegisterAddr::try_into_short)
+                        .try_collect::<Vec<_>>()
+                        .map(|args| (val, args))
+                        .and_then(|(val, args)| {
+                            ret_at.try_into_short().map(|ret_at| (val, args, ret_at))
+                        })
+                }) {
+                    Some((val, args, ret_at)) => {
+                        Instruction::SCall(Instruction_Call::InterfaceCall {
+                            interface,
+                            val,
+                            method,
+                            args,
+                            ret_at,
+                        })
+                    }
+                    None => Instruction::Call(Instruction_Call::InterfaceCall {
+                        interface,
+                        val,
                         method,
                         args,
                         ret_at,

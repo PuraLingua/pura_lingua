@@ -11,6 +11,7 @@ use crate::{
     type_system::{
         class::Class,
         get_traits::{GetAssemblyRef, GetNonGenericTypeHandleKind, GetTypeVars},
+        interface::Interface,
         method::{Method, MethodDisplayOptions},
         r#struct::Struct,
         type_handle::{NonGenericTypeHandle, NonGenericTypeHandleKind},
@@ -96,6 +97,12 @@ impl CallStack {
                 },
                 (m, NonGenericTypeHandleKind::Struct) => unsafe {
                     m.cast::<Method<Struct>>()
+                        .as_ref()
+                        .display(options)
+                        .to_string()
+                },
+                (m, NonGenericTypeHandleKind::Interface) => unsafe {
+                    m.cast::<Method<Interface>>()
                         .as_ref()
                         .display(options)
                         .to_string()
@@ -228,7 +235,12 @@ impl LocalVariable {
     }
     #[inline]
     pub fn write_typed<T>(self, val: T) {
-        debug_assert!(self.layout.size() >= size_of::<T>());
+        debug_assert!(
+            self.layout.size() >= size_of::<T>(),
+            "{} is less then required size {}",
+            self.layout.size(),
+            size_of::<T>()
+        );
         unsafe {
             self.ptr.cast::<T>().write(val);
         }
@@ -350,6 +362,7 @@ impl CommonCallStackFrame {
                 Layout,
             ) -> Result<NonNull<[u8]>, std::alloc::AllocError> =
                 <_ as std::alloc::Allocator>::allocate_zeroed;
+
             ALLOCATE_FN(&std::alloc::Global, full_layout)
                 .unwrap()
                 .as_non_null_ptr()

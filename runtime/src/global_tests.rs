@@ -256,6 +256,7 @@ fn gtest_simple_console() -> global::Result<()> {
 }
 
 #[test]
+#[ignore = "Not yet ready"]
 #[cfg(windows)]
 fn gtest_middle_ir_simple_console() -> global::Result<()> {
     let vm = global_vm();

@@ -199,6 +199,9 @@ where
                 super::type_handle::NonGenericTypeHandle::Struct(ty) => unsafe {
                     std::ptr::addr_eq(self, ty.as_ref().method_table_ref())
                 },
+                super::type_handle::NonGenericTypeHandle::Interface(ty) => unsafe {
+                    std::ptr::addr_eq(self, ty.as_ref().method_table_ref())
+                },
             })? as u32
         };
 

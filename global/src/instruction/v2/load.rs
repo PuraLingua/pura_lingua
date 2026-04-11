@@ -197,6 +197,8 @@ where
     NonPurusCallConfiguration(NonPurusCallConfiguration),
 
     Arg(u64),
+    /// It will read the value if the arg is passed by ref
+    ArgValue(u64),
 
     Static {
         ty: TTypeRef,
@@ -238,6 +240,7 @@ where
                 f.write_fmt(format_args!("non_purus_call_configuration({conf:?})"))
             }
             LoadContent::Arg(arg) => f.write_fmt(format_args!("arg({arg}({arg:#x}))")),
+            LoadContent::ArgValue(arg) => f.write_fmt(format_args!("*arg({arg}({arg:#x}))")),
             LoadContent::Static { ty, field } => {
                 f.write_fmt(format_args!("static({field} at {ty})"))
             }

@@ -29,6 +29,8 @@
 #![feature(derive_const)]
 #![feature(generic_const_exprs)]
 #![feature(pointer_is_aligned_to)]
+#![feature(more_qualified_paths)]
+#![feature(try_find)]
 #![feature(impl_trait_in_bindings)]
 /* cSpell:disable-next-line */
 #![feature(exitcode_exit_method)]

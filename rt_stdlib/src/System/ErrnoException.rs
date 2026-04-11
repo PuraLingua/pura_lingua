@@ -10,7 +10,7 @@ proc_macros::define_core_class! {
     #methods of super::Exception::MethodId:
     [
         #[Public {}] Constructor ".ctor" () -> CoreTypeRef::Core(CoreTypeId::System_Void);
-        #[Public {}] Constructor_I32 ".ctor" (
+        #[Public {}] Constructor_I32 ".ctor([!]System::Int32)" (
             #[{}] CoreTypeRef::Core(CoreTypeId::System_Int32)
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] []

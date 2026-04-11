@@ -120,7 +120,31 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             }
         }
 
-        LoadContent::Arg(arg) => {
+        LoadContent::Arg(arg_index) => {
+            let arg_index = (*arg_index) as usize;
+            let Some(arg) = args.get(arg_index) else {
+                return Some(Err(Termination::LoadArgFailed(arg_index as u64)));
+            };
+
+            match NonNull::new(*arg) {
+                None => {
+                    call_frame(cpu).zero_register(*register_addr);
+                }
+                Some(p) => {
+                    let Some(out_var) = call_frame(cpu).get(*register_addr) else {
+                        load_register_failed!(*register_addr);
+                    };
+                    if let Some(param) = method.args.get(arg_index)
+                        && param.attr.is_by_ref()
+                    {
+                        out_var.write_typed(p);
+                    } else {
+                        unsafe { out_var.copy_all_from(p.cast()) }
+                    }
+                }
+            }
+        }
+        LoadContent::ArgValue(arg) => {
             let Some(arg) = args.get((*arg) as usize) else {
                 return Some(Err(Termination::LoadArgFailed(*arg)));
             };
@@ -192,6 +216,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                         );
                     }
                 }
+                NonGenericTypeHandle::Interface(_) => unreachable!(),
             }
         }
     }

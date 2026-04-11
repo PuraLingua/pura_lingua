@@ -2,7 +2,6 @@ use std::{ffi::c_void, mem::offset_of, ptr::NonNull};
 
 use global::{
     attrs::{CallConvention, MethodAttr, MethodImplementationFlags},
-    dt_println,
     getset::Getters,
     instruction::Instruction,
 };
@@ -143,7 +142,8 @@ impl<T> Method<T> {
         attr: MethodAttr<MaybeUnloadedTypeHandle>,
     ) -> Self {
         extern "system" fn sctor<T>(_: &mut CPU, _: &Method<T>) {
-            dt_println!("Calling default sctor");
+            #[cfg(feature = "print_invoke_and_call")]
+            global::dt_println!("Calling default sctor");
         }
         Self::create_sctor(mt, attr, sctor::<T>)
     }
@@ -275,6 +275,33 @@ pub enum MethodRef {
         index: u32,
         types: Vec<MaybeUnloadedTypeHandle>,
     },
+}
+
+impl MethodRef {
+    pub fn index(&self) -> u32 {
+        match self {
+            MethodRef::Index(index) => *index,
+            MethodRef::Specific { index, .. } => *index,
+        }
+    }
+    pub fn map_index(self, f: impl FnOnce(u32) -> u32) -> Self {
+        match self {
+            MethodRef::Index(index) => Self::Index(f(index)),
+            MethodRef::Specific { index, types } => Self::Specific {
+                index: f(index),
+                types,
+            },
+        }
+    }
+    pub fn cloned_map_index(&self, f: impl FnOnce(u32) -> u32) -> Self {
+        match self {
+            MethodRef::Index(index) => Self::Index(f(*index)),
+            MethodRef::Specific { index, types } => Self::Specific {
+                index: f(*index),
+                types: types.clone(),
+            },
+        }
+    }
 }
 
 impl std::fmt::Display for MethodRef {

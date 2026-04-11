@@ -74,6 +74,8 @@ pub enum MainResult {
     VoidWithException = 1,
     Custom(u8) = 2,
     SignatureNotMatched = 3,
+    MainAttrNotFound = 4,
+    MainNotFound = 5,
 }
 
 impl std::process::Termination for MainResult {
@@ -84,6 +86,14 @@ impl std::process::Termination for MainResult {
             Self::Custom(code) => std::process::ExitCode::from(code),
             Self::SignatureNotMatched => {
                 eprintln!("The signature of the Main method is mismatched.");
+                std::process::ExitCode::FAILURE
+            }
+            Self::MainAttrNotFound => {
+                eprintln!("MainAttr not found");
+                std::process::ExitCode::FAILURE
+            }
+            Self::MainNotFound => {
+                eprintln!("No `Main` method found");
                 std::process::ExitCode::FAILURE
             }
         }
@@ -285,6 +295,19 @@ impl CPU {
                 MainResult::SignatureNotMatched
             }
         }
+    }
+
+    pub fn invoke_main_class(&mut self, class: &Class, args: Vec<String>) -> MainResult {
+        let Some(&method_id) = class.main().as_ref() else {
+            return MainResult::MainAttrNotFound;
+        };
+        let Some(method) = class.method_table_ref().get_method(method_id) else {
+            return MainResult::MainNotFound;
+        };
+        if cfg!(debug_assertions) && unsafe { &**method.as_ref().name() } != "Main" {
+            dt_println!("Main does not have the name `Main`");
+        }
+        self.invoke_main(unsafe { method.as_ref() }, args)
     }
 
     pub fn invoke_main_and_exit<T: GetAssemblyRef + GetTypeVars + GetNonGenericTypeHandleKind>(

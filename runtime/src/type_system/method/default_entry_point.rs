@@ -33,6 +33,7 @@ enum Termination {
     NewObjectFailed,
     /// Failed to convert a puralingua object to rust
     UnmarshalFailed(global::Error),
+    UnimplementedInterface,
 
     Returned,
     Terminated,
@@ -124,6 +125,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         };
 
         if !matches!(ins, Instruction::Nop) {
+            #[cfg(feature = "print_invoke_and_call")]
             eprintln!("INVOKE: {ins}");
         }
 
@@ -259,6 +261,9 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                 }
                 Termination::UnmarshalFailed(err) => {
                     t_println!("Unmarshal failed because:\n{err}");
+                }
+                Termination::UnimplementedInterface => {
+                    t_println!("Interface has not been implemented");
                 }
 
                 Termination::Terminated => {}

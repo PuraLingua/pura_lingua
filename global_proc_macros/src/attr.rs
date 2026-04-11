@@ -10,6 +10,7 @@ mod keywords {
     custom_keyword!(parameter);
     custom_keyword!(field);
     custom_keyword!(class);
+    custom_keyword!(interface);
 }
 
 pub enum AttrKind {
@@ -18,6 +19,7 @@ pub enum AttrKind {
     Field,
     Class,
     Struct,
+    Interface,
 }
 
 impl From<keywords::method> for AttrKind {
@@ -50,6 +52,12 @@ impl From<Token![struct]> for AttrKind {
     }
 }
 
+impl From<keywords::interface> for AttrKind {
+    fn from(_: keywords::interface) -> Self {
+        Self::Interface
+    }
+}
+
 impl Parse for AttrKind {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         input
@@ -59,10 +67,11 @@ impl Parse for AttrKind {
             .or_else(|_| input.parse::<keywords::field>().map(Self::from))
             .or_else(|_| input.parse::<keywords::class>().map(Self::from))
             .or_else(|_| input.parse::<Token![struct]>().map(Self::from))
+            .or_else(|_| input.parse::<keywords::interface>().map(Self::from))
             .map_err(|e| {
                 syn::Error::new(
                     e.span(),
-                    "expected one of `method`, `parameter`, `field`, `class` or `struct`",
+                    "expected one of `method`, `parameter`, `field`, `class`, `struct` or `interface`",
                 )
             })
     }
@@ -87,6 +96,10 @@ pub enum CreateAttrAst {
         flags: Vec<Ident>,
     },
     Struct {
+        vis: Ident,
+        flags: Vec<Ident>,
+    },
+    Interface {
         vis: Ident,
         flags: Vec<Ident>,
     },
@@ -165,6 +178,18 @@ impl Parse for CreateAttrAst {
                 }
 
                 Ok(Self::Struct { vis, flags })
+            }
+            AttrKind::Interface => {
+                let vis = input.parse()?;
+
+                let flag_tokens;
+                syn::braced!(flag_tokens in input);
+                let mut flags = Vec::new();
+                while let Ok(f) = flag_tokens.parse::<Ident>() {
+                    flags.push(f);
+                }
+
+                Ok(Self::Interface { vis, flags })
             }
         }
     }
@@ -264,6 +289,19 @@ pub fn create_attr_impl(ast: CreateAttrAst) -> syn::Result<TokenStream> {
                 #_crate::attrs::TypeAttr::new(
                     #_crate::attrs::Visibility::#vis,
                     #_crate::attrs::TypeSpecificAttr::Struct(#flags),
+                )
+            })
+        }
+        CreateAttrAst::Interface { vis, flags } => {
+            let flags = make_flags(
+                &_crate,
+                Ident::new("InterfaceImplementationFlags", Span::call_site()),
+                flags,
+            );
+            Ok(quote! {
+                #_crate::attrs::TypeAttr::new(
+                    #_crate::attrs::Visibility::#vis,
+                    #_crate::attrs::TypeSpecificAttr::Interface(#flags),
                 )
             })
         }

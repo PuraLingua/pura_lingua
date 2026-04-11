@@ -42,3 +42,7 @@ windows-result = "0.4.1"
 
 [target.'cfg(unix)'.dependencies.libc]
 version = "0.2.182"
+
+[features]
+default = []
+print_invoke_and_call = []

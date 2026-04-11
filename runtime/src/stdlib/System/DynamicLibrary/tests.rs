@@ -104,6 +104,7 @@ fn simple_dynamic_lib_test() {
                             .into(),
                     )],
                     None,
+                    vec![],
                     None,
                 )
                 .into(),

@@ -61,6 +61,7 @@ fn test_layout() {
                         ),
                     ],
                     None,
+                    vec![],
                     None,
                 )
                 .as_non_null_ptr(),

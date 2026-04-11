@@ -33,6 +33,24 @@ impl ExceptionManager {
 pub struct ThrowHelper(CPU);
 
 impl ThrowHelper {
+    pub fn alloc(&mut self) -> bool {
+        let exception = match self.0.new_object(
+            &self
+                .0
+                .vm_ref()
+                .assembly_manager()
+                .get_core_type(CoreTypeId::System_AllocException)
+                .into(),
+            &stdlib_header::MethodId!(AllocException::Constructor).into(),
+            &[],
+        ) {
+            None => return false,
+            Some(exception) => exception,
+        };
+        self.0.throw_exception(exception);
+
+        true
+    }
     pub fn invalid_enum(&mut self, enum_name: &str, message: &str) -> bool {
         let mut enum_name = ManagedReference::new_string(&mut self.0, enum_name);
         let mut message = ManagedReference::new_string(&mut self.0, message);

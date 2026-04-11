@@ -30,6 +30,7 @@ proc_macros::define_core_class! {
 
     #methods of super::Object::MethodId:
     [
+        // Skip sign for default constructor
         #[Public {}] Constructor ".ctor" (
             #[{}] CoreTypeRef::Core(CoreTypeId::System_UInt8)
             #[{}] CoreTypeRef::Core(CoreTypeId::System_NonPurusCallType)

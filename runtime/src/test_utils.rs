@@ -88,6 +88,7 @@ pub fn try_invoke_instructions(
                 }),
                 vec![],
                 None,
+                vec![],
                 None,
             )
             .into(),

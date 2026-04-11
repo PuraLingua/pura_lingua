@@ -83,6 +83,7 @@ fn test_call_stack() {
                         },
                         vec![],
                         None,
+                        vec![],
                         None,
                     )
                     .as_non_null_ptr(),

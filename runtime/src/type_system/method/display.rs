@@ -28,6 +28,12 @@ impl Parameter {
     }
 }
 
+impl<T> fmt::Debug for Display<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <_ as fmt::Display>::fmt(self, f)
+    }
+}
+
 impl<T> fmt::Display for Display<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.1.contains(MethodDisplayOptions::WithCallConvention) {

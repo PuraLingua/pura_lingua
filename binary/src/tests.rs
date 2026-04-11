@@ -175,6 +175,8 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
             fields: Vec::new(),
             sctor: None,
             generic_bounds: None,
+
+            interfaces: vec![],
         })],
 
         string_section: section,

@@ -10,6 +10,7 @@ use crate::type_system::{
     field::Field,
     generics::GenericBounds,
     get_traits::{GetAssemblyRef, GetTypeVars},
+    interface::{Interface, InterfaceImplementation},
     method::{Method, MethodRef, Parameter},
     method_table::MethodTable,
     r#struct::Struct,
@@ -114,6 +115,7 @@ impl AssemblyManager {
                         }
                     }
                     NonGenericTypeHandle::Struct(_) => {}
+                    NonGenericTypeHandle::Interface(_) => {}
                 }
             }
         }
@@ -136,6 +138,15 @@ impl AssemblyManager {
                 binary::ty::TypeDef::Struct(struct_def) => {
                     self.load_binary_struct(&assembly, id, binary, struct_def, type_id as u32)?;
                 }
+                binary::ty::TypeDef::Interface(interface_def) => {
+                    self.load_binary_interface(
+                        &assembly,
+                        id,
+                        binary,
+                        interface_def,
+                        type_id as u32,
+                    )?;
+                }
             }
         }
 
@@ -154,6 +165,7 @@ impl AssemblyManager {
         let mut parent_loaded = true;
         let result = Class::new_for_binary(
             NonNull::from_ref(assembly),
+            class_def.main,
             name.to_owned(),
             class_def.attr,
             class_def
@@ -212,6 +224,23 @@ impl AssemblyManager {
                 })
                 .try_collect()?,
             class_def.sctor,
+            class_def
+                .interfaces
+                .iter()
+                .map(|x| {
+                    MaybeUnloadedTypeHandle::from_token_for_type(
+                        assembly,
+                        assembly_id,
+                        b_assembly,
+                        &x.target,
+                        class_id,
+                    )
+                    .map(|target| InterfaceImplementation {
+                        target,
+                        map: x.map.clone(),
+                    })
+                })
+                .try_collect()?,
             self.load_binary_generic_bounds(
                 assembly,
                 assembly_id,
@@ -270,6 +299,59 @@ impl AssemblyManager {
         );
 
         assert_eq!(assembly.add_type(result.as_non_null_ptr()), struct_id);
+        Ok(())
+    }
+
+    fn load_binary_interface(
+        &self,
+        assembly: &Assembly,
+        assembly_id: usize,
+        b_assembly: &binary::assembly::Assembly,
+        interface_def: &binary::ty::InterfaceDef,
+        interface_id: u32,
+    ) -> binary::binary_core::BinaryResult<()> {
+        let name = b_assembly.get_string(interface_def.name)?;
+        let result = Interface::new(
+            NonNull::from_ref(assembly),
+            name.to_owned(),
+            interface_def.attr,
+            interface_def
+                .required_interfaces
+                .iter()
+                .map(|tt| {
+                    MaybeUnloadedTypeHandle::from_token_for_type(
+                        assembly,
+                        assembly_id,
+                        b_assembly,
+                        tt,
+                        interface_id,
+                    )
+                })
+                .try_collect()?,
+            |rt_interface| {
+                MethodTable::new(rt_interface, |mt| {
+                    self.load_binary_methods(
+                        assembly,
+                        assembly_id,
+                        b_assembly,
+                        interface_id,
+                        mt,
+                        &interface_def.method_table,
+                    )
+                    .unwrap()
+                })
+                .as_non_null_ptr()
+            },
+            self.load_binary_generic_bounds(
+                assembly,
+                assembly_id,
+                b_assembly,
+                interface_id,
+                &interface_def.generic_bounds,
+            )?,
+        );
+
+        assert_eq!(assembly.add_type(result.as_non_null_ptr()), interface_id);
         Ok(())
     }
 

@@ -6,11 +6,13 @@ use crate::item_token::TypeToken;
 
 mod class;
 mod field;
+mod interface;
 mod method;
 mod r#struct;
 
 pub use class::ClassDef;
 pub use field::Field;
+pub use interface::{InterfaceDef, InterfaceImplementation};
 pub use method::{BinaryInstruction, Method, MethodSpec, Parameter};
 pub use r#struct::StructDef;
 
@@ -22,7 +24,7 @@ pub use r#struct::StructDef;
 pub enum TypeDef {
     Class(ClassDef),
     Struct(StructDef),
-    // Interface(InterfaceDef),
+    Interface(InterfaceDef),
 }
 
 impl TypeDef {
@@ -30,14 +32,14 @@ impl TypeDef {
         match self {
             TypeDef::Class(class_def) => &class_def.name,
             TypeDef::Struct(struct_def) => &struct_def.name,
-            // TypeDef::Interface(interface_def) => interface_def.name(),
+            TypeDef::Interface(interface_def) => &interface_def.name,
         }
     }
     pub fn attr(&self) -> TypeAttr {
         match self {
             TypeDef::Class(class_def) => class_def.attr,
             TypeDef::Struct(struct_def) => struct_def.attr,
-            // TypeDef::Interface(interface_def) => interface_def.attr,
+            TypeDef::Interface(interface_def) => interface_def.attr,
         }
     }
 }

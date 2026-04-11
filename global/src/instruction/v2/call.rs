@@ -31,6 +31,13 @@ where
         args: Vec<TRegisterAddr>,
         ret_at: TRegisterAddr,
     },
+    InterfaceCall {
+        interface: TTypeRef,
+        val: TRegisterAddr,
+        method: TMethodRef,
+        args: Vec<TRegisterAddr>,
+        ret_at: TRegisterAddr,
+    },
     StaticNonPurusCall {
         f_pointer: TRegisterAddr,
         config: NonPurusCallConfiguration,
@@ -88,6 +95,19 @@ where
                 ret_at,
             } => Instruction_Call::StaticCall {
                 ty: f_TTypeRef(ty),
+                method: f_TMethodRef(method),
+                args: args.into_iter().map(&mut f_TRegisterAddr).collect(),
+                ret_at: f_TRegisterAddr(ret_at),
+            },
+            Instruction_Call::InterfaceCall {
+                interface,
+                val,
+                method,
+                args,
+                ret_at,
+            } => Instruction_Call::InterfaceCall {
+                interface: f_TTypeRef(interface),
+                val: f_TRegisterAddr(val),
                 method: f_TMethodRef(method),
                 args: args.into_iter().map(&mut f_TRegisterAddr).collect(),
                 ret_at: f_TRegisterAddr(ret_at),
@@ -193,6 +213,16 @@ where
                 ret_at,
             } => f.write_fmt(format_args!(
                 " StaticCall {ty} {method}({}) -> {ret_at:#x}",
+                display_args(args)
+            )),
+            Instruction_Call::InterfaceCall {
+                interface,
+                val,
+                method,
+                args,
+                ret_at,
+            } => f.write_fmt(format_args!(
+                " InterfaceCall {val:#x} as {interface} {method}({}) -> {ret_at:#x}",
                 display_args(args)
             )),
             Instruction_Call::StaticNonPurusCall {

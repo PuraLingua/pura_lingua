@@ -86,7 +86,7 @@ where
         #[inline]
         fn mark_field(field_ptr: NonNull<u8>, field_type: NonGenericTypeHandle, val: bool) {
             match field_type {
-                NonGenericTypeHandle::Class(_) => unsafe {
+                NonGenericTypeHandle::Class(_) | NonGenericTypeHandle::Interface(_) => unsafe {
                     field_ptr
                         .cast::<ManagedReference<Class>>()
                         .as_mut()

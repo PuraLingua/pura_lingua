@@ -6,7 +6,8 @@ use global::{UnwrapEnum, non_purus_call_configuration::NonPurusCallType};
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdExt},
     type_system::{
-        assembly_manager::AssemblyManager, class::Class, r#struct::Struct, type_ref::TypeRef,
+        assembly_manager::AssemblyManager, class::Class, interface::Interface, r#struct::Struct,
+        type_ref::TypeRef,
     },
 };
 
@@ -22,6 +23,7 @@ mod convert;
 pub enum NonGenericTypeHandleKind {
     Class = TypeHandleKind::Class as _,
     Struct = TypeHandleKind::Struct as _,
+    Interface = TypeHandleKind::Interface as _,
 }
 
 #[repr(u8)]
@@ -30,6 +32,7 @@ pub enum NonGenericTypeHandleKind {
 pub enum NonGenericTypeHandle {
     Class(NonNull<Class>) = NonGenericTypeHandleKind::Class as _,
     Struct(NonNull<Struct>) = NonGenericTypeHandleKind::Struct as _,
+    Interface(NonNull<Interface>) = NonGenericTypeHandleKind::Interface as _,
 }
 
 impl NonGenericTypeHandle {
@@ -37,13 +40,15 @@ impl NonGenericTypeHandle {
         match self {
             Self::Class(ty) => unsafe { ty.as_ref().method_table_ref().get_core_type_id() },
             Self::Struct(ty) => unsafe { ty.as_ref().method_table_ref().get_core_type_id() },
+            Self::Interface(ty) => unsafe { ty.as_ref().method_table_ref().get_core_type_id() },
         }
     }
 
     pub fn name(&self) -> &str {
         match self {
-            NonGenericTypeHandle::Class(ty) => unsafe { ty.as_ref().name() },
-            NonGenericTypeHandle::Struct(ty) => unsafe { ty.as_ref().name() },
+            Self::Class(ty) => unsafe { ty.as_ref().name() },
+            Self::Struct(ty) => unsafe { ty.as_ref().name() },
+            Self::Interface(ty) => unsafe { ty.as_ref().name() },
         }
     }
 
@@ -71,6 +76,7 @@ impl NonGenericTypeHandle {
         match th {
             TypeHandle::Class(ty) => Some(Self::Class(ty)),
             TypeHandle::Struct(ty) => Some(Self::Struct(ty)),
+            TypeHandle::Interface(ty) => Some(Self::Interface(ty)),
             TypeHandle::Generic(_) => None,
         }
     }
@@ -79,6 +85,7 @@ impl NonGenericTypeHandle {
         match self {
             Self::Class(ty) => unsafe { ty.as_ref().val_layout() },
             Self::Struct(ty) => unsafe { ty.as_ref().val_layout() },
+            Self::Interface(ty) => unsafe { ty.as_ref().val_layout() },
         }
     }
 
@@ -89,6 +96,7 @@ impl NonGenericTypeHandle {
         match self {
             Self::Class(ty) => unsafe { ty.as_ref().val_libffi_type() },
             Self::Struct(ty) => unsafe { ty.as_ref().val_libffi_type() },
+            Self::Interface(_) => libffi::middle::Type::pointer(),
         }
     }
 
@@ -102,6 +110,7 @@ impl NonGenericTypeHandle {
         match self {
             Self::Class(_) => NonPurusCallType::Object,
             Self::Struct(ty) => unsafe { ty.as_ref().non_purus_call_type() },
+            Self::Interface(_) => NonPurusCallType::Object,
         }
     }
 
@@ -110,6 +119,7 @@ impl NonGenericTypeHandle {
             match self {
                 Self::Class(ty) => Self::Class(ty.as_ref().instantiate(type_vars)),
                 Self::Struct(ty) => Self::Struct(ty.as_ref().instantiate(type_vars)),
+                Self::Interface(ty) => Self::Interface(ty.as_ref().instantiate(type_vars)),
             }
         }
     }
@@ -132,6 +142,7 @@ impl NonGenericTypeHandle {
 pub enum TypeHandleKind {
     Class,
     Struct,
+    Interface,
     Generic,
 }
 
@@ -140,6 +151,7 @@ pub enum TypeHandleKind {
 pub enum TypeHandle {
     Class(NonNull<Class>) = TypeHandleKind::Class as _,
     Struct(NonNull<Struct>) = TypeHandleKind::Struct as _,
+    Interface(NonNull<Interface>) = TypeHandleKind::Interface as _,
     Generic(u32) = TypeHandleKind::Generic as _,
 }
 
@@ -148,6 +160,7 @@ impl Debug for TypeHandle {
         match self {
             Self::Class(cl) => write!(f, "Class {}", unsafe { cl.as_ref().name() }),
             Self::Struct(s) => write!(f, "Struct {}", unsafe { s.as_ref().name() }),
+            Self::Interface(s) => write!(f, "Interface {}", unsafe { s.as_ref().name() }),
 
             Self::Generic(g) => write!(f, "Generic {g}"),
         }
@@ -159,6 +172,7 @@ impl PartialEq for TypeHandle {
         match (self, other) {
             (Self::Class(p), Self::Class(po)) => p.addr() == po.addr(),
             (Self::Struct(p), Self::Struct(po)) => p.addr() == po.addr(),
+            (Self::Interface(p), Self::Interface(po)) => p.addr() == po.addr(),
             (Self::Generic(i1), Self::Generic(i2)) => i1.eq(i2),
             _ => false,
         }
@@ -379,15 +393,8 @@ const _: () = {
         (CLASS.get_int_tag() == N_CLASS.get_int_tag())
             && (STRUCT.get_int_tag() == N_STRUCT.get_int_tag())
     }
-    fn _assert()
-    where
-        And<
-            And<
-                ConstAssert<{ size_of::<TypeHandle>() >= size_of::<NonGenericTypeHandle>() }>,
-                ConstAssert<{ test_align() }>,
-            >,
-            ConstAssert<{ test_tags() }>,
-        >: SuccessAssert,
-    {
-    }
+
+    assert!(size_of::<TypeHandle>() >= size_of::<NonGenericTypeHandle>());
+    assert!(test_align());
+    assert!(test_tags());
 };

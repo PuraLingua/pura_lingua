@@ -2,6 +2,7 @@
 #![feature(const_trait_impl)]
 #![feature(const_convert)]
 #![feature(core_intrinsics)]
+#![feature(const_index)]
 #![allow(clippy::manual_non_exhaustive)]
 #![allow(nonstandard_style)]
 #![allow(internal_features)]
@@ -11,7 +12,6 @@ use global::{AllVariants, AllVariantsName, num_enum::TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
 pub mod System;
-pub mod definitions;
 
 #[repr(u32)]
 #[derive(
@@ -56,6 +56,8 @@ pub enum CoreTypeId {
     System_Char,
 
     System_Pointer,
+    /// It has the same size as [`Self::System_Pointer`]
+    System_Reference_1,
 
     System_NonPurusCallConfiguration,
     System_NonPurusCallType,
@@ -65,12 +67,15 @@ pub enum CoreTypeId {
     System_Tuple,
 
     System_Array_1,
+    System_Span_1,
+
     System_String,
     System_LargeString,
 
-    System_Environment,
+    System_RuntimeBasic,
 
     System_Exception,
+    System_AllocException,
     System_InvalidEnumException,
     System_Win32Exception,
     System_ErrnoException,
@@ -153,7 +158,8 @@ pub struct FieldInfo {
 
 impl CoreTypeId {
     pub const fn raw_name(self) -> &'static str {
-        Self::ALL_VARIANTS_NAME[self as u32 as usize]
+        // SAFETY: self is always less than `Self::ALL_VARIANTS_NAME.len()`
+        unsafe { Self::ALL_VARIANTS_NAME.get_unchecked(self as u32 as usize) }
     }
     pub const fn name(&self) -> &'static str {
         match self {
@@ -180,6 +186,7 @@ impl CoreTypeId {
             Self::System_Char => "System::Char",
 
             Self::System_Pointer => "System::Pointer",
+            Self::System_Reference_1 => "System::Reference`1",
 
             Self::System_NonPurusCallConfiguration => "System::NonPurusCallConfiguration",
             Self::System_NonPurusCallType => "System::NonPurusCallType",
@@ -189,13 +196,15 @@ impl CoreTypeId {
             Self::System_Tuple => "System::Tuple",
 
             Self::System_Array_1 => "System::Array`1",
+            Self::System_Span_1 => "System::Span`1",
 
             Self::System_String => "System::String",
             Self::System_LargeString => "System::LargeString",
 
-            Self::System_Environment => "System::Environment",
+            Self::System_RuntimeBasic => "System::RuntimeBasic",
 
             Self::System_Exception => "System::Exception",
+            Self::System_AllocException => "System::AllocException",
             Self::System_InvalidEnumException => "System::InvalidEnumException",
             Self::System_Win32Exception => "System::Win32Exception",
             Self::System_ErrnoException => "System::ErrnoException",
@@ -206,7 +215,7 @@ impl CoreTypeId {
 
 impl CoreTypeId {
     pub fn get_core_type_info(self) -> fn() -> CoreTypeInfo {
-        macro aider($($n:ident in $p:path)*) {
+        macro aider($($n:ident in $p:expr),* $(,)?) {
             match self {
                 $(
                     Self::$n => $p,
@@ -214,51 +223,58 @@ impl CoreTypeId {
             }
         }
 
+        macro of($i:ident) {
+            System::$i::load
+        }
+
         aider!(
-            System_Object in System::Object::load
-            System_ValueType in System::ValueType::load
+            System_Object in of!(Object),
+            System_ValueType in of!(ValueType),
 
-            System_Void in System::Void::load
+            System_Void in of!(Void),
 
-            System_Nullable_1 in System::Nullable_1::load
+            System_Nullable_1 in of!(Nullable_1),
 
-            System_Boolean in System::Boolean::load
+            System_Boolean in of!(Boolean),
 
-            System_UInt8 in System::UInt8::load
-            System_UInt16 in System::UInt16::load
-            System_UInt32 in System::UInt32::load
-            System_UInt64 in System::UInt64::load
-            System_USize in System::USize::load
+            System_UInt8 in of!(UInt8),
+            System_UInt16 in of!(UInt16),
+            System_UInt32 in of!(UInt32),
+            System_UInt64 in of!(UInt64),
+            System_USize in of!(USize),
 
-            System_Int8 in System::Int8::load
-            System_Int16 in System::Int16::load
-            System_Int32 in System::Int32::load
-            System_Int64 in System::Int64::load
-            System_ISize in System::ISize::load
+            System_Int8 in of!(Int8),
+            System_Int16 in of!(Int16),
+            System_Int32 in of!(Int32),
+            System_Int64 in of!(Int64),
+            System_ISize in of!(ISize),
 
-            System_Char in System::Char::load
+            System_Char in of!(Char),
 
-            System_Pointer in System::Pointer::load
+            System_Pointer in of!(Pointer),
+            System_Reference_1 in of!(Reference_1),
 
-            System_NonPurusCallConfiguration in System::NonPurusCallConfiguration::load
-            System_NonPurusCallType in System::NonPurusCallType::load
+            System_NonPurusCallConfiguration in of!(NonPurusCallConfiguration),
+            System_NonPurusCallType in of!(NonPurusCallType),
 
-            System_DynamicLibrary in System::DynamicLibrary::load
+            System_DynamicLibrary in of!(DynamicLibrary),
 
-            System_Tuple in System::Tuple::load
+            System_Tuple in of!(Tuple),
 
-            System_Array_1 in System::Array_1::load
+            System_Array_1 in of!(Array_1),
+            System_Span_1 in of!(Span_1),
 
-            System_String in System::String::load
-            System_LargeString in System::LargeString::load
+            System_String in of!(String),
+            System_LargeString in of!(LargeString),
 
-            System_Environment in System::Environment::load
+            System_RuntimeBasic in of!(RuntimeBasic),
 
-            System_Exception in System::Exception::load
-            System_InvalidEnumException in System::InvalidEnumException::load
-            System_Win32Exception in System::Win32Exception::load
-            System_ErrnoException in System::ErrnoException::load
-            System_DlErrorException in System::DlErrorException::load
+            System_Exception in of!(Exception),
+            System_AllocException in of!(AllocException),
+            System_InvalidEnumException in of!(InvalidEnumException),
+            System_Win32Exception in of!(Win32Exception),
+            System_ErrnoException in of!(ErrnoException),
+            System_DlErrorException in of!(DlErrorException),
         )
     }
 }

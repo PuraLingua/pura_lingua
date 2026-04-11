@@ -160,6 +160,7 @@ fn array_get_set() -> global::Result<()> {
                         },
                         vec![],
                         None,
+                        vec![],
                         None,
                     )
                     .into(),

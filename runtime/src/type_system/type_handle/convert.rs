@@ -6,34 +6,29 @@ use stdlib_header::CoreTypeRef;
 
 use crate::{
     stdlib::CoreTypeIdConstExt,
-    type_system::{class::Class, r#struct::Struct, type_ref::TypeRef},
+    type_system::{class::Class, interface::Interface, r#struct::Struct, type_ref::TypeRef},
 };
 
 use super::{MaybeUnloadedTypeHandle, NonGenericTypeHandle, TypeHandle};
 
-impl const From<NonNull<Class>> for NonGenericTypeHandle {
-    fn from(value: NonNull<Class>) -> Self {
-        Self::Class(value)
-    }
-}
+const _: () = {
+    macro easy_from_ptr($Source:ident -> $Target:ty) {
+        impl const From<NonNull<$Source>> for $Target {
+            fn from(value: NonNull<$Source>) -> Self {
+                Self::$Source(value)
+            }
+        }
 
-impl const From<NonNull<Struct>> for NonGenericTypeHandle {
-    fn from(value: NonNull<Struct>) -> Self {
-        Self::Struct(value)
+        impl const From<Unique<$Source>> for $Target {
+            fn from(value: Unique<$Source>) -> Self {
+                Self::$Source(value.as_non_null_ptr())
+            }
+        }
     }
-}
-
-impl const From<Unique<Class>> for NonGenericTypeHandle {
-    fn from(value: Unique<Class>) -> Self {
-        Self::Class(value.as_non_null_ptr())
-    }
-}
-
-impl const From<Unique<Struct>> for NonGenericTypeHandle {
-    fn from(value: Unique<Struct>) -> Self {
-        Self::Struct(value.as_non_null_ptr())
-    }
-}
+    easy_from_ptr!(Class -> NonGenericTypeHandle);
+    easy_from_ptr!(Struct -> NonGenericTypeHandle);
+    easy_from_ptr!(Interface -> NonGenericTypeHandle);
+};
 
 impl From<CoreTypeRef> for MaybeUnloadedTypeHandle {
     fn from(value: CoreTypeRef) -> Self {
@@ -77,79 +72,36 @@ impl const From<NonGenericTypeHandle> for TypeHandle {
         match value {
             NonGenericTypeHandle::Class(ty) => Self::Class(ty),
             NonGenericTypeHandle::Struct(ty) => Self::Struct(ty),
+            NonGenericTypeHandle::Interface(ty) => Self::Interface(ty),
         }
     }
 }
 
-impl const IUnwrap<NonNull<Class>> for TypeHandle {
-    fn _unwrap(self) -> NonNull<Class> {
-        match self {
-            Self::Class(c) => c,
-            _ => panic!("Call _unwrap with wrong type"),
+const _: () = {
+    macro easy_unwrap($Source:ident from $Target:ty) {
+        impl const IUnwrap<NonNull<$Source>> for $Target {
+            fn _unwrap(self) -> NonNull<$Source> {
+                match self {
+                    <$Target>::$Source(x) => x,
+                    _ => panic!("Call _unwrap with wrong type"),
+                }
+            }
         }
-    }
-}
 
-impl const IUnwrap<NonNull<Struct>> for TypeHandle {
-    fn _unwrap(self) -> NonNull<Struct> {
-        match self {
-            Self::Struct(s) => s,
-            _ => panic!("Call _unwrap with wrong type"),
+        impl<'a> const IUnwrap<&'a NonNull<$Source>> for &'a $Target {
+            fn _unwrap(self) -> &'a NonNull<$Source> {
+                match self {
+                    <$Target>::$Source(x) => x,
+                    _ => panic!("Call _unwrap with wrong type"),
+                }
+            }
         }
     }
-}
+    easy_unwrap!(Class from TypeHandle);
+    easy_unwrap!(Struct from TypeHandle);
+    easy_unwrap!(Interface from TypeHandle);
 
-impl<'a> const IUnwrap<&'a NonNull<Class>> for &'a TypeHandle {
-    fn _unwrap(self) -> &'a NonNull<Class> {
-        match self {
-            TypeHandle::Class(c) => c,
-            _ => panic!("Call _unwrap with wrong type"),
-        }
-    }
-}
-
-impl<'a> const IUnwrap<&'a NonNull<Struct>> for &'a TypeHandle {
-    fn _unwrap(self) -> &'a NonNull<Struct> {
-        match self {
-            TypeHandle::Struct(s) => s,
-            _ => panic!("Call _unwrap with wrong type"),
-        }
-    }
-}
-
-// NonGeneric
-impl const IUnwrap<NonNull<Class>> for NonGenericTypeHandle {
-    fn _unwrap(self) -> NonNull<Class> {
-        match self {
-            Self::Class(c) => c,
-            _ => panic!("Call _unwrap with wrong type"),
-        }
-    }
-}
-
-impl const IUnwrap<NonNull<Struct>> for NonGenericTypeHandle {
-    fn _unwrap(self) -> NonNull<Struct> {
-        match self {
-            Self::Struct(s) => s,
-            _ => panic!("Call _unwrap with wrong type"),
-        }
-    }
-}
-
-impl<'a> const IUnwrap<&'a NonNull<Class>> for &'a NonGenericTypeHandle {
-    fn _unwrap(self) -> &'a NonNull<Class> {
-        match self {
-            NonGenericTypeHandle::Class(c) => c,
-            _ => panic!("Call _unwrap with wrong type"),
-        }
-    }
-}
-
-impl<'a> const IUnwrap<&'a NonNull<Struct>> for &'a NonGenericTypeHandle {
-    fn _unwrap(self) -> &'a NonNull<Struct> {
-        match self {
-            NonGenericTypeHandle::Struct(s) => s,
-            _ => panic!("Call _unwrap with wrong type"),
-        }
-    }
-}
+    easy_unwrap!(Class from NonGenericTypeHandle);
+    easy_unwrap!(Struct from NonGenericTypeHandle);
+    easy_unwrap!(Interface from NonGenericTypeHandle);
+};

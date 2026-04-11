@@ -103,6 +103,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 match ty {
                     NonGenericTypeHandle::Class($n) => $b,
                     NonGenericTypeHandle::Struct($n) => $b,
+                    NonGenericTypeHandle::Interface(_) => unreachable!(),
                 }
             }
 
@@ -119,6 +120,97 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                     m_ref.untyped_call(cpu, None, &args)
                 }
             };
+
+            if actual_layout != Layout::new::<()>() {
+                let Some(out_var) = call_frame(cpu).get(*ret_at) else {
+                    load_register_failed!(*ret_at);
+                };
+                unsafe {
+                    out_var.copy_from(ret_ptr, actual_layout.size());
+                }
+            }
+            unsafe {
+                std::alloc::Allocator::deallocate(&std::alloc::Global, ret_ptr, ret_layout);
+            }
+        }
+        Instruction_Call::InterfaceCall {
+            interface,
+            val,
+            method: method_target,
+            args,
+            ret_at,
+        } => {
+            let Some(interface) = interface
+                .load(
+                    method
+                        .require_method_table_ref()
+                        .ty_ref()
+                        .__get_assembly_ref()
+                        .manager_ref(),
+                )
+                .map(|x| x.get_non_generic_with_method(method))
+            else {
+                return Some(Err(Termination::LoadTypeHandleFailed(interface.clone())));
+            };
+            let interface = interface.unwrap_interface();
+            let Some(val) = call_frame(cpu).read_typed::<ManagedReference<Class>, _>(*val) else {
+                load_register_failed!(*val);
+            };
+            let Some(val_mt) = val.method_table_ref() else {
+                return Some(Err(Termination::NullReference(
+                    std::panic::Location::caller(),
+                )));
+            };
+            let implementation =
+                match val_mt
+                    .ty_ref()
+                    .implemented_interfaces()
+                    .iter()
+                    .try_find(|x| {
+                        let Some(target) = x
+                            .target
+                            .load(
+                                method
+                                    .require_method_table_ref()
+                                    .ty_ref()
+                                    .__get_assembly_ref()
+                                    .manager_ref(),
+                            )
+                            .map(|x| x.get_non_generic_with_method(method))
+                        else {
+                            return Err(Termination::LoadTypeHandleFailed(x.target.clone()));
+                        };
+                        let target = target.unwrap_interface();
+                        Ok(std::ptr::addr_eq(interface.as_ptr(), target.as_ptr()))
+                    }) {
+                    Ok(Some(x)) => x,
+                    Ok(None) => return Some(Err(Termination::UnimplementedInterface)),
+                    Err(e) => return Some(Err(e)),
+                };
+            let method_target =
+                method_target.cloned_map_index(|x| *implementation.map.get(x as usize).unwrap());
+
+            let args = args
+                .iter()
+                .map(|x| {
+                    call_frame(cpu)
+                        .get(*x)
+                        .unwrap()
+                        .ptr
+                        .cast::<c_void>()
+                        .as_ptr()
+                })
+                .collect::<Vec<_>>();
+
+            let mt = val.method_table_ref().unwrap();
+            let Some(m) = mt.get_method_by_ref(&method_target) else {
+                return Some(Err(Termination::LoadMethodFailed(method_target)));
+            };
+
+            let m_ref = unsafe { m.as_ref() };
+            let actual_layout = m_ref.get_return_type().val_layout();
+            let (ret_ptr, ret_layout) =
+                m_ref.untyped_call(cpu, Some(NonNull::from_ref(&val).cast()), &args);
 
             if actual_layout != Layout::new::<()>() {
                 let Some(out_var) = call_frame(cpu).get(*ret_at) else {

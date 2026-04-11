@@ -13,12 +13,12 @@ use crate::type_system::{
     type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
 };
 
+pub mod AllocException;
 pub mod Array_1;
 pub mod Boolean;
 pub mod Char;
 pub mod DlErrorException;
 pub mod DynamicLibrary;
-pub mod Environment;
 pub mod ErrnoException;
 pub mod Exception;
 pub mod InvalidEnumException;
@@ -28,6 +28,9 @@ pub mod NonPurusCallType;
 pub mod Nullable_1;
 pub mod Object;
 pub mod Pointer;
+pub mod Reference_1;
+pub mod RuntimeBasic;
+pub mod Span_1;
 pub mod String;
 pub mod Tuple;
 pub mod ValueType;
@@ -65,6 +68,10 @@ fn map_method_attr(val: MethodAttr<CoreTypeRef>) -> MethodAttr<MaybeUnloadedType
 
 fn map_parameter((attr, ty): (ParameterAttr, CoreTypeRef)) -> Parameter {
     Parameter::new(ty.into(), attr)
+}
+
+fn map_parameters(args: Vec<(ParameterAttr, CoreTypeRef)>) -> Vec<Parameter> {
+    args.into_iter().map(map_parameter).collect()
 }
 
 fn map_field_info(
@@ -213,6 +220,7 @@ pub fn define_class(
                 }),
                 fields.into_iter().map(map_field_info).collect(),
                 None,
+                vec![],
                 None,
             )
             .as_non_null_ptr(),

@@ -87,6 +87,7 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             CoreTypeId::System_Char => Some(Layout::new::<u16>()),
 
             Self::System_Pointer => Some(Layout::new::<*const u8>()),
+            Self::System_Reference_1 => Some(Layout::new::<*const u8>()),
 
             Self::System_NonPurusCallConfiguration => None,
             Self::System_NonPurusCallType => None,
@@ -96,12 +97,15 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             Self::System_Tuple => None,
 
             CoreTypeId::System_Array_1 => Some(Layout::new::<usize>()),
+            Self::System_Span_1 => None,
+
             CoreTypeId::System_String => Some(Layout::new::<u16>()),
             Self::System_LargeString => Some(Layout::new::<usize>()),
 
-            Self::System_Environment => None,
+            Self::System_RuntimeBasic => None,
 
             CoreTypeId::System_Exception => None,
+            CoreTypeId::System_AllocException => None,
             CoreTypeId::System_InvalidEnumException => None,
             Self::System_Win32Exception => None,
             Self::System_ErrnoException => None,
@@ -136,6 +140,7 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             CoreTypeId::System_Char => Some(Layout::new::<u16>()),
 
             Self::System_Pointer => Some(Layout::new::<*const u8>()),
+            Self::System_Reference_1 => Some(Layout::new::<*const u8>()),
 
             Self::System_NonPurusCallConfiguration => {
                 Some(Layout::new::<ManagedReference<Class>>())
@@ -146,18 +151,19 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             CoreTypeId::System_Tuple => None,
 
             CoreTypeId::System_Array_1 => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_Span_1 => None,
+
             CoreTypeId::System_String => Some(Layout::new::<ManagedReference<Class>>()),
             CoreTypeId::System_LargeString => Some(Layout::new::<ManagedReference<Class>>()),
 
-            CoreTypeId::System_Environment => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_RuntimeBasic => Some(Layout::new::<ManagedReference<Class>>()),
 
-            CoreTypeId::System_Exception => Some(Layout::new::<ManagedReference<Class>>()),
-            CoreTypeId::System_InvalidEnumException => {
-                Some(Layout::new::<ManagedReference<Class>>())
-            }
-            CoreTypeId::System_Win32Exception => Some(Layout::new::<ManagedReference<Class>>()),
-            CoreTypeId::System_ErrnoException => Some(Layout::new::<ManagedReference<Class>>()),
-            CoreTypeId::System_DlErrorException => Some(Layout::new::<ManagedReference<Class>>()),
+            CoreTypeId::System_Exception
+            | CoreTypeId::System_AllocException
+            | CoreTypeId::System_InvalidEnumException
+            | CoreTypeId::System_Win32Exception
+            | CoreTypeId::System_ErrnoException
+            | CoreTypeId::System_DlErrorException => Some(Layout::new::<ManagedReference<Class>>()),
         }
     }
 
@@ -190,6 +196,7 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             Self::System_Char => of!(Char),
 
             Self::System_Pointer => of!(Pointer),
+            Self::System_Reference_1 => of!(Reference_1),
 
             Self::System_NonPurusCallConfiguration => of!(NonPurusCallConfiguration),
             Self::System_NonPurusCallType => of!(NonPurusCallType),
@@ -199,12 +206,15 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             Self::System_Tuple => of!(Tuple),
 
             Self::System_Array_1 => of!(Array_1),
+            Self::System_Span_1 => of!(Span_1),
+
             Self::System_String => of!(String),
             Self::System_LargeString => of!(LargeString),
 
-            Self::System_Environment => of!(Environment),
+            Self::System_RuntimeBasic => of!(RuntimeBasic),
 
             Self::System_Exception => of!(Exception),
+            Self::System_AllocException => of!(AllocException),
             Self::System_InvalidEnumException => of!(InvalidEnumException),
             Self::System_Win32Exception => of!(Win32Exception),
             Self::System_ErrnoException => of!(ErrnoException),
@@ -248,6 +258,7 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_Char => Some(Type::u16()),
 
             Self::System_Pointer => Some(Type::pointer()),
+            Self::System_Reference_1 => Some(Type::pointer()),
 
             Self::System_NonPurusCallConfiguration => Some(Type::pointer()),
             Self::System_NonPurusCallType => Some(Type::pointer()),
@@ -257,16 +268,19 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_Tuple => None,
 
             Self::System_Array_1 => Some(Type::pointer()),
+            Self::System_Span_1 => Some(Type::pointer()),
+
             Self::System_String => Some(Type::pointer()),
             Self::System_LargeString => Some(Type::pointer()),
 
-            Self::System_Environment => Some(Type::pointer()),
+            Self::System_RuntimeBasic => Some(Type::pointer()),
 
-            Self::System_Exception => Some(Type::pointer()),
-            Self::System_InvalidEnumException => Some(Type::pointer()),
-            Self::System_Win32Exception => Some(Type::pointer()),
-            Self::System_ErrnoException => Some(Type::pointer()),
-            Self::System_DlErrorException => Some(Type::pointer()),
+            Self::System_Exception
+            | Self::System_AllocException
+            | Self::System_InvalidEnumException
+            | Self::System_Win32Exception
+            | Self::System_ErrnoException
+            | Self::System_DlErrorException => Some(Type::pointer()),
         }
     }
     fn non_purus_call_type(self) -> Option<NonPurusCallType> {
@@ -295,6 +309,7 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_Char => Some(NonPurusCallType::U16),
 
             Self::System_Pointer => Some(NonPurusCallType::Pointer),
+            Self::System_Reference_1 => Some(NonPurusCallType::Pointer),
 
             Self::System_NonPurusCallConfiguration => Some(NonPurusCallType::Object),
             Self::System_NonPurusCallType => Some(NonPurusCallType::Object),
@@ -304,16 +319,19 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_Tuple => None,
 
             Self::System_Array_1 => Some(NonPurusCallType::Object),
+            Self::System_Span_1 => None,
+
             Self::System_String => Some(NonPurusCallType::String),
             Self::System_LargeString => Some(NonPurusCallType::Object),
 
-            Self::System_Environment => Some(NonPurusCallType::Object),
+            Self::System_RuntimeBasic => Some(NonPurusCallType::Object),
 
-            Self::System_Exception => Some(NonPurusCallType::Object),
-            Self::System_InvalidEnumException => Some(NonPurusCallType::Object),
-            Self::System_Win32Exception => Some(NonPurusCallType::Object),
-            Self::System_ErrnoException => Some(NonPurusCallType::Object),
-            Self::System_DlErrorException => Some(NonPurusCallType::Object),
+            Self::System_Exception
+            | Self::System_AllocException
+            | Self::System_InvalidEnumException
+            | Self::System_Win32Exception
+            | Self::System_ErrnoException
+            | Self::System_DlErrorException => Some(NonPurusCallType::Object),
         }
     }
 }
