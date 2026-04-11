@@ -2,7 +2,7 @@ use std::{
     alloc::{Allocator, Global, Layout},
     cell::SyncUnsafeCell,
     collections::HashMap,
-    mem::{MaybeUninit, offset_of},
+    mem::MaybeUninit,
     num::NonZero,
     pin::Pin,
     ptr::{NonNull, Unique},
@@ -13,7 +13,6 @@ use cpu::CPU;
 use global::{ThreadSafe, getset::Getters};
 
 use crate::{
-    memory::alloc_type,
     type_system::{
         assembly_manager::AssemblyManager, class::Class, get_traits::GetStaticConstructorId,
         r#struct::Struct, type_handle::NonGenericTypeHandle,
@@ -76,43 +75,35 @@ impl CpuID {
 impl VirtualMachine {
     pub fn construct_in(this: NonNull<Self>) {
         unsafe {
-            this.byte_add(offset_of!(VirtualMachine, resource_manager))
-                .cast::<ResourceManager>()
-                .write(ResourceManager {});
-            this.byte_add(offset_of!(VirtualMachine, cpu_lock))
-                .cast::<Mutex<()>>()
-                .write(Mutex::new(()));
-            this.byte_add(offset_of!(VirtualMachine, central_processing_units))
-                .cast::<SyncUnsafeCell<Vec<Pin<Box<RwLock<CPU>>>>>>()
-                .write(SyncUnsafeCell::new(Vec::new()));
-            this.byte_add(offset_of!(Self, cpu_for_static))
-                .cast::<Pin<Box<RwLock<CPU>>>>()
-                .write(CPU::new(this));
-            this.byte_add(offset_of!(Self, class_static_map))
-                .cast::<RwLock<HashMap<NonNull<Class>, ManagedReference<Class>>>>()
-                .write(RwLock::new(HashMap::new()));
-            this.byte_add(offset_of!(Self, struct_static_map))
-                .cast::<RwLock<HashMap<NonNull<Struct>, ManagedReference<Struct>>>>()
-                .write(RwLock::new(HashMap::new()));
+            this.write(VirtualMachine {
+                #[expect(invalid_value, reason = "It will be init then")]
+                assembly_manager: MaybeUninit::uninit().assume_init(),
+                resource_manager: ResourceManager {},
+                cpu_lock: Mutex::new(()),
+                central_processing_units: SyncUnsafeCell::new(Vec::new()),
+                cpu_for_static: CPU::new(this),
+                class_static_map: RwLock::new(HashMap::new()),
+                struct_static_map: RwLock::new(HashMap::new()),
+            });
         }
 
         AssemblyManager::construct_in(this);
     }
 
-    pub fn new() -> Unique<Self> {
-        let this = alloc_type::<Self, _>(&std::alloc::Global).unwrap();
+    pub fn new_in<A: Allocator>(allocator: &A) -> Unique<Self> {
+        let this = allocator.allocate(Layout::new::<Self>()).unwrap().cast();
 
         Self::construct_in(this);
 
         Unique::from_non_null(this)
     }
 
+    pub fn new() -> Unique<Self> {
+        Self::new_in(&std::alloc::Global)
+    }
+
     pub fn new_system() -> Unique<Self> {
-        let this = alloc_type::<Self, _>(&std::alloc::System).unwrap();
-
-        Self::construct_in(this);
-
-        Unique::from_non_null(this)
+        Self::new_in(&std::alloc::System)
     }
 
     pub fn cpu_for_static(&self) -> Pin<&RwLock<CPU>> {

@@ -1,8 +1,4 @@
-use std::{
-    alloc::{AllocError, Allocator, Layout},
-    mem::Alignment,
-    ptr::NonNull,
-};
+use std::{alloc::Layout, mem::Alignment};
 
 use bon::Builder;
 
@@ -39,12 +35,6 @@ impl const Default for GetFieldOffsetOptions {
             discard_calculated_offset: false,
         }
     }
-}
-
-pub fn alloc_type<T, A: Allocator>(allocator: &A) -> Result<NonNull<T>, AllocError> {
-    allocator
-        .allocate_zeroed(Layout::new::<T>())
-        .map(|x| x.cast())
 }
 
 /// On arithmetic overflow or when the total size would exceed

@@ -4,5 +4,4 @@
 /.vscode
 /.cargo/
 /.rmv
-/TestData
 /rustc-ice-*.txt

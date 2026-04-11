@@ -43,24 +43,19 @@ mod tests {
     use crate::{
         test_utils::g_core_class,
         value::managed_reference::{ArrayAccessor, ManagedReference},
-        virtual_machine::{EnsureGlobalVirtualMachineInitialized, global_vm},
+        virtual_machine::CpuID,
     };
 
     use super::*;
 
     #[test]
     fn gc() {
-        EnsureGlobalVirtualMachineInitialized();
-
-        let vm = global_vm();
-        let cpu_id = vm.add_cpu();
-        let cpu = cpu_id.as_global_cpu().unwrap();
-        let mut cpu_write = cpu.write().unwrap();
+        let mut cpu = CpuID::new_write_global();
         let string_t = g_core_class!(System_String);
         let string_mt = unsafe { string_t.as_ref().method_table_ref() };
 
         let mut array_obj =
-            ManagedReference::alloc_array(&mut cpu_write, NonNull::from_ref(string_mt), 10);
+            ManagedReference::alloc_array(&mut cpu, NonNull::from_ref(string_mt), 10);
         unsafe {
             for (ele_i, ele) in array_obj
                 .access_unchecked_mut::<ArrayAccessor>()
@@ -69,9 +64,9 @@ mod tests {
                 .iter_mut()
                 .enumerate()
             {
-                *ele = ManagedReference::new_string(&mut cpu_write, &format!("VARIABLE:{ele_i}"));
+                *ele = ManagedReference::new_string(&mut cpu, &format!("VARIABLE:{ele_i}"));
             }
         }
-        cpu_write.gc_collect();
+        cpu.gc_collect();
     }
 }
