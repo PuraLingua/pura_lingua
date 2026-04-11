@@ -5,11 +5,13 @@ pub const fn get_abi_by_call_convention(call_convention: CallConvention) -> libf
         CallConvention::PlatformDefault => libffi::middle::ffi_abi_FFI_DEFAULT_ABI,
         CallConvention::CDecl => cfg_select! {
             target_arch = "x86" => { libffi::middle::ffi_abi_FFI_MS_CDECL }
-            _ => { libffi::raw::ffi_abi_FFI_WIN64 }
+            windows => { libffi::raw::ffi_abi_FFI_WIN64 }
+            unix => { libffi::raw::ffi_abi_FFI_GNUW64 }
         },
         CallConvention::CDeclWithVararg => cfg_select! {
             target_arch = "x86" => { libffi::middle::ffi_abi_FFI_MS_CDECL }
-            _ => { libffi::raw::ffi_abi_FFI_WIN64 }
+            windows => { libffi::raw::ffi_abi_FFI_WIN64 }
+            unix => { libffi::raw::ffi_abi_FFI_GNUW64 }
         },
         CallConvention::Stdcall => cfg_select! {
             target_arch = "x86" => { libffi::middle::ffi_abi_FFI_STDCALL }

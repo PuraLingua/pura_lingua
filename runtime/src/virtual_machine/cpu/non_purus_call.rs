@@ -303,37 +303,39 @@ impl CPU {
         use libffi::middle::Cif;
 
         let abi = crate::libffi_utils::get_abi_by_call_convention(cfg.call_convention);
-        let cif = match cfg.call_convention {
-            CallConvention::CDeclWithVararg => {
-                let args = args
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| {
-                        if let Some((is_by_ref, _)) = cfg.arguments.get(i)
-                            && *is_by_ref
-                        {
-                            (true, &x.ty)
-                        } else {
-                            (false, &x.ty)
-                        }
-                    })
-                    .map(non_purus_type_arg_to_libffi_type);
-                let fixed_args = cfg.arguments.len();
-                Cif::new_variadic_with_abi(
-                    args,
-                    fixed_args,
-                    non_purus_type_to_libffi_type(&cfg.return_type),
-                    abi,
-                )
-            }
-            _ => Cif::new_with_abi(
+        let cif = if cfg.arguments.len() < args.len() {
+            println!("Variadic functions are not yet fully supported");
+            let args = args
+                .iter()
+                .enumerate()
+                .map(|(i, x)| {
+                    if let Some((is_by_ref, _)) = cfg.arguments.get(i)
+                        && *is_by_ref
+                    {
+                        (true, &x.ty)
+                    } else {
+                        (false, &x.ty)
+                    }
+                })
+                .map(non_purus_type_arg_to_libffi_type);
+            let fixed_args = cfg.arguments.len();
+            Cif::new_variadic_with_abi(
+                args,
+                fixed_args,
+                non_purus_type_to_libffi_type(&cfg.return_type),
+                abi,
+            )
+        } else if cfg.arguments.len() == args.len() {
+            Cif::new_with_abi(
                 cfg.arguments
                     .iter()
                     .map(|x| (x.0, &x.1))
                     .map(non_purus_type_arg_to_libffi_type),
                 non_purus_type_to_libffi_type(&cfg.return_type),
                 abi,
-            ),
+            )
+        } else {
+            panic!();
         };
         let allocate_guard = AllocateGuard::global();
         let mut treat_string_as_object = false;

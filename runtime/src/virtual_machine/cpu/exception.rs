@@ -106,8 +106,6 @@ impl ThrowHelper {
     #[doc(cfg(unix))]
     #[cfg(unix)]
     pub fn errno(&mut self, mut code: i32) -> bool {
-        use stdlib_header::definitions::System_ErrnoException_MethodId;
-
         let exception = match self.0.new_object(
             &self
                 .0
@@ -115,7 +113,7 @@ impl ThrowHelper {
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_ErrnoException)
                 .into(),
-            &System_ErrnoException_MethodId::Constructor_I32.into(),
+            &stdlib_header::MethodId!(ErrnoException::Constructor_I32).into(),
             &[(&raw mut code).cast()],
         ) {
             None => return false,
@@ -137,8 +135,6 @@ impl ThrowHelper {
     #[cfg(unix)]
     // cSpell:disable-next-line
     pub fn dlerror(&mut self, message: *mut libc::c_char) -> bool {
-        use stdlib_header::definitions::System_Exception_MethodId;
-
         let message = ManagedReference::new_string(
             &mut self.0,
             &unsafe { std::ffi::CString::from_raw(message) }
@@ -153,7 +149,7 @@ impl ThrowHelper {
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_DlErrorException)
                 .into(),
-            &System_Exception_MethodId::Constructor_String.into(),
+            &stdlib_header::MethodId!(Exception::Constructor_String).into(),
             &[(&raw const message).cast_mut().cast()],
         ) {
             None => return false,

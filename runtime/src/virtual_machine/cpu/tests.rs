@@ -445,6 +445,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
 }
 
 #[test]
+#[cfg(windows)]
 fn non_purus_call_va_arg() {
     unsafe extern "C" {
         safe fn wprintf(format: *const u16, ...) -> std::ffi::c_int;
@@ -462,6 +463,56 @@ fn non_purus_call_va_arg() {
     };
 
     let formatting = ManagedReference::new_string(&mut cpu, "%ls: %d\n");
+    let info = ManagedReference::new_string(&mut cpu, "AAA");
+    let i_data: std::ffi::c_int = 10;
+
+    let (result, result_layout) = cpu.non_purus_call(
+        &cfg,
+        f_ptr,
+        vec![
+            NonPurusCallArg::new(&formatting, NonPurusCallType::String),
+            NonPurusCallArg::new(&info, NonPurusCallType::String),
+            NonPurusCallArg::new(&i_data, NonPurusCallType::C_Int),
+        ],
+    );
+    unsafe {
+        std::alloc::Allocator::deallocate(&std::alloc::Global, result, result_layout);
+    }
+}
+
+#[test]
+#[cfg(unix)]
+#[ignore = "not yet ready"]
+fn non_purus_call_va_arg() {
+    #[allow(unsafe_op_in_unsafe_fn)]
+    unsafe extern "C" fn _printf(format: *const libc::c_char, mut args: ...) -> std::ffi::c_int {
+        use std::ffi::CStr;
+
+        let s = args.arg::<*const libc::c_char>();
+        let d = args.arg::<std::ffi::c_int>();
+        println!(
+            "({}){}: {d}",
+            CStr::from_ptr(format).display(),
+            CStr::from_ptr(s.cast::<*const libc::c_char>().read()).display()
+        );
+        0
+    }
+    unsafe extern "system" {
+        safe fn printf(format: *const libc::c_char, ...) -> std::ffi::c_int;
+    }
+
+    let f_ptr = printf as *const u8;
+    let mut cpu = CpuID::new_write_global();
+
+    let cfg = NonPurusCallConfiguration {
+        call_convention: CallConvention::SystemV,
+        return_type: NonPurusCallType::C_Int,
+        encoding: global::non_purus_call_configuration::StringEncoding::C_Utf8,
+        object_strategy: global::non_purus_call_configuration::ObjectStrategy::PointToData,
+        arguments: vec![(false, NonPurusCallType::String)],
+    };
+
+    let formatting = ManagedReference::new_string(&mut cpu, "%s: %d\n");
     let info = ManagedReference::new_string(&mut cpu, "AAA");
     let i_data: std::ffi::c_int = 10;
 

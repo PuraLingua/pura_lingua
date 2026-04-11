@@ -46,6 +46,7 @@
 #![feature(box_into_inner)]
 #![feature(pin_ergonomics)]
 #![cfg_attr(all(unix, test), feature(cstr_display))]
+#![cfg_attr(all(unix, test), feature(c_variadic))]
 //
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]

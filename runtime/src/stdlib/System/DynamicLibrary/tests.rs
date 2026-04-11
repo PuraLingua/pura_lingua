@@ -394,10 +394,6 @@ fn gen_simple_dynamic_lib_to_invoke(
     mt: NonNull<MethodTable<Class>>,
 ) -> Box<Method<Class>> {
     use global::instruction::Instruction_Call;
-    use stdlib_header::definitions::{
-        System_Array_1_MethodId, System_NonPurusCallConfiguration_MethodId,
-        System_NonPurusCallType_StaticMethodId,
-    };
 
     const TEST_CLASS_REF: TypeRef = TypeRef::Index {
         assembly: AssemblyRef::Name(string_name!("Test")),
@@ -455,7 +451,7 @@ fn gen_simple_dynamic_lib_to_invoke(
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(0),
-                method: MethodRef::from(System_DynamicLibrary_MethodId::GetSymbol),
+                method: MethodRef::from(stdlib_header::System::DynamicLibrary::MethodId::GetSymbol),
                 args: vec![RegisterAddr::new(1)],
                 ret_at: RegisterAddr::new(2),
             }),
@@ -471,7 +467,7 @@ fn gen_simple_dynamic_lib_to_invoke(
                 ty: assembly_manager
                     .get_core_type(CoreTypeId::System_NonPurusCallType)
                     .into(),
-                method: System_NonPurusCallType_StaticMethodId::CreateI64.into(),
+                method: stdlib_header::System::NonPurusCallType::StaticMethodId::CreateI64.into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(5),
             }),
@@ -515,13 +511,14 @@ fn gen_simple_dynamic_lib_to_invoke(
                 ty: assembly_manager
                     .get_core_type(CoreTypeId::System_NonPurusCallType)
                     .into(),
-                method: System_NonPurusCallType_StaticMethodId::CreatePointer.into(),
+                method: stdlib_header::System::NonPurusCallType::StaticMethodId::CreatePointer
+                    .into(),
                 args: vec![],
                 ret_at: RegisterAddr::new(11),
             }),
             Instruction::Call(Instruction_Call::InstanceCall {
                 val: RegisterAddr::new(9),
-                method: System_Array_1_MethodId::set_Index.into(),
+                method: stdlib_header::System::Array_1::MethodId::set_Index.into(),
                 args: vec![RegisterAddr::new(10), RegisterAddr::new(11)],
                 ret_at: RegisterAddr::new(0),
             }),
@@ -530,7 +527,8 @@ fn gen_simple_dynamic_lib_to_invoke(
                 ty: assembly_manager
                     .get_core_type(CoreTypeId::System_NonPurusCallConfiguration)
                     .into(),
-                ctor_name: System_NonPurusCallConfiguration_MethodId::Constructor.into(),
+                ctor_name: stdlib_header::System::NonPurusCallConfiguration::MethodId::Constructor
+                    .into(),
                 args: vec![
                     RegisterAddr::new(4),
                     RegisterAddr::new(5),
