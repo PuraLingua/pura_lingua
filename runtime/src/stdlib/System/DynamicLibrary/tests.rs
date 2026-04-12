@@ -1,4 +1,3 @@
-#[cfg(windows)]
 use std::pin::Pin;
 use std::ptr::NonNull;
 
@@ -396,7 +395,7 @@ fn gen_simple_dynamic_lib_to_invoke(
 fn gen_simple_dynamic_lib_to_invoke(
     assembly_manager: &AssemblyManager,
     mt: NonNull<MethodTable<Class>>,
-) -> Box<Method<Class>> {
+) -> Pin<Box<Method<Class>>> {
     use global::instruction::Instruction_Call;
 
     const TEST_CLASS_REF: TypeRef = TypeRef::Index {
@@ -404,7 +403,7 @@ fn gen_simple_dynamic_lib_to_invoke(
         ind: 0,
     };
 
-    Box::new(Method::new(
+    Method::new(
         mt,
         "ToInvoke".to_owned(),
         global::attr!(
@@ -558,6 +557,6 @@ fn gen_simple_dynamic_lib_to_invoke(
                 register_addr: RegisterAddr::new(13),
             },
         ],
-        ExceptionTable::new(),
-    ))
+        ExceptionTable::gen_new(),
+    )
 }
