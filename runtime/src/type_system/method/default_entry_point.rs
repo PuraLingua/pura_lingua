@@ -2,6 +2,7 @@ use std::{
     alloc::{Allocator as _, Layout},
     ffi::c_void,
     ptr::NonNull,
+    range::Range,
 };
 
 use global::{
@@ -13,7 +14,8 @@ use crate::{
     type_system::{
         class::Class,
         get_traits::{GetAssemblyRef, GetTypeVars},
-        type_handle::MaybeUnloadedTypeHandle,
+        r#struct::Struct,
+        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandleKind},
     },
     value::managed_reference::ManagedReference,
     virtual_machine::cpu::{CPU, CommonCallStackFrame},
@@ -34,6 +36,8 @@ enum Termination {
     /// Failed to convert a puralingua object to rust
     UnmarshalFailed(global::Error),
     UnimplementedInterface,
+    RethrowWithoutExceptions,
+    LoadCaughtExceptionWithoutExceptions,
 
     Returned,
     Terminated,
@@ -70,6 +74,7 @@ fn eval_throw<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterA
     #[allow(unused)] args: &[*mut c_void],
     #[allow(unused)] result_ptr: NonNull<[u8]>,
     #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     exception_addr: &TRegisterAddr,
 ) -> Option<Result<(), Termination>> {
     let Some(exception) = call_frame(cpu).get_typed::<ManagedReference<Class>, _>(*exception_addr)
@@ -88,6 +93,7 @@ fn eval_return_val<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] args: &[*mut c_void],
     #[allow(unused)] result_ptr: NonNull<[u8]>,
     #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     register_addr: &TRegisterAddr,
 ) -> Option<Result<(), Termination>> {
     let Some(res_var) = call_frame(cpu).get(*register_addr) else {
@@ -108,6 +114,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         args: &[*mut c_void],
         result_ptr: NonNull<[u8]>,
         pc: &mut usize,
+        caught_exception: Option<ManagedReference<Class>>,
     ) -> Result<(), Termination>;
 
     /// Return None if the current instruction cannot be handled through common way,
@@ -119,6 +126,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         args: &[*mut c_void],
         result_ptr: NonNull<[u8]>,
         pc: &mut usize,
+        caught_exception: Option<ManagedReference<Class>>,
     ) -> Option<Result<(), Termination>> {
         let Some(ins) = method.instructions.get(*pc) else {
             return Some(Err(Termination::AllInstructionExecuted));
@@ -130,7 +138,16 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         }
 
         macro _eval($ins:ident by $evaluator:ident) {
-            $evaluator::eval(method, cpu, this, args, result_ptr, pc, $ins)
+            $evaluator::eval(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                $ins,
+            )
         }
 
         match ins {
@@ -138,19 +155,47 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             Instruction::Load(ins) => _eval!(ins by load),
             Instruction::SLoad(ins) => _eval!(ins by load),
 
-            Instruction::ReadPointerTo(ins) => {
-                read_write_pointer::read_pointer_to(method, cpu, this, args, result_ptr, pc, ins)
-            }
-            Instruction::SReadPointerTo(ins) => {
-                read_write_pointer::read_pointer_to(method, cpu, this, args, result_ptr, pc, ins)
-            }
+            Instruction::ReadPointerTo(ins) => read_write_pointer::read_pointer_to(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                ins,
+            ),
+            Instruction::SReadPointerTo(ins) => read_write_pointer::read_pointer_to(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                ins,
+            ),
 
-            Instruction::WritePointer(ins) => {
-                read_write_pointer::write_pointer(method, cpu, this, args, result_ptr, pc, ins)
-            }
-            Instruction::SWritePointer(ins) => {
-                read_write_pointer::write_pointer(method, cpu, this, args, result_ptr, pc, ins)
-            }
+            Instruction::WritePointer(ins) => read_write_pointer::write_pointer(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                ins,
+            ),
+            Instruction::SWritePointer(ins) => read_write_pointer::write_pointer(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                ins,
+            ),
 
             Instruction::Check(ins) => _eval!(ins by check),
             Instruction::SCheck(ins) => _eval!(ins by check),
@@ -167,19 +212,54 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
             Instruction::Calculate(ins) => _eval!(ins by calculate),
             Instruction::SCalculate(ins) => _eval!(ins by calculate),
 
-            Instruction::Throw { exception_addr } => {
-                eval_throw(method, cpu, this, args, result_ptr, pc, exception_addr)
-            }
-            Instruction::SThrow { exception_addr } => {
-                eval_throw(method, cpu, this, args, result_ptr, pc, exception_addr)
+            Instruction::Throw { exception_addr } => eval_throw(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                exception_addr,
+            ),
+            Instruction::SThrow { exception_addr } => eval_throw(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                exception_addr,
+            ),
+            Instruction::Rethrow => {
+                let Some(exception) = caught_exception else {
+                    return Some(Err(Termination::RethrowWithoutExceptions));
+                };
+                cpu.throw_exception(exception);
+                Some(Ok(()))
             }
 
-            Instruction::ReturnVal { register_addr } => {
-                eval_return_val(method, cpu, this, args, result_ptr, pc, register_addr)
-            }
-            Instruction::SReturnVal { register_addr } => {
-                eval_return_val(method, cpu, this, args, result_ptr, pc, register_addr)
-            }
+            Instruction::ReturnVal { register_addr } => eval_return_val(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                register_addr,
+            ),
+            Instruction::SReturnVal { register_addr } => eval_return_val(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                register_addr,
+            ),
 
             Instruction::Jump(ins) => _eval!(ins by jump),
             Instruction::SJump(ins) => _eval!(ins by jump),
@@ -195,8 +275,11 @@ impl<T: GetAssemblyRef + GetTypeVars> Spec for T {
         args: &[*mut c_void],
         result_ptr: NonNull<[u8]>,
         pc: &mut usize,
+        caught_exception: Option<ManagedReference<Class>>,
     ) -> Result<(), Termination> {
-        if let Some(res) = Self::common_match_code(method, cpu, this, args, result_ptr, pc) {
+        if let Some(res) =
+            Self::common_match_code(method, cpu, this, args, result_ptr, pc, caught_exception)
+        {
             return res;
         }
         Ok(())
@@ -216,12 +299,152 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
     }
     let result_ptr = std::alloc::Global.allocate(result_layout).unwrap();
     let mut pc = 0;
+    let mut caught_exception = vec![];
+
+    enum RunStatus {
+        OnFinally {
+            end: u64,
+            recover: usize,
+            then_fault: Option<Range<u64>>,
+            then_catch: Range<u64>,
+        },
+        OnFault {
+            end: u64,
+            recover: usize,
+            then_catch: Range<u64>,
+        },
+        OnCatch {
+            end: u64,
+            recover: usize,
+        },
+    }
+
+    let mut status = vec![];
 
     loop {
-        if cpu.has_exception() {
-            return (result_ptr.cast(), result_layout);
+        if let Some(last_status) = status.pop() {
+            match last_status {
+                RunStatus::OnFinally {
+                    end,
+                    recover,
+                    then_fault,
+                    then_catch,
+                } => {
+                    if (pc as u64) >= end {
+                        if let Some(fault_range) = then_fault {
+                            status.push(RunStatus::OnFault {
+                                end: fault_range.end,
+                                recover,
+                                then_catch: then_catch,
+                            });
+                            pc = fault_range.start as usize;
+                        } else {
+                            status.push(RunStatus::OnCatch {
+                                end: then_catch.end,
+                                recover,
+                            });
+                            pc = then_catch.start as usize;
+                        }
+
+                        continue;
+                    }
+                }
+                RunStatus::OnFault {
+                    end,
+                    recover,
+                    then_catch,
+                } => {
+                    if (pc as u64) >= end {
+                        status.push(RunStatus::OnCatch {
+                            end: then_catch.end,
+                            recover,
+                        });
+                        pc = then_catch.start as usize;
+                        continue;
+                    }
+                }
+                RunStatus::OnCatch { end, recover } => {
+                    if (pc as u64) >= end {
+                        pc = recover;
+                        continue;
+                    }
+                }
+            }
         }
-        if let Err(t) = T::spec_match_code(method, cpu, this, args, result_ptr, &mut pc) {
+
+        if cpu.has_exception() {
+            if let Some(handler) = method.exception_table.get_for(pc).find_map(|x| {
+                x.get_exception_type(method)
+                    .filter(|exception_type| {
+                        cpu.is_exception_type_suitable(*exception_type) && {
+                            x.get_filter(method).is_none_or(
+                                |(ty_kind, filter_method)| match ty_kind {
+                                    NonGenericTypeHandleKind::Class => {
+                                        let filter_method = filter_method.cast::<Method<Class>>();
+                                        let enable = unsafe { filter_method.as_ref() }
+                                            .typed_res_call::<u8>(cpu, None, &[]);
+                                        enable != 0
+                                    }
+                                    NonGenericTypeHandleKind::Struct => {
+                                        let filter_method = filter_method.cast::<Method<Struct>>();
+                                        let enable = unsafe { filter_method.as_ref() }
+                                            .typed_res_call::<u8>(cpu, None, &[]);
+                                        enable != 0
+                                    }
+                                    NonGenericTypeHandleKind::Interface => unreachable!(),
+                                },
+                            )
+                        }
+                    })
+                    .map(|_| x)
+            }) {
+                caught_exception.push({
+                    let x = cpu.take_exception();
+                    debug_assert_ne!(x, ManagedReference::null());
+                    x
+                });
+                match (handler.finally(), handler.fault(), handler.catch()) {
+                    (Some(finally), fault, catch) => {
+                        status.push(RunStatus::OnFinally {
+                            end: finally.end,
+                            recover: pc,
+                            then_fault: fault,
+                            then_catch: catch,
+                        });
+                        pc = finally.start as usize;
+                        continue;
+                    }
+                    (None, Some(fault), catch) => {
+                        status.push(RunStatus::OnFault {
+                            end: fault.end,
+                            recover: pc,
+                            then_catch: catch,
+                        });
+                        pc = fault.start as usize;
+                        continue;
+                    }
+                    (None, None, catch) => {
+                        status.push(RunStatus::OnCatch {
+                            end: catch.end,
+                            recover: pc,
+                        });
+                        pc = catch.start as usize;
+                        continue;
+                    }
+                }
+            } else {
+                return (result_ptr.cast(), result_layout);
+            }
+        }
+        if let Err(t) = T::spec_match_code(
+            method,
+            cpu,
+            this,
+            args,
+            result_ptr,
+            &mut pc,
+            caught_exception.last().copied(),
+        ) {
             match t {
                 Termination::LoadRegisterFailed(r) => {
                     t_println!("Cannot load Register {r}");
@@ -247,11 +470,11 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                             .write_bytes(0, result_ptr.len());
                     }
                 },
-                Termination::LoadTypeHandleFailed(_) => {
-                    t_println!("Cannot load TypeHandle");
+                Termination::LoadTypeHandleFailed(th) => {
+                    t_println!("Cannot load TypeHandle {}", th);
                 }
-                Termination::LoadMethodFailed(_) => {
-                    t_println!("Cannot load Method");
+                Termination::LoadMethodFailed(m) => {
+                    t_println!("Cannot load Method {}", m);
                 }
                 Termination::LoadFieldFailed(f) => {
                     t_println!("Cannot load Field {f}");
@@ -264,6 +487,12 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                 }
                 Termination::UnimplementedInterface => {
                     t_println!("Interface has not been implemented");
+                }
+                Termination::RethrowWithoutExceptions => {
+                    t_println!("Rethrow without exceptions");
+                }
+                Termination::LoadCaughtExceptionWithoutExceptions => {
+                    t_println!("Load caught exception without exceptions");
                 }
 
                 Termination::Terminated => {}

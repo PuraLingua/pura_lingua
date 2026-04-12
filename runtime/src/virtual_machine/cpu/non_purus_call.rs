@@ -304,6 +304,7 @@ impl CPU {
 
         let abi = crate::libffi_utils::get_abi_by_call_convention(cfg.call_convention);
         let cif = if cfg.arguments.len() < args.len() {
+            #[cfg(unix)]
             println!("Variadic functions are not yet fully supported");
             let args = args
                 .iter()

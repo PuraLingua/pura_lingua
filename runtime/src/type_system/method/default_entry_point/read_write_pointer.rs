@@ -4,12 +4,14 @@ use global::instruction::{CommonReadPointerTo, CommonWritePointer, IRegisterAddr
 
 use crate::{
     type_system::{
+        class::Class,
         get_traits::{GetAssemblyRef, GetTypeVars},
         method::{
             Method,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
     },
+    value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
 };
 
@@ -23,6 +25,7 @@ pub(super) fn read_pointer_to<
     #[allow(unused)] args: &[*mut c_void],
     #[allow(unused)] result_ptr: NonNull<[u8]>,
     #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     ins: &CommonReadPointerTo<TRegisterAddr>,
 ) -> Option<Result<(), Termination>> {
     let Some(&ptr_var) = call_frame(cpu).get_typed::<*const u8, _>(ins.ptr) else {
@@ -55,6 +58,7 @@ pub(super) fn write_pointer<
     #[allow(unused)] args: &[*mut c_void],
     #[allow(unused)] result_ptr: NonNull<[u8]>,
     #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     ins: &CommonWritePointer<TRegisterAddr>,
 ) -> Option<Result<(), Termination>> {
     let Some(source) = call_frame(cpu).get(ins.source) else {

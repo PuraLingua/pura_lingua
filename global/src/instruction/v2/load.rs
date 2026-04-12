@@ -208,6 +208,8 @@ where
         container: TRegisterAddr,
         field: TFieldRef,
     },
+
+    CaughtException,
 }
 
 impl<TString, TTypeRef, TFieldRef, TRegisterAddr: IRegisterAddr> Display
@@ -247,6 +249,7 @@ where
             LoadContent::Field { container, field } => {
                 f.write_fmt(format_args!("field({field} at {container})"))
             }
+            LoadContent::CaughtException => f.write_fmt(format_args!("caught exception")),
         }
     }
 }

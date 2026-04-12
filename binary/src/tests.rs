@@ -126,6 +126,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                             content: LoadContent::U64(5u64),
                         }),
                     ],
+                    exception_table: vec![],
                 },
                 Method {
                     name: section.as_string_section_mut().add_string("F2"),
@@ -155,6 +156,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                         args: vec![],
                         ret_at: RegisterAddr::new(1),
                     })],
+                    exception_table: vec![],
                 },
                 // Statics
                 Method {
@@ -170,6 +172,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                     call_convention: CallConvention::PlatformDefault,
                     generic_bounds: None,
                     instructions: Vec::new(),
+                    exception_table: vec![],
                 },
             ],
             fields: Vec::new(),

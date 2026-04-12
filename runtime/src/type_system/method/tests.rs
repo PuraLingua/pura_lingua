@@ -150,7 +150,7 @@ fn test_interface_call() {
                 ),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
-                    vec![Box::new(Method::new(
+                    vec![Method::new(
                         mt,
                         "FTest".to_owned(),
                         global::attr!(
@@ -161,7 +161,8 @@ fn test_interface_call() {
                         Default::default(),
                         None,
                         vec![],
-                    ))]
+                        ExceptionTable::gen_new(),
+                    )]
                 }),
                 None,
             )
@@ -174,7 +175,7 @@ fn test_interface_call() {
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
-                        Box::new(Method::new(
+                        Method::new(
                             mt,
                             ".ctor".to_owned(),
                             global::attr!(
@@ -185,8 +186,9 @@ fn test_interface_call() {
                             Default::default(),
                             None,
                             vec![],
-                        )),
-                        Box::new(Method::new(
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::new(
                             mt,
                             "AAA".to_owned(),
                             global::attr!(
@@ -197,8 +199,9 @@ fn test_interface_call() {
                             Default::default(),
                             None,
                             vec![],
-                        )),
-                        Box::new(Method::new(
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::new(
                             mt,
                             "FTest".to_owned(),
                             global::attr!(
@@ -218,12 +221,10 @@ fn test_interface_call() {
                                     register_addr: ShortRegisterAddr::new(0),
                                 },
                             ],
-                        )),
+                            ExceptionTable::gen_new(),
+                        ),
                         // Statics
-                        Box::new(Method::default_sctor(
-                            Some(mt),
-                            global::attr!(method Public {Static}),
-                        )),
+                        Method::default_sctor(Some(mt), global::attr!(method Public {Static})),
                     ]
                 }),
                 vec![],
@@ -246,7 +247,7 @@ fn test_interface_call() {
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
-                        Box::new(Method::new(
+                        Method::new(
                             mt,
                             ".ctor".to_owned(),
                             global::attr!(
@@ -257,8 +258,9 @@ fn test_interface_call() {
                             Default::default(),
                             None,
                             vec![],
-                        )),
-                        Box::new(Method::new(
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::new(
                             mt,
                             "FTest".to_owned(),
                             global::attr!(
@@ -278,12 +280,10 @@ fn test_interface_call() {
                                     register_addr: ShortRegisterAddr::new(0),
                                 },
                             ],
-                        )),
+                            ExceptionTable::gen_new(),
+                        ),
                         // Statics
-                        Box::new(Method::default_sctor(
-                            Some(mt),
-                            global::attr!(method Public {Static}),
-                        )),
+                        Method::default_sctor(Some(mt), global::attr!(method Public {Static})),
                     ]
                 }),
                 vec![],
@@ -306,7 +306,7 @@ fn test_interface_call() {
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
-                        Box::new(Method::new(
+                        Method::new(
                             mt,
                             "Main".to_owned(),
                             global::attr!(
@@ -390,8 +390,9 @@ fn test_interface_call() {
                                     ret_at: ShortRegisterAddr::new(3),
                                 }),
                             ],
-                        )),
-                        Box::new(Method::native(
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::native(
                             Some(mt),
                             "Println".to_owned(),
                             global::attr!(method Public {Static}),
@@ -403,11 +404,9 @@ fn test_interface_call() {
                             Default::default(),
                             None,
                             Println as _,
-                        )),
-                        Box::new(Method::default_sctor(
-                            Some(mt),
-                            global::attr!(method Public {Static}),
-                        )),
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::default_sctor(Some(mt), global::attr!(method Public {Static})),
                     ]
                 }),
                 vec![],

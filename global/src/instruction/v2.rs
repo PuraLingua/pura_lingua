@@ -64,6 +64,7 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
 
     Throw { exception_addr: RegisterAddr },
     SThrow { exception_addr: ShortRegisterAddr },
+    Rethrow,
 
     ReturnVal { register_addr: RegisterAddr },
     SReturnVal { register_addr: ShortRegisterAddr },
@@ -122,6 +123,7 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
 
             Throw { exception_addr } => Some(Throw { exception_addr }),
             SThrow { exception_addr } => Some(SThrow { exception_addr }),
+            Rethrow => Some(Rethrow),
 
             ReturnVal { register_addr } => Some(ReturnVal { register_addr }),
             SReturnVal { register_addr } => Some(SReturnVal { register_addr }),
@@ -176,6 +178,7 @@ impl<TString, E1, TTypeRef, E2, TMethodRef, E3, TFieldRef, E4>
 
             Throw { exception_addr } => Ok(Throw { exception_addr }),
             SThrow { exception_addr } => Ok(SThrow { exception_addr }),
+            Rethrow => Ok(Rethrow),
 
             ReturnVal { register_addr } => Ok(ReturnVal { register_addr }),
             SReturnVal { register_addr } => Ok(SReturnVal { register_addr }),
@@ -245,6 +248,7 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
 
             Throw { exception_addr } => Throw { exception_addr },
             SThrow { exception_addr } => SThrow { exception_addr },
+            Rethrow => Rethrow,
 
             ReturnVal { register_addr } => ReturnVal { register_addr },
             SReturnVal { register_addr } => SReturnVal { register_addr },
@@ -313,6 +317,7 @@ where
             Instruction::SThrow { exception_addr } => {
                 f.write_fmt(format_args!("{NAME}::SThrow {exception_addr:#x}"))
             }
+            Instruction::Rethrow => f.write_fmt(format_args!("{NAME}::Rethrow")),
 
             Instruction::ReturnVal { register_addr } => {
                 f.write_fmt(format_args!("{NAME}::ReturnVal {register_addr:#x}"))
@@ -429,6 +434,11 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                             content: LoadContent::Field { container, field },
                         }),
                     },
+
+                    LoadContent::CaughtException => SLoad(Instruction_Load {
+                        addr,
+                        content: LoadContent::CaughtException,
+                    }),
                 }
             }
             SLoad(ins) => SLoad(ins),
@@ -718,6 +728,7 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                 None => Throw { exception_addr },
             },
             SThrow { exception_addr } => SThrow { exception_addr },
+            Rethrow => Rethrow,
 
             ReturnVal { register_addr } => match register_addr.try_into_short() {
                 Some(register_addr) => SReturnVal { register_addr },

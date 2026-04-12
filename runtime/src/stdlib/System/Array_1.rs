@@ -13,7 +13,7 @@ use crate::{
     stdlib::System::{_define_class, common_new_method, default_sctor},
     type_system::{
         class::Class,
-        method::Method,
+        method::{ExceptionTable, Method},
         type_handle::{NonGenericTypeHandle, TypeHandle},
     },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
@@ -146,50 +146,49 @@ _define_class!(
             t_size
             result
         );
-        Box::new(
-            Method::new(
-                mt,
-                TMethodId::get_Index.get_name().to_owned(),
-                super::map_method_attr(TMethodId::get_Index.get_attr()),
-                TMethodId::get_Index.get_parameters()
-                    .into_iter()
-                    .map(super::map_parameter)
-                    .collect(),
-                TMethodId::get_Index.get_return_type().into(),
-                CallConvention::PlatformDefault,
-                None,
-                {
-                    use global::instruction::Instruction;
-                    vec![
-                        Instruction::SLoad(Instruction_Load {
-                            addr: this_addr,
-                            content: LoadContent::This,
-                        }),
-                        Instruction::SLoad(Instruction_Load {
-                            addr: arg_Index,
-                            content: LoadContent::Arg(0),
-                        }),
-                        Instruction::SCall(global::instruction::Instruction_Call::InstanceCall {
-                            val: this_addr,
-                            method: TMethodId::GetPointerOfIndex.into(),
-                            args: vec![arg_Index],
-                            ret_at: ptr2result,
-                        }),
-                        Instruction::SLoad(Instruction_Load {
-                            addr: t_size,
-                            content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
-                        }),
-                        Instruction::SReadPointerTo(CommonReadPointerTo {
-                            ptr: ptr2result,
-                            size: t_size,
-                            destination: result,
-                        }),
-                        Instruction::SReturnVal {
-                            register_addr: result,
-                        },
-                    ]
-                },
-            )
+        Method::new(
+            mt,
+            TMethodId::get_Index.get_name().to_owned(),
+            super::map_method_attr(TMethodId::get_Index.get_attr()),
+            TMethodId::get_Index.get_parameters()
+                .into_iter()
+                .map(super::map_parameter)
+                .collect(),
+            TMethodId::get_Index.get_return_type().into(),
+            CallConvention::PlatformDefault,
+            None,
+            {
+                use global::instruction::Instruction;
+                vec![
+                    Instruction::SLoad(Instruction_Load {
+                        addr: this_addr,
+                        content: LoadContent::This,
+                    }),
+                    Instruction::SLoad(Instruction_Load {
+                        addr: arg_Index,
+                        content: LoadContent::Arg(0),
+                    }),
+                    Instruction::SCall(global::instruction::Instruction_Call::InstanceCall {
+                        val: this_addr,
+                        method: TMethodId::GetPointerOfIndex.into(),
+                        args: vec![arg_Index],
+                        ret_at: ptr2result,
+                    }),
+                    Instruction::SLoad(Instruction_Load {
+                        addr: t_size,
+                        content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                    }),
+                    Instruction::SReadPointerTo(CommonReadPointerTo {
+                        ptr: ptr2result,
+                        size: t_size,
+                        destination: result,
+                    }),
+                    Instruction::SReturnVal {
+                        register_addr: result,
+                    },
+                ]
+            },
+            ExceptionTable::gen_new(),
         )
     };
     set_Index => {
@@ -200,44 +199,43 @@ _define_class!(
             t_size
             pointer2target
         );
-        Box::new(
-            Method::new(
-                mt,
-                TMethodId::set_Index.get_name().to_owned(),
-                super::map_method_attr(TMethodId::set_Index.get_attr()),
-                TMethodId::set_Index.get_parameters()
-                    .into_iter()
-                    .map(super::map_parameter)
-                    .collect(),
-                TMethodId::set_Index.get_return_type().into(),
-                CallConvention::PlatformDefault,
-                None,
-                {
-                    use global::instruction::Instruction;
-                    vec![
-                        Instruction::SLoad(Instruction_Load { addr: this_addr, content: LoadContent::This }),
-                        Instruction::SLoad(Instruction_Load { addr: arg_Index, content: LoadContent::Arg(0) }),
-                        Instruction::SLoad(Instruction_Load { addr: arg_Value, content: LoadContent::Arg(1) }),
+        Method::new(
+            mt,
+            TMethodId::set_Index.get_name().to_owned(),
+            super::map_method_attr(TMethodId::set_Index.get_attr()),
+            TMethodId::set_Index.get_parameters()
+                .into_iter()
+                .map(super::map_parameter)
+                .collect(),
+            TMethodId::set_Index.get_return_type().into(),
+            CallConvention::PlatformDefault,
+            None,
+            {
+                use global::instruction::Instruction;
+                vec![
+                    Instruction::SLoad(Instruction_Load { addr: this_addr, content: LoadContent::This }),
+                    Instruction::SLoad(Instruction_Load { addr: arg_Index, content: LoadContent::Arg(0) }),
+                    Instruction::SLoad(Instruction_Load { addr: arg_Value, content: LoadContent::Arg(1) }),
 
-                        Instruction::SLoad(Instruction_Load {
-                            addr: t_size,
-                            content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
-                        }),
+                    Instruction::SLoad(Instruction_Load {
+                        addr: t_size,
+                        content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                    }),
 
-                        Instruction::SCall(Instruction_Call::InstanceCall {
-                            val: this_addr,
-                            method: TMethodId::GetPointerOfIndex.into(),
-                            args: vec![arg_Index],
-                            ret_at: pointer2target,
-                        }),
-                        Instruction::SWritePointer(CommonWritePointer {
-                            source: arg_Value,
-                            size: t_size,
-                            ptr: pointer2target,
-                        }),
-                    ]
-                },
-            )
+                    Instruction::SCall(Instruction_Call::InstanceCall {
+                        val: this_addr,
+                        method: TMethodId::GetPointerOfIndex.into(),
+                        args: vec![arg_Index],
+                        ret_at: pointer2target,
+                    }),
+                    Instruction::SWritePointer(CommonWritePointer {
+                        source: arg_Value,
+                        size: t_size,
+                        ptr: pointer2target,
+                    }),
+                ]
+            },
+            ExceptionTable::gen_new(),
         )
     };
 #static_methods(TStaticMethodId):

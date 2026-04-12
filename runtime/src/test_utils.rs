@@ -11,7 +11,7 @@ use crate::{
     type_system::{
         assembly::Assembly,
         class::Class,
-        method::{Method, MethodRef},
+        method::{ExceptionTable, Method, MethodRef},
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
@@ -65,7 +65,7 @@ pub fn try_invoke_instructions(
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
-                        Box::new(Method::new(
+                        Method::new(
                             mt,
                             "__Test".to_owned(),
                             MethodAttr::new(
@@ -79,11 +79,9 @@ pub fn try_invoke_instructions(
                             CallConvention::PlatformDefault,
                             None,
                             instructions,
-                        )),
-                        Box::new(Method::default_sctor(
-                            Some(mt),
-                            global::attr!(method Public {Static}),
-                        )),
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::default_sctor(Some(mt), global::attr!(method Public {Static})),
                     ]
                 }),
                 vec![],

@@ -1,3 +1,5 @@
+#[cfg(windows)]
+use std::pin::Pin;
 use std::ptr::NonNull;
 
 use global::{
@@ -17,7 +19,7 @@ use crate::{
         assembly_manager::{AssemblyManager, AssemblyRef},
         class::Class,
         field::Field,
-        method::{Method, MethodRef},
+        method::{ExceptionTable, Method, MethodRef},
         method_table::MethodTable,
         type_ref::TypeRef,
     },
@@ -59,7 +61,7 @@ fn simple_dynamic_lib_test() {
                     MethodTable::wrap_as_method_generator(|mt| {
                         vec![
                             // Statics
-                            Box::new(Method::new(
+                            Method::new(
                                 mt,
                                 ".sctor".to_owned(),
                                 global::attr!(
@@ -92,7 +94,8 @@ fn simple_dynamic_lib_test() {
                                         field: 0,
                                     }),
                                 ],
-                            )),
+                                ExceptionTable::gen_new(),
+                            ),
                             gen_simple_dynamic_lib_to_invoke(assembly_manager, mt),
                         ]
                     }),
@@ -162,7 +165,7 @@ fn simple_dynamic_lib_test() {
 fn gen_simple_dynamic_lib_to_invoke(
     _assembly_manager: &AssemblyManager,
     mt: NonNull<MethodTable<Class>>,
-) -> Box<Method<Class>> {
+) -> Pin<Box<Method<Class>>> {
     use global::instruction::Instruction_Call;
 
     use crate::stdlib::CoreTypeIdConstExt as _;
@@ -172,7 +175,7 @@ fn gen_simple_dynamic_lib_to_invoke(
         ind: 0,
     };
 
-    Box::new(Method::new(
+    Method::new(
         mt,
         "ToInvoke".to_owned(),
         global::attr!(
@@ -385,7 +388,8 @@ fn gen_simple_dynamic_lib_to_invoke(
                 register_addr: RegisterAddr::new(16),
             },
         ],
-    ))
+        ExceptionTable::gen_new(),
+    )
 }
 
 #[cfg(unix)]
@@ -554,5 +558,6 @@ fn gen_simple_dynamic_lib_to_invoke(
                 register_addr: RegisterAddr::new(13),
             },
         ],
+        ExceptionTable::new(),
     ))
 }

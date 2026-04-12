@@ -6,12 +6,14 @@ use global::instruction::{
 
 use crate::{
     type_system::{
+        class::Class,
         get_traits::{GetAssemblyRef, GetTypeVars},
         method::{
             Method,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
     },
+    value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
 };
 
@@ -37,6 +39,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] args: &[*mut c_void],
     #[allow(unused)] result_ptr: NonNull<[u8]>,
     #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     ins: &Instruction_Jump<TRegisterAddr>,
 ) -> Option<Result<(), Termination>> {
     let cond = match &ins.condition {

@@ -8,7 +8,10 @@ use global::{
 
 use crate::{
     stdlib::System::{_define_struct, default_sctor, map_method_attr, map_parameters},
-    type_system::{method::Method, type_handle::TypeHandle},
+    type_system::{
+        method::{ExceptionTable, Method},
+        type_handle::TypeHandle,
+    },
 };
 
 _define_struct!(
@@ -17,7 +20,7 @@ _define_struct!(
 #methods(TMethodId):
 #static_methods(TStaticMethodId):
     StaticConstructor => default_sctor!(mt TStaticMethodId);
-    Read => Box::new(Method::new(
+    Read => Method::new(
         mt,
         method_info.name,
         map_method_attr(method_info.attr),
@@ -43,8 +46,9 @@ _define_struct!(
                 register_addr: ShortRegisterAddr::new(2),
             },
         ],
-    ));
-    Write => Box::new(Method::new(
+        ExceptionTable::gen_new(),
+    );
+    Write => Method::new(
         mt,
         method_info.name,
         map_method_attr(method_info.attr),
@@ -71,5 +75,6 @@ _define_struct!(
                 ptr: ShortRegisterAddr::new(0),
             })
         ],
-    ));
+        ExceptionTable::gen_new(),
+    );
 );

@@ -33,10 +33,10 @@ fn test_layout() {
                     Vec::new(),
                     |class| {
                         MethodTable::new(class, |mt| {
-                            vec![Box::new(Method::default_sctor(
+                            vec![Method::default_sctor(
                                 Some(mt),
                                 global::attr!(method Public {Static}),
-                            ))]
+                            )]
                         })
                         .as_non_null_ptr()
                     },

@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::offset_of, ptr::NonNull};
+use std::{ffi::c_void, mem::offset_of, pin::Pin, ptr::NonNull};
 
 use global::{
     attrs::{CallConvention, MethodAttr, MethodImplementationFlags},
@@ -21,8 +21,10 @@ use super::{
 };
 
 mod calling;
+mod exception_table;
 mod parameter;
 
+pub use exception_table::{ExceptionTable, ExceptionTableEntry};
 pub use parameter::Parameter;
 
 pub type RuntimeInstruction = Instruction<String, MaybeUnloadedTypeHandle, MethodRef, u32>;
@@ -47,6 +49,8 @@ pub struct Method<T> {
 
     instructions: Vec<RuntimeInstruction>,
     entry_point: CodePtr,
+
+    exception_table: ExceptionTable<T>,
 }
 
 mod display;
@@ -66,7 +70,7 @@ impl<T> Method<T>
 where
     T: GetTypeVars + GetAssemblyRef,
 {
-    pub fn new(
+    pub fn new<FExceptionTable: FnOnce(&Self) -> ExceptionTable<T>>(
         mt: NonNull<MethodTable<T>>,
 
         name: String,
@@ -78,8 +82,10 @@ where
         generic_bounds: Option<Vec<GenericBounds>>,
 
         instructions: Vec<RuntimeInstruction>,
-    ) -> Self {
-        Self {
+
+        exception_table_generator: FExceptionTable,
+    ) -> Pin<Box<Self>> {
+        let mut this = Box::pin(Self {
             mt: Some(mt),
             generic: None,
 
@@ -97,13 +103,57 @@ where
 
             instructions,
             entry_point: CodePtr::from_ptr(default_entry_point::__default_entry_point::<T> as _),
-        }
+
+            exception_table: ExceptionTable::new(NonNull::dangling()),
+        });
+        this.exception_table = exception_table_generator(&this);
+        this
+    }
+
+    pub fn try_new<E, FExceptionTable: FnOnce(&Self) -> Result<ExceptionTable<T>, E>>(
+        mt: NonNull<MethodTable<T>>,
+
+        name: String,
+        attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        args: Vec<Parameter>,
+        return_type: MaybeUnloadedTypeHandle,
+        call_convention: CallConvention,
+
+        generic_bounds: Option<Vec<GenericBounds>>,
+
+        instructions: Vec<RuntimeInstruction>,
+
+        exception_table_generator: FExceptionTable,
+    ) -> Result<Pin<Box<Self>>, E> {
+        let mut this = Box::pin(Self {
+            mt: Some(mt),
+            generic: None,
+
+            name: name.into_boxed_str(),
+            attr,
+            args,
+            return_type,
+            call_convention,
+
+            generic_instances: Vec::new(),
+            generic_bounds: generic_bounds
+                .filter(|x| !x.is_empty())
+                .map(|x| Box::into_non_null(x.into_boxed_slice())),
+            type_vars: None,
+
+            instructions,
+            entry_point: CodePtr::from_ptr(default_entry_point::__default_entry_point::<T> as _),
+
+            exception_table: ExceptionTable::new(NonNull::dangling()),
+        });
+        this.exception_table = exception_table_generator(&this)?;
+        Ok(this)
     }
 }
 
 #[allow(clippy::too_many_arguments)]
 impl<T> Method<T> {
-    pub fn native(
+    pub fn native<FExceptionTable: FnOnce(&Self) -> ExceptionTable<T>>(
         mt: Option<NonNull<MethodTable<T>>>,
 
         name: String,
@@ -115,8 +165,10 @@ impl<T> Method<T> {
         generic_bounds: Option<Vec<GenericBounds>>,
 
         entry_point: *const c_void,
-    ) -> Self {
-        Self {
+
+        exception_table_generator: FExceptionTable,
+    ) -> Pin<Box<Self>> {
+        let mut this = Box::pin(Self {
             mt,
             generic: None,
 
@@ -134,13 +186,17 @@ impl<T> Method<T> {
 
             instructions: Vec::new(),
             entry_point: CodePtr::from_ptr(entry_point),
-        }
+
+            exception_table: ExceptionTable::new(NonNull::dangling()),
+        });
+        this.exception_table = exception_table_generator(&this);
+        this
     }
     /// Creates a static method called `.sctor`
     pub fn default_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
         attr: MethodAttr<MaybeUnloadedTypeHandle>,
-    ) -> Self {
+    ) -> Pin<Box<Self>> {
         extern "system" fn sctor<T>(_: &mut CPU, _: &Method<T>) {
             #[cfg(feature = "print_invoke_and_call")]
             global::dt_println!("Calling default sctor");
@@ -152,7 +208,7 @@ impl<T> Method<T> {
         mt: Option<NonNull<MethodTable<T>>>,
         mut attr: MethodAttr<MaybeUnloadedTypeHandle>,
         rust_fn: extern "system" fn(&mut CPU, &Method<T>),
-    ) -> Self {
+    ) -> Pin<Box<Self>> {
         attr.impl_flags_mut()
             .insert(MethodImplementationFlags::Static);
         Self::native(
@@ -164,6 +220,7 @@ impl<T> Method<T> {
             CallConvention::PlatformDefault,
             None,
             rust_fn as _,
+            ExceptionTable::gen_new(),
         )
     }
 }
@@ -196,11 +253,17 @@ impl<T> Method<T> {
             generic_instances: Vec::new(),
             generic_bounds: None,
             type_vars: Some(Box::clone_from_ref(type_vars)),
+
+            exception_table: self.exception_table.clone(),
         });
 
-        let instantiated = Box::into_non_null(instantiated);
+        let mut instantiated = Box::into_non_null(instantiated);
 
         unsafe {
+            instantiated
+                .as_mut()
+                .exception_table
+                .reset_method_ptr(instantiated);
             NonNull::from_ref(self)
                 .byte_add(offset_of!(Self, generic_instances))
                 .cast::<Vec<NonNull<Self>>>()

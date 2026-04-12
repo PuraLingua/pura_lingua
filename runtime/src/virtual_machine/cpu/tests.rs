@@ -18,7 +18,7 @@ use crate::{
     type_system::{
         assembly::Assembly,
         class::Class,
-        method::Method,
+        method::{ExceptionTable, Method},
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
@@ -54,7 +54,7 @@ fn test_call_stack() {
                         |class| {
                             MethodTable::new(class, |mt| {
                                 vec![
-                                    Box::new(Method::new(
+                                    Method::new(
                                         mt,
                                         "F".to_owned(),
                                         global::attr!(
@@ -71,12 +71,13 @@ fn test_call_stack() {
                                         CallConvention::PlatformDefault,
                                         None,
                                         vec![],
-                                    )),
+                                        ExceptionTable::gen_new(),
+                                    ),
                                     // Statics
-                                    Box::new(Method::default_sctor(
+                                    Method::default_sctor(
                                         Some(mt),
                                         global::attr!(method Public {}),
-                                    )),
+                                    ),
                                 ]
                             })
                             .as_non_null_ptr()

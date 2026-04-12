@@ -4,6 +4,8 @@ mod iterators;
 mod option;
 #[doc(hidden)]
 mod primitive;
+#[doc(hidden)]
+mod range;
 
 mod string;
 

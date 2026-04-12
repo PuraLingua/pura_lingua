@@ -83,77 +83,79 @@ fn array_get_set() -> global::Result<()> {
                         vec![],
                         |class| {
                             MethodTable::new(class, |mt| {
-                                vec![Box::new(Method::new(
-                                    mt,
-                                    "TestSet".to_owned(),
-                                    global::attr!(
-                                        method Public {Static}
-                                        /* 0 */ MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
-											assembly_and_index: either::Either::Right(Box::new(
-												g_core_type!(System_String),
-											)),
-											types: vec![g_core_type!(System_String)],
-										}),
-                                        /* 1 */ g_core_type!(System_String),
-                                        /* 2 */ g_core_type!(System_String),
-                                        /* 3 */	g_core_type!(System_USize),
-										/* 4 */ g_core_type!(System_Void),
+                                vec![
+                                    Method::new(
+                                        mt,
+                                        "TestSet".to_owned(),
+                                        global::attr!(
+                                            method Public {Static}
+                                            /* 0 */ MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
+                                                assembly_and_index: either::Either::Right(Box::new(
+                                                    g_core_type!(System_String),
+                                                )),
+                                                types: vec![g_core_type!(System_String)],
+                                            }),
+                                            /* 1 */ g_core_type!(System_String),
+                                            /* 2 */ g_core_type!(System_String),
+                                            /* 3 */	g_core_type!(System_USize),
+                                            /* 4 */ g_core_type!(System_Void),
+                                        ),
+                                        vec![],
+                                        MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
+                                            assembly_and_index: either::Either::Right(Box::new(
+                                                g_core_type!(System_String),
+                                            )),
+                                            types: vec![g_core_type!(System_String)],
+                                        }),
+                                        CallConvention::PlatformDefault,
+                                        None,
+                                        vec![
+                                            Instruction::New(Instruction_New::NewArray {
+                                                element_type: CoreTypeId::System_String
+                                                    .static_type_ref()
+                                                    .into(),
+                                                len: 2,
+                                                output: RegisterAddr::new(0),
+                                            }),
+                                            Instruction::Load(Instruction_Load {
+                                                addr: RegisterAddr::new(1),
+                                                content: LoadContent::String("aaa".to_owned()),
+                                            }),
+                                            Instruction::Load(Instruction_Load {
+                                                addr: RegisterAddr::new(2),
+                                                content: LoadContent::String("bbb".to_owned()),
+                                            }),
+
+                                            Instruction::Load(Instruction_Load {
+                                                addr: RegisterAddr::new(3),
+                                                content: LoadContent::U64(0),
+                                            }),
+                                            Instruction::Call(Instruction_Call::InstanceCall {
+                                                val: RegisterAddr::new(0),
+                                                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
+                                                args: vec![RegisterAddr::new(3), RegisterAddr::new(1)],
+                                                ret_at: RegisterAddr::new(4),
+                                            }),
+
+                                            Instruction::Load(Instruction_Load {
+                                                addr: RegisterAddr::new(3),
+                                                content: LoadContent::U64(1),
+                                            }),
+                                            Instruction::Call(Instruction_Call::InstanceCall {
+                                                val: RegisterAddr::new(0),
+                                                method: stdlib_header::MethodId!(Array_1::set_Index).into(),
+                                                args: vec![RegisterAddr::new(3), RegisterAddr::new(2)],
+                                                ret_at: RegisterAddr::new(4),
+                                            }),
+
+                                            Instruction::ReturnVal {
+                                                register_addr: RegisterAddr::new(0),
+                                            }
+                                        ],
+                                        ExceptionTable::gen_new(),
                                     ),
-                                    vec![],
-                                    MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
-                                        assembly_and_index: either::Either::Right(Box::new(
-                                            g_core_type!(System_String),
-                                        )),
-                                        types: vec![g_core_type!(System_String)],
-                                    }),
-                                    CallConvention::PlatformDefault,
-                                    None,
-                                    vec![
-                                        Instruction::New(Instruction_New::NewArray {
-                                            element_type: CoreTypeId::System_String
-                                                .static_type_ref()
-                                                .into(),
-                                            len: 2,
-                                            output: RegisterAddr::new(0),
-                                        }),
-                                        Instruction::Load(Instruction_Load {
-                                            addr: RegisterAddr::new(1),
-                                            content: LoadContent::String("aaa".to_owned()),
-                                        }),
-                                        Instruction::Load(Instruction_Load {
-                                            addr: RegisterAddr::new(2),
-                                            content: LoadContent::String("bbb".to_owned()),
-                                        }),
-
-										Instruction::Load(Instruction_Load {
-                                            addr: RegisterAddr::new(3),
-                                            content: LoadContent::U64(0),
-                                        }),
-										Instruction::Call(Instruction_Call::InstanceCall {
-											val: RegisterAddr::new(0),
-											method: stdlib_header::MethodId!(Array_1::set_Index).into(),
-											args: vec![RegisterAddr::new(3), RegisterAddr::new(1)],
-											ret_at: RegisterAddr::new(4),
-										}),
-
-										Instruction::Load(Instruction_Load {
-                                            addr: RegisterAddr::new(3),
-                                            content: LoadContent::U64(1),
-                                        }),
-										Instruction::Call(Instruction_Call::InstanceCall {
-											val: RegisterAddr::new(0),
-											method: stdlib_header::MethodId!(Array_1::set_Index).into(),
-											args: vec![RegisterAddr::new(3), RegisterAddr::new(2)],
-											ret_at: RegisterAddr::new(4),
-										}),
-
-										Instruction::ReturnVal {
-                                            register_addr: RegisterAddr::new(0),
-                                        }
-                                    ],
-                                    )),
                                     //statics
-                                    Box::new(Method::default_sctor(Some(mt), global::attr!(method Public {Static}))),
+                                    Method::default_sctor(Some(mt), global::attr!(method Public {Static})),
                                 ]
                             })
                             .into()

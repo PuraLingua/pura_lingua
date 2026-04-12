@@ -37,11 +37,11 @@ _define_class!(
     RuntimeBasic
 #methods(TMethodId):
 #static_methods(TStaticMethodId):
-    StaticConstructor => Box::new(Method::create_sctor(
+    StaticConstructor => Method::create_sctor(
         Some(mt),
         super::map_method_attr(TStaticMethodId::StaticConstructor.get_attr()),
         StaticConstructor,
-    ));
+    );
 
     /* #region Allocation */
     Global_Allocate => common_new_method!(mt TStaticMethodId Global_Allocate allocation::Global_Allocate);

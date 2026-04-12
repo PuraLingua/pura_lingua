@@ -9,8 +9,12 @@ use global::{
 use crate::{
     test_utils::{g_core_class, g_core_type},
     type_system::{
-        assembly::Assembly, assembly_manager::AssemblyRef, field::Field, method::Method,
-        method_table::MethodTable, type_ref::TypeRef,
+        assembly::Assembly,
+        assembly_manager::AssemblyRef,
+        field::Field,
+        method::{ExceptionTable, Method},
+        method_table::MethodTable,
+        type_ref::TypeRef,
     },
 };
 
@@ -38,7 +42,7 @@ fn test_static() {
                         |class| {
                             MethodTable::new(class, |mt| {
                                 // Statics
-                                vec![Box::new(Method::new(
+                                vec![Method::new(
                                     mt,
                                     ".sctor".to_owned(),
                                     global::attr!(
@@ -67,7 +71,8 @@ fn test_static() {
                                             field: 0,
                                         }),
                                     ],
-                                ))]
+                                    ExceptionTable::gen_new(),
+                                )]
                             })
                             .as_non_null_ptr()
                         },

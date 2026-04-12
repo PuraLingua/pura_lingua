@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::{pin::Pin, ptr::NonNull};
 
 use global::attrs::{MethodAttr, ParameterAttr};
 use stdlib_header::{CoreTypeId, CoreTypeInfo, CoreTypeKind, CoreTypeRef, FieldInfo, MethodInfo};
@@ -39,7 +39,7 @@ pub mod Win32Exception;
 pub mod _Integers;
 
 pub(crate) macro common_new_method($mt:ident $TMethodId:ident $id:ident $f:path) {
-    Box::new(Method::native(
+    Method::native(
         Some($mt),
         $TMethodId::$id.get_name().to_owned(),
         $crate::stdlib::System::map_method_attr($TMethodId::$id.get_attr()),
@@ -52,14 +52,17 @@ pub(crate) macro common_new_method($mt:ident $TMethodId:ident $id:ident $f:path)
         ::global::attrs::CallConvention::PlatformDefault,
         None,
         $f as _,
-    ))
+        |method| {
+            $crate::type_system::method::ExceptionTable::new(std::ptr::NonNull::from_ref(method))
+        },
+    )
 }
 
 pub(crate) macro default_sctor($mt:ident $TMethodId:ident) {
-    Box::new(Method::default_sctor(
+    Method::default_sctor(
         Some($mt),
         $crate::stdlib::System::map_method_attr($TMethodId::StaticConstructor.get_attr()),
-    ))
+    )
 }
 
 fn map_method_attr(val: MethodAttr<CoreTypeRef>) -> MethodAttr<MaybeUnloadedTypeHandle> {
@@ -178,8 +181,8 @@ macro _define_struct(
 
 pub fn define_class(
     id: CoreTypeId,
-    get_method: impl Fn(NonNull<MethodTable<Class>>, MethodInfo) -> Box<Method<Class>>,
-    get_static_method: impl Fn(NonNull<MethodTable<Class>>, MethodInfo) -> Box<Method<Class>>,
+    get_method: impl Fn(NonNull<MethodTable<Class>>, MethodInfo) -> Pin<Box<Method<Class>>>,
+    get_static_method: impl Fn(NonNull<MethodTable<Class>>, MethodInfo) -> Pin<Box<Method<Class>>>,
 ) -> impl FnOnce(&Assembly) -> NonGenericTypeHandle {
     move |assembly| {
         let CoreTypeInfo {
@@ -230,8 +233,8 @@ pub fn define_class(
 
 pub fn define_struct(
     id: CoreTypeId,
-    get_method: impl Fn(NonNull<MethodTable<Struct>>, MethodInfo) -> Box<Method<Struct>>,
-    get_static_method: impl Fn(NonNull<MethodTable<Struct>>, MethodInfo) -> Box<Method<Struct>>,
+    get_method: impl Fn(NonNull<MethodTable<Struct>>, MethodInfo) -> Pin<Box<Method<Struct>>>,
+    get_static_method: impl Fn(NonNull<MethodTable<Struct>>, MethodInfo) -> Pin<Box<Method<Struct>>>,
 ) -> impl FnOnce(&Assembly) -> NonGenericTypeHandle {
     move |assembly| {
         let CoreTypeInfo {

@@ -45,6 +45,9 @@
 #![feature(sync_unsafe_cell)]
 #![feature(box_into_inner)]
 #![feature(pin_ergonomics)]
+#![feature(extend_one)]
+#![feature(super_let)]
+#![feature(const_range)]
 #![cfg_attr(all(unix, test), feature(cstr_display))]
 #![cfg_attr(all(unix, test), feature(c_variadic))]
 //

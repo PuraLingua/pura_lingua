@@ -70,6 +70,15 @@ impl<T> const Clone for ManagedReference<T> {
 
 impl<T> Copy for ManagedReference<T> {}
 
+impl<T> PartialEq for ManagedReference<T> {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::addr_eq::<ManagedReferenceInner<T>, ManagedReferenceInner<T>>(
+            unsafe { std::mem::transmute(self.data) },
+            unsafe { std::mem::transmute(other.data) },
+        )
+    }
+}
+
 impl<T> ManagedReference<T> {
     #[inline(always)]
     pub const fn null() -> Self {

@@ -172,6 +172,8 @@ impl CPU {
 }
 
 mod helpers {
+    use std::ptr::NonNull;
+
     use crate::{
         type_system::class::Class, value::managed_reference::ManagedReference,
         virtual_machine::cpu::CPU,
@@ -186,6 +188,24 @@ mod helpers {
         }
         pub fn get_exception(&self) -> ManagedReference<Class> {
             *self.exception_manager().get_exception()
+        }
+        pub fn is_exception_type_suitable(&self, desired_type: NonNull<Class>) -> bool {
+            if self.has_exception() {
+                let mt = unsafe {
+                    super let x = self.get_exception();
+                    x.method_table_ref_unchecked()
+                };
+                let desired_mt = unsafe { desired_type.as_ref().method_table_ref() };
+                mt.can_cast_to(desired_mt)
+            } else {
+                false
+            }
+        }
+        pub fn take_exception(&mut self) -> ManagedReference<Class> {
+            std::mem::replace(
+                &mut self.exception_manager.exception,
+                ManagedReference::null(),
+            )
         }
     }
 }

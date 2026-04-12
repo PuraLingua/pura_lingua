@@ -1,6 +1,7 @@
 use std::{
     alloc::Layout,
     cell::Cell,
+    pin::Pin,
     ptr::{NonNull, Unique},
     sync::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
 };
@@ -10,7 +11,7 @@ use enumflags2::BitFlags;
 use crate::{
     memory::{GetFieldOffsetOptions, GetLayoutOptions},
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
-    type_system::method::Method,
+    type_system::{class::Class, method::Method, r#struct::Struct},
 };
 
 use super::{
@@ -123,13 +124,13 @@ impl<T> MethodTable<T>
 where
     T: GetAssemblyRef + GetMethodTableRef + GetParent + 'static,
 {
-    pub fn wrap_as_method_generator<F: FnOnce(NonNull<Self>) -> Vec<Box<Method<T>>>>(
+    pub fn wrap_as_method_generator<F: FnOnce(NonNull<Self>) -> Vec<Pin<Box<Method<T>>>>>(
         f: F,
     ) -> impl FnOnce(NonNull<T>) -> NonNull<Self> {
         move |ty| Self::new(ty, f).as_non_null_ptr()
     }
     /// The NonNull passed to method_generator is always valid to be cast to &Self
-    pub fn new<F: FnOnce(NonNull<Self>) -> Vec<Box<Method<T>>>>(
+    pub fn new<F: FnOnce(NonNull<Self>) -> Vec<Pin<Box<Method<T>>>>>(
         ty: NonNull<T>,
         method_generator: F,
     ) -> Unique<Self> {
@@ -162,12 +163,12 @@ where
 
         for this_m in this_methods.into_iter() {
             if let Some(o) = this_m.attr().overrides().as_ref().copied() {
-                methods[o as usize] = Box::into_non_null(this_m);
+                methods[o as usize] = Box::into_non_null(Pin::into_inner(this_m));
                 unsafe {
                     this.as_mut().__override_methods.push(o as usize);
                 }
             } else {
-                methods.push(Box::into_non_null(this_m));
+                methods.push(Box::into_non_null(Pin::into_inner(this_m)));
             }
         }
         unsafe {
@@ -206,6 +207,49 @@ where
         };
 
         CoreTypeId::try_from(id).ok()
+    }
+}
+
+const trait CanCastToSpec {
+    fn __can_cast_to(&self, desired: &Self) -> bool;
+}
+
+impl CanCastToSpec for MethodTable<Class> {
+    fn __can_cast_to(&self, desired: &Self) -> bool {
+        self.is_inherited_from(desired)
+    }
+}
+
+impl const CanCastToSpec for MethodTable<Struct> {
+    #[inline(always)]
+    fn __can_cast_to(&self, _desired: &Self) -> bool {
+        false
+    }
+}
+
+#[expect(private_bounds)]
+impl<T> MethodTable<T>
+where
+    Self: CanCastToSpec,
+{
+    pub fn can_cast_to(&self, desired: &Self) -> bool {
+        if std::ptr::addr_eq(self, desired) {
+            return true;
+        }
+        self.__can_cast_to(desired)
+    }
+}
+
+impl MethodTable<Class> {
+    /// A is not inherited from itself
+    pub fn is_inherited_from(&self, final_parent: &Self) -> bool {
+        if let Some(parent) = self.ty_ref().parent() {
+            unsafe { parent.as_ref() }
+                .method_table_ref()
+                .is_inherited_from(final_parent)
+        } else {
+            false
+        }
     }
 }
 

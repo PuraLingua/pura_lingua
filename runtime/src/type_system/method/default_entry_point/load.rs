@@ -23,6 +23,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] args: &[*mut c_void],
     #[allow(unused)] result_ptr: NonNull<[u8]>,
     #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     ins: &Instruction_Load<String, MaybeUnloadedTypeHandle, u32, TRegisterAddr>,
 ) -> Option<Result<(), Termination>> {
     let register_addr = &ins.addr;
@@ -219,6 +220,8 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 NonGenericTypeHandle::Interface(_) => unreachable!(),
             }
         }
+
+        LoadContent::CaughtException => {}
     }
 
     Some(Ok(()))

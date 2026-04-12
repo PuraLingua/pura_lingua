@@ -7,7 +7,7 @@ use crate::{
     type_system::{
         assembly::Assembly,
         class::Class,
-        method::{Method, Parameter},
+        method::{ExceptionTable, Method, Parameter},
         method_table::MethodTable,
         r#struct::Struct,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
@@ -41,7 +41,7 @@ $assembly:ident, $mt:ident, $method_info:ident, $RustT:ident $(,)?:
                 $mt: NonNull<MethodTable<Struct>>,
                 #[allow(unused)]
                 $method_info: stdlib_header::MethodInfo,
-            ) -> Box<Method<Struct>> {
+            ) -> std::pin::Pin<Box<Method<Struct>>> {
                 type $RustT = $inner;
                 match unsafe {
                     std::mem::transmute::<_, stdlib_header::System::$HeaderName::StaticMethodId>($method_info.id)
@@ -77,14 +77,14 @@ assembly, mt, method_info, RustT:
     System_Int64 of Int64 => i64;
     System_ISize of ISize => isize;
 @StaticConstructor =>
-    Box::new(Method::default_sctor(
+    Method::default_sctor(
         Some(mt),
         global::attr!(
             method Public {Static}
         ),
-    ));
+    );
 @ToString =>
-    Box::new(Method::native(
+    Method::native(
         Some(mt),
         "ToString".to_owned(),
         global::attr!(
@@ -98,5 +98,6 @@ assembly, mt, method_info, RustT:
         global::attrs::CallConvention::PlatformDefault,
         None,
         ToString::<RustT> as _,
-    ));
+        |method| ExceptionTable::new(NonNull::from_ref(method)),
+    );
 }

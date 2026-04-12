@@ -25,11 +25,9 @@ _define_struct!(
     Pointer
 #methods(TMethodId):
 #static_methods(TStaticMethodId):
-    StaticConstructor => Box::new(
-        Method::create_sctor(
-            Some(mt),
-            super::map_method_attr(TStaticMethodId::StaticConstructor.get_attr()),
-            StaticConstructor,
-        ),
+    StaticConstructor => Method::create_sctor(
+        Some(mt),
+        super::map_method_attr(TStaticMethodId::StaticConstructor.get_attr()),
+        StaticConstructor,
     );
 );

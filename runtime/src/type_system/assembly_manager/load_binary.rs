@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::{pin::Pin, ptr::NonNull};
 
 use either::Either;
 use global::StringName;
@@ -11,7 +11,7 @@ use crate::type_system::{
     generics::GenericBounds,
     get_traits::{GetAssemblyRef, GetTypeVars},
     interface::{Interface, InterfaceImplementation},
-    method::{Method, MethodRef, Parameter},
+    method::{ExceptionTable, ExceptionTableEntry, Method, MethodRef, Parameter},
     method_table::MethodTable,
     r#struct::Struct,
     type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle, TypeHandle},
@@ -384,7 +384,7 @@ impl AssemblyManager {
         t_id: u32,
         mt: NonNull<MethodTable<T>>,
         methods: &[binary::ty::Method],
-    ) -> binary::prelude::BinaryResult<Vec<Box<Method<T>>>> {
+    ) -> binary::prelude::BinaryResult<Vec<Pin<Box<Method<T>>>>> {
         methods
             .iter()
             .map(|method| {
@@ -401,7 +401,7 @@ impl AssemblyManager {
         t_id: u32,
         mt: NonNull<MethodTable<T>>,
         method: &binary::ty::Method,
-    ) -> binary::prelude::BinaryResult<Box<Method<T>>> {
+    ) -> binary::prelude::BinaryResult<Pin<Box<Method<T>>>> {
         let name = b_assembly.get_string(method.name)?.to_owned();
         let attr = method
             .attr
@@ -416,7 +416,7 @@ impl AssemblyManager {
                 )
             })
             .transpose()?;
-        Ok(Box::new(Method::new(
+        Ok(Method::try_new(
             mt,
             name,
             attr,
@@ -479,7 +479,59 @@ impl AssemblyManager {
                         .transpose::<binary::prelude::Error>()
                 })
                 .try_collect()?,
-        )))
+            |rt_method| {
+                method
+                    .exception_table
+                    .iter()
+                    .map(|entry| {
+                        Ok::<ExceptionTableEntry, binary::prelude::Error>(ExceptionTableEntry::new(
+                            entry.range,
+                            MaybeUnloadedTypeHandle::from_token_for_type(
+                                assembly,
+                                assembly_id,
+                                b_assembly,
+                                &entry.exception_type,
+                                t_id,
+                            )?,
+                            entry
+                                .filter
+                                .map(|(ty, method)| {
+                                    MaybeUnloadedTypeHandle::from_token_for_type(
+                                        assembly,
+                                        assembly_id,
+                                        b_assembly,
+                                        &ty,
+                                        t_id,
+                                    )
+                                    .and_then(|ty| {
+                                        MethodRef::from_token_for_type(
+                                            assembly,
+                                            assembly_id,
+                                            b_assembly,
+                                            &method,
+                                            t_id,
+                                        )
+                                        .map(|method| (ty, method))
+                                    })
+                                })
+                                .transpose()?,
+                            entry.catch,
+                            entry.finally,
+                            entry.fault,
+                        ))
+                    })
+                    .try_fold(
+                        ExceptionTable::new(NonNull::from_ref(rt_method)),
+                        |mut exec, entry| match entry {
+                            Ok(entry) => {
+                                exec.push(entry);
+                                Ok(exec)
+                            }
+                            Err(err) => Err(err),
+                        },
+                    )
+            },
+        )?)
     }
 
     fn load_binary_generic_bounds(

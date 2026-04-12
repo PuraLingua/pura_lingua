@@ -13,7 +13,7 @@ mod r#struct;
 pub use class::ClassDef;
 pub use field::Field;
 pub use interface::{InterfaceDef, InterfaceImplementation};
-pub use method::{BinaryInstruction, Method, MethodSpec, Parameter};
+pub use method::{BinaryInstruction, ExceptionTableEntry, Method, MethodSpec, Parameter};
 pub use r#struct::StructDef;
 
 #[derive(Debug, Clone, WithType, UnwrapEnum, ReadFromSection, WriteToSection)]

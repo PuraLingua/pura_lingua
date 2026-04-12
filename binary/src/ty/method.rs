@@ -1,3 +1,5 @@
+use std::range::Range;
+
 use binary_core::traits::StringRef;
 use global::{
     attrs::{CallConvention, MethodAttr, ParameterAttr},
@@ -22,6 +24,8 @@ pub struct Method {
     pub generic_bounds: Option<Vec<GenericBounds>>,
 
     pub instructions: Vec<BinaryInstruction>,
+
+    pub exception_table: Vec<ExceptionTableEntry>,
 }
 
 #[derive(Clone, Debug, ReadFromSection, WriteToSection)]
@@ -34,4 +38,15 @@ pub struct Parameter {
 pub struct MethodSpec {
     pub m: u32,
     pub generics: Vec<TypeToken>,
+}
+
+#[derive(Clone, Debug, ReadFromSection, WriteToSection)]
+pub struct ExceptionTableEntry {
+    pub range: Range<u64>,
+    pub exception_type: TypeToken,
+    /// Sign should be `static ([!]System::Exception) -> [!]System::Boolean`
+    pub filter: Option<(TypeToken, MethodToken)>,
+    pub catch: Range<u64>,
+    pub finally: Option<Range<u64>>,
+    pub fault: Option<Range<u64>>,
 }
