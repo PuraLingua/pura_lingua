@@ -92,11 +92,6 @@ where
     }
 }
 
-#[inline(always)]
-const fn noop<T>(val: T) -> T {
-    val
-}
-
 impl<TTypeRef, TMethodRef, TRegisterAddr> Instruction_New<TTypeRef, TMethodRef, TRegisterAddr>
 where
     TRegisterAddr: IRegisterAddr,
@@ -109,7 +104,7 @@ where
         __F_TTypeRef: ::core::ops::FnMut(TTypeRef) -> __TTypeRef,
         TRegisterAddr: IRegisterAddr,
     {
-        self.map(f, noop, noop)
+        self.map(f, core::convert::identity, core::convert::identity)
     }
 }
 impl<TTypeRef, TMethodRef, TRegisterAddr> Instruction_New<TTypeRef, TMethodRef, TRegisterAddr>
@@ -124,7 +119,7 @@ where
         __F_TMethodRef: ::core::ops::FnMut(TMethodRef) -> __TMethodRef,
         TRegisterAddr: IRegisterAddr,
     {
-        self.map(noop, f, noop)
+        self.map(core::convert::identity, f, core::convert::identity)
     }
 }
 impl<TTypeRef, TMethodRef, TRegisterAddr> Instruction_New<TTypeRef, TMethodRef, TRegisterAddr>
@@ -139,7 +134,7 @@ where
         __F_TRegisterAddr: ::core::ops::FnMut(TRegisterAddr) -> __TRegisterAddr,
         __TRegisterAddr: IRegisterAddr,
     {
-        self.map(noop, noop, f)
+        self.map(core::convert::identity, core::convert::identity, f)
     }
 }
 

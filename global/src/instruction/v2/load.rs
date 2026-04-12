@@ -83,11 +83,6 @@ impl<TString, TTypeRef, TFieldRef, TRegisterAddr: IRegisterAddr>
     }
 }
 
-#[inline(always)]
-const fn noop<T>(val: T) -> T {
-    val
-}
-
 impl<TString, TTypeRef, TFieldRef, TRegisterAddr>
     Instruction_Load<TString, TTypeRef, TFieldRef, TRegisterAddr>
 where
@@ -101,7 +96,12 @@ where
         __F_TString: ::core::ops::FnMut(TString) -> __TString,
         TRegisterAddr: IRegisterAddr,
     {
-        self.map(f, noop, noop, noop)
+        self.map(
+            f,
+            core::convert::identity,
+            core::convert::identity,
+            core::convert::identity,
+        )
     }
 }
 impl<TString, TTypeRef, TFieldRef, TRegisterAddr>
@@ -117,7 +117,12 @@ where
         __F_TTypeRef: ::core::ops::FnMut(TTypeRef) -> __TTypeRef,
         TRegisterAddr: IRegisterAddr,
     {
-        self.map(noop, f, noop, noop)
+        self.map(
+            core::convert::identity,
+            f,
+            core::convert::identity,
+            core::convert::identity,
+        )
     }
 }
 impl<TString, TTypeRef, TFieldRef, TRegisterAddr>
@@ -133,7 +138,12 @@ where
         __F_TFieldRef: ::core::ops::FnMut(TFieldRef) -> __TFieldRef,
         TRegisterAddr: IRegisterAddr,
     {
-        self.map(noop, noop, f, noop)
+        self.map(
+            core::convert::identity,
+            core::convert::identity,
+            f,
+            core::convert::identity,
+        )
     }
 }
 impl<TString, TTypeRef, TFieldRef, TRegisterAddr>
@@ -149,7 +159,12 @@ where
         __F_TRegisterAddr: ::core::ops::FnMut(TRegisterAddr) -> __TRegisterAddr,
         __TRegisterAddr: IRegisterAddr,
     {
-        self.map(noop, noop, noop, f)
+        self.map(
+            core::convert::identity,
+            core::convert::identity,
+            core::convert::identity,
+            f,
+        )
     }
 }
 

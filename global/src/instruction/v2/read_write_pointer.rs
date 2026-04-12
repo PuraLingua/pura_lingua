@@ -21,6 +21,7 @@ impl CommonReadPointerTo<RegisterAddr> {
         struct ComposeSizeWithPtr(/* ptr */ ShortRegisterAddr);
         impl const FnOnce<(ShortRegisterAddr,)> for ComposeSizeWithPtr {
             type Output = (ShortRegisterAddr, ShortRegisterAddr);
+            #[inline(always)]
             extern "rust-call" fn call_once(self, (size,): (ShortRegisterAddr,)) -> Self::Output {
                 (self.0, size)
             }
@@ -31,6 +32,7 @@ impl CommonReadPointerTo<RegisterAddr> {
         }
         impl const FnOnce<(ShortRegisterAddr,)> for Construct {
             type Output = CommonReadPointerTo<ShortRegisterAddr>;
+            #[inline(always)]
             extern "rust-call" fn call_once(
                 self,
                 (destination,): (ShortRegisterAddr,),
@@ -46,6 +48,7 @@ impl CommonReadPointerTo<RegisterAddr> {
         struct ThenSize(/* size */ RegisterAddr);
         impl const FnOnce<(ShortRegisterAddr,)> for ThenSize {
             type Output = Option<(ShortRegisterAddr, ShortRegisterAddr)>;
+            #[inline(always)]
             extern "rust-call" fn call_once(self, (ptr,): (ShortRegisterAddr,)) -> Self::Output {
                 self.0.try_into_short().map(ComposeSizeWithPtr(ptr))
             }
@@ -53,6 +56,7 @@ impl CommonReadPointerTo<RegisterAddr> {
         struct ThenDestination(/* destination */ RegisterAddr);
         impl const FnOnce<((ShortRegisterAddr, ShortRegisterAddr),)> for ThenDestination {
             type Output = Option<CommonReadPointerTo<ShortRegisterAddr>>;
+            #[inline(always)]
             extern "rust-call" fn call_once(
                 self,
                 ((ptr, size),): ((ShortRegisterAddr, ShortRegisterAddr),),
@@ -99,6 +103,7 @@ impl CommonWritePointer<RegisterAddr> {
         struct ComposeSizeWithSource(/* source */ ShortRegisterAddr);
         impl const FnOnce<(ShortRegisterAddr,)> for ComposeSizeWithSource {
             type Output = (ShortRegisterAddr, ShortRegisterAddr);
+            #[inline(always)]
             extern "rust-call" fn call_once(self, (size,): (ShortRegisterAddr,)) -> Self::Output {
                 (self.0, size)
             }
@@ -109,6 +114,7 @@ impl CommonWritePointer<RegisterAddr> {
         }
         impl const FnOnce<(ShortRegisterAddr,)> for Construct {
             type Output = CommonWritePointer<ShortRegisterAddr>;
+            #[inline(always)]
             extern "rust-call" fn call_once(self, (ptr,): (ShortRegisterAddr,)) -> Self::Output {
                 CommonWritePointer {
                     source: self.source,
@@ -121,6 +127,7 @@ impl CommonWritePointer<RegisterAddr> {
         struct ThenSize(/* size */ RegisterAddr);
         impl const FnOnce<(ShortRegisterAddr,)> for ThenSize {
             type Output = Option<(ShortRegisterAddr, ShortRegisterAddr)>;
+            #[inline(always)]
             extern "rust-call" fn call_once(self, (source,): (ShortRegisterAddr,)) -> Self::Output {
                 self.0.try_into_short().map(ComposeSizeWithSource(source))
             }
@@ -128,6 +135,7 @@ impl CommonWritePointer<RegisterAddr> {
         struct ThenPtr(/* ptr */ RegisterAddr);
         impl const FnOnce<((ShortRegisterAddr, ShortRegisterAddr),)> for ThenPtr {
             type Output = Option<CommonWritePointer<ShortRegisterAddr>>;
+            #[inline(always)]
             extern "rust-call" fn call_once(
                 self,
                 ((source, size),): ((ShortRegisterAddr, ShortRegisterAddr),),
