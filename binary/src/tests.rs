@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use binary_core::section::Section;
+use binary_core::section::SectionBuilder;
 use global::{
     attrs::CallConvention,
     instruction::{
@@ -11,8 +11,8 @@ use global::{
 use stdlib_header::{CoreTypeId, System};
 
 use crate::{
-    assembly::ExtraHeader,
-    prelude::{Assembly, MethodTokenBuilder, MethodType, TypeTokenBuilder, TypeType},
+    assembly::{AssemblyBuilder, ExtraHeader},
+    prelude::{MethodTokenBuilder, MethodType, TypeTokenBuilder, TypeType},
     ty::{ClassDef, Method, TypeDef, TypeRef},
 };
 
@@ -39,8 +39,8 @@ impl_into_method_token!(System::Exception::MethodId);
 
 #[test]
 fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
-    let mut section = Section::new();
-    let assembly = Assembly {
+    let mut section = SectionBuilder::new();
+    let assembly = AssemblyBuilder {
         extra_header: ExtraHeader {
             name: section.as_string_section_mut().add_string("TestNormalF"),
         },

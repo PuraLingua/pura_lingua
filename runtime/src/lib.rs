@@ -48,6 +48,7 @@
 #![feature(extend_one)]
 #![feature(super_let)]
 #![feature(const_range)]
+#![cfg_attr(test, feature(vec_from_fn))]
 #![cfg_attr(all(unix, test), feature(cstr_display))]
 #![cfg_attr(all(unix, test), feature(c_variadic))]
 //

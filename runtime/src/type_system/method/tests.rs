@@ -88,10 +88,12 @@ fn test_normal_f() {
 
     let mut cpu = CpuID::new_write_global();
     let assembly_manager = global_vm().assembly_manager();
+
+    let b_assembly =
+        binary::assembly::AssemblyBuilder::from_path("../TestData/TestNormalF.plb").unwrap();
+
     assembly_manager
-        .load_binaries(&[
-            binary::assembly::Assembly::from_path("../TestData/TestNormalF.plb").unwrap(),
-        ])
+        .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])
         .unwrap();
 
     let assembly = global_vm()
@@ -436,12 +438,20 @@ fn test_interface_call() {
 fn test_interface_from_binary() {
     let mut cpu = CpuID::new_write_global();
     let assembly_manager = global_vm().assembly_manager();
+
+    let binaries = [
+        binary::assembly::AssemblyBuilder::from_path("../TestData/SimpleIR.SimpleConsole.plb")
+            .unwrap(),
+        binary::assembly::AssemblyBuilder::from_path("../TestData/TestInterface.plb").unwrap(),
+    ];
+
     assembly_manager
-        .load_binaries(&[
-            binary::assembly::Assembly::from_path("../TestData/SimpleIR.SimpleConsole.plb")
-                .unwrap(),
-            binary::assembly::Assembly::from_path("../TestData/TestInterface.plb").unwrap(),
-        ])
+        .load_binaries(&Vec::from_fn(binaries.len(), |i| {
+            binaries
+                .get(i)
+                .map(binary::assembly::Assembly::from_builder)
+                .unwrap()
+        }))
         .unwrap();
 
     let assembly = global_vm()

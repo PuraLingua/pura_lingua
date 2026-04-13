@@ -15,10 +15,13 @@
 #![feature(const_clone)]
 #![feature(const_range)]
 #![feature(const_ops)]
-#![feature(slice_split_once)]
-#![feature(const_default)]
 #![feature(optimize_attribute)]
-#![allow(internal_features)]
+#![feature(trusted_len)]
+#![feature(const_try)]
+#![feature(const_result_trait_fn)]
+#![feature(specialization)]
+#![feature(nonzero_internals)]
+#![allow(internal_features, incomplete_features)]
 
 pub mod error;
 pub mod file;

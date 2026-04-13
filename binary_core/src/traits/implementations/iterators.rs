@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hash::Hash};
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 
 use crate::traits::{ReadFromSection, WriteToSection};
 
@@ -102,6 +102,38 @@ where
             v.write_to_section(cursor)?;
         }
 
+        Ok(())
+    }
+}
+
+impl<T> ReadFromSection for IndexSet<T>
+where
+    T: ReadFromSection + Hash + Eq,
+{
+    fn read_from_section(
+        cursor: &mut std::io::Cursor<&crate::section::Section>,
+    ) -> crate::BinaryResult<Self> {
+        let len = u64::read_from_section(cursor)?;
+        let mut set = Self::with_capacity(len as usize);
+        for _ in 0..len {
+            set.insert(T::read_from_section(cursor)?);
+        }
+        Ok(set)
+    }
+}
+
+impl<T> WriteToSection for IndexSet<T>
+where
+    T: WriteToSection,
+{
+    fn write_to_section(
+        &self,
+        cursor: &mut std::io::Cursor<&mut Vec<u8>>,
+    ) -> crate::BinaryResult<()> {
+        (self.len() as u64).write_to_section(cursor)?;
+        for v in self {
+            v.write_to_section(cursor)?;
+        }
         Ok(())
     }
 }

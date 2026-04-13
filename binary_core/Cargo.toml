@@ -8,6 +8,7 @@ enumflags2 = { workspace = true }
 indexmap = { workspace = true }
 
 global_errors = { package = "pura_lingua_global_errors", path = "../global_errors" }
+memchr = "2.7.4"
 
 [dev-dependencies]
 proc_macros = { path = "../binary_proc_macros", package = "pura_lingua_binary_proc_macros" }

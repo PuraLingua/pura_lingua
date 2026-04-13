@@ -140,10 +140,10 @@ fn gtest_utf8() -> global::Result<()> {
 fn gtest_test_fn() -> global::Result<()> {
     let vm = global_vm();
 
+    let b_assembly = binary::assembly::AssemblyBuilder::from_path("../TestData/Test.plb")?;
+
     vm.assembly_manager()
-        .load_binaries(&[binary::assembly::Assembly::from_path(
-            "../TestData/Test.plb",
-        )?])?;
+        .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
 
     let mut cpu = CpuID::new_write_global();
 
@@ -177,10 +177,10 @@ fn gtest_test_fn() -> global::Result<()> {
 fn gtest_test_msgbox() -> global::Result<()> {
     let vm = global_vm();
 
+    let b_assembly = binary::assembly::AssemblyBuilder::from_path("../TestData/MsgboxTest.plb")?;
+
     vm.assembly_manager()
-        .load_binaries(&[binary::assembly::Assembly::from_path(
-            "../TestData/MsgboxTest.plb",
-        )?])?;
+        .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
 
     let mut cpu = CpuID::new_write_global();
 
@@ -220,10 +220,11 @@ fn gtest_test_msgbox() -> global::Result<()> {
 fn gtest_simple_console() -> global::Result<()> {
     let vm = global_vm();
 
+    let b_assembly =
+        binary::assembly::AssemblyBuilder::from_path("../TestData/SimpleIR.SimpleConsole.plb")?;
+
     vm.assembly_manager()
-        .load_binaries(&[binary::assembly::Assembly::from_path(
-            "../TestData/SimpleIR.SimpleConsole.plb",
-        )?])?;
+        .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
 
     let mut cpu = CpuID::new_write_global();
 
@@ -261,10 +262,11 @@ fn gtest_simple_console() -> global::Result<()> {
 fn gtest_middle_ir_simple_console() -> global::Result<()> {
     let vm = global_vm();
 
+    let b_assembly =
+        binary::assembly::AssemblyBuilder::from_path("../TestData/MiddleIR.SimpleConsole.plb")?;
+
     vm.assembly_manager()
-        .load_binaries(&[binary::assembly::Assembly::from_path(
-            "../TestData/MiddleIR.SimpleConsole.plb",
-        )?])?;
+        .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
 
     let mut cpu = CpuID::new_write_global();
 

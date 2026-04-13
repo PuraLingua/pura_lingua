@@ -2,13 +2,14 @@ use std::io::{Cursor, Seek, Write};
 
 use crate::{
     error::Error,
-    section::{Section, SectionInfo},
+    section::{Section, SectionBuilder, SectionInfo},
     traits::{ReadFromSection, StringRef, WriteToSection},
 };
 
+#[derive(Debug)]
 pub struct FileParser<'a> {
     bytes: &'a [u8],
-    index: usize,
+    content_index: usize,
 }
 
 #[repr(C, packed)]
@@ -30,16 +31,21 @@ const CURRENT_MAGIC: [u8; 2] = *b"PL";
 const CURRENT_VERSION: [u8; 2] = [0x00, 0x00];
 
 impl<'a> FileParser<'a> {
-    pub fn from_bytes(bytes: &'a [u8]) -> Self {
-        Self { bytes, index: 0 }
+    pub fn from_bytes(bytes: &'a [u8]) -> Result<Self, Error> {
+        let mut this = Self {
+            bytes,
+            content_index: 0,
+        };
+        this.render_header()?;
+        Ok(this)
     }
 
-    pub fn as_ptr(&self) -> *const u8 {
+    pub const fn as_ptr(&self) -> *const u8 {
         self.bytes.as_ptr()
     }
 
-    pub fn parse_header(&mut self) -> Result<&'a Header, Error> {
-        debug_assert!(self.index == 0);
+    fn render_header(&mut self) -> Result<(), Error> {
+        debug_assert!(self.content_index == 0);
         if self.bytes.len() < Header::SECTION_INFOS_OFFSET {
             #[cfg(debug_assertions)]
             {
@@ -62,81 +68,185 @@ impl<'a> FileParser<'a> {
             }
             return Err(Error::WrongFileSize);
         }
-        self.index = size;
-        unsafe {
-            Ok(&*std::ptr::from_raw_parts(
-                self.as_ptr(),
-                section_info_len as usize,
-            ))
+        self.content_index = size;
+        Ok(())
+    }
+
+    pub const fn get_header(&self) -> &'a Header {
+        unsafe { &*std::ptr::from_raw_parts(self.as_ptr(), self.content_index) }
+    }
+
+    pub fn section_iter(self) -> Result<SectionIter<'a>, Error> {
+        SectionIter::new(self)
+    }
+}
+
+pub struct SectionIter<'a> {
+    header: &'a Header,
+    raw: &'a [u8],
+    section_index: usize,
+}
+
+impl<'a> SectionIter<'a> {
+    fn new(parser: FileParser<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            header: parser.get_header(),
+            raw: parser.bytes,
+            section_index: 0,
+        })
+    }
+}
+
+impl<'a> Iterator for SectionIter<'a> {
+    type Item = &'a Section;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let info = self.header.section_infos.get(self.section_index)?;
+        let res = Section::with_bytes(
+            &self.raw[(info.offset as usize)..((info.offset + info.len) as usize)],
+        );
+        self.section_index += 1;
+        Some(res)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            self.header.section_infos.len(),
+            Some(self.header.section_infos.len()),
+        )
+    }
+}
+
+unsafe impl<'a> std::iter::TrustedLen for SectionIter<'a> {}
+
+#[derive(Debug)]
+pub struct File<'a> {
+    raw: FileParser<'a>,
+}
+
+#[repr(usize)]
+pub enum PredefinedSectionId {
+    String,
+
+    FirstNonStandard,
+}
+
+impl<'a> File<'a> {
+    pub fn from_bytes(bytes: &'a [u8]) -> Result<Self, Error> {
+        Ok(Self {
+            raw: FileParser::from_bytes(bytes)?,
+        })
+    }
+
+    pub const fn get_section(&self, index: usize) -> Option<&'a Section> {
+        let info = self.raw.get_header().section_infos.get(index)?;
+        Some(Section::with_bytes(
+            &self.raw.bytes[(info.offset as usize)..((info.offset + info.len) as usize)],
+        ))
+    }
+    pub const fn get_predefined_section(&self, id: PredefinedSectionId) -> Option<&'a Section> {
+        self.get_section(id as usize)
+    }
+
+    pub const fn get_string(&self, string_ref: StringRef) -> Option<&str> {
+        self.get_predefined_section(PredefinedSectionId::String)?
+            .as_string_section()
+            .get_string(string_ref)
+    }
+
+    pub fn read_all<T: ReadFromSection>(
+        &self,
+        section_id: usize,
+    ) -> Result<Vec<T>, crate::error::Error> {
+        let section = self
+            .get_section(section_id)
+            .ok_or(Error::UnknownSection(section_id))?;
+        let mut cursor = Cursor::new(section);
+        let mut result = Vec::new();
+
+        loop {
+            if cursor.position() >= section.len() {
+                break Ok(result);
+            }
+            result.push(T::read_from_section(&mut cursor)?);
         }
     }
 }
 
 #[derive(Debug)]
-pub struct File {
-    version: [u8; 2],
-    sections: Vec<Section>,
+pub struct FileBuilder {
+    pub version: [u8; 2],
+    sections: Vec<SectionBuilder>,
 }
 
-impl File {
-    pub const STRING_SECTION: usize = 0;
-    pub const FIRST_NON_STANDARD_AVAILABLE_SECTION_ID: usize = 1;
-
+impl FileBuilder {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             version: CURRENT_VERSION,
-            sections: vec![Section::new()],
+            sections: vec![SectionBuilder::new()],
         }
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, Error> {
-        let mut parser = FileParser::from_bytes(&bytes);
-        let header = parser.parse_header()?;
-
-        let mut sections = Vec::with_capacity(header.section_info_len as usize);
-        for section_info in &header.section_infos {
-            sections.push(Section::with_bytes(
-                parser.bytes[(section_info.offset as usize)
-                    ..((section_info.offset + section_info.len) as usize)]
-                    .to_vec(),
-            ));
-        }
+        let section_iter = FileParser::from_bytes(&bytes)?.section_iter()?;
 
         Ok(Self {
-            version: header.version,
-            sections,
+            version: section_iter.header.version,
+            sections: section_iter.map(ToOwned::to_owned).collect(),
         })
     }
 
-    pub fn add_section(&mut self, section: Section) {
-        self.sections.push(section);
+    pub fn get_section(&self, index: usize) -> Option<&SectionBuilder> {
+        self.sections.get(index)
+    }
+    pub fn get_predefined_section(&self, id: PredefinedSectionId) -> Option<&SectionBuilder> {
+        self.get_section(id as usize)
     }
 
-    pub fn get_section(&self, index: usize) -> Option<&Section> {
-        self.sections.get(index)
+    pub fn get_string(&self, string_ref: StringRef) -> Option<&str> {
+        self.sections
+            .get(PredefinedSectionId::String as usize)?
+            .as_string_section()
+            .get_string(string_ref)
+    }
+
+    pub fn read_all<T: ReadFromSection>(
+        &self,
+        section_id: usize,
+    ) -> Result<Vec<T>, crate::error::Error> {
+        let section = self
+            .sections
+            .get(section_id)
+            .ok_or(Error::UnknownSection(section_id))?;
+        let mut cursor = Cursor::new(&**section);
+        let mut result = Vec::new();
+
+        loop {
+            if cursor.position() >= section.len() {
+                break Ok(result);
+            }
+            result.push(T::read_from_section(&mut cursor)?);
+        }
     }
 
     /// # Safety
     /// After this, every [`StringRef`] created by [`Self::add_string`] will be invalid,
     /// although [`StringRef`] itself does not know.
-    pub unsafe fn set_string_section(&mut self, section: Section) {
-        self.sections[Self::STRING_SECTION] = section;
+    pub unsafe fn set_string_section(&mut self, section: SectionBuilder) {
+        self.sections[PredefinedSectionId::String as usize] = section;
     }
 
     pub fn add_string(&mut self, s: &str) -> StringRef {
         self.sections
-            .get_mut(Self::STRING_SECTION)
+            .get_mut(PredefinedSectionId::String as usize)
             .unwrap()
             .as_string_section_mut()
             .add_string(s)
     }
 
-    pub fn get_string(&self, string_ref: StringRef) -> Option<&str> {
-        self.sections
-            .get(Self::STRING_SECTION)?
-            .as_string_section()
-            .get_string(string_ref)
+    pub fn add_section(&mut self, section: SectionBuilder) {
+        self.sections.push(section);
     }
 
     pub fn write_to<W: Write + Seek>(self, w: &mut W) -> std::io::Result<()> {
@@ -159,24 +269,6 @@ impl File {
         Ok(())
     }
 
-    pub fn read_all<T: ReadFromSection>(
-        &self,
-        section_id: usize,
-    ) -> Result<Vec<T>, crate::error::Error> {
-        let section = self
-            .sections
-            .get(section_id)
-            .ok_or(Error::UnknownSection(section_id))?;
-        let mut cursor = Cursor::new(section);
-        let mut result = Vec::new();
-
-        loop {
-            if cursor.position() >= section.len() {
-                break Ok(result);
-            }
-            result.push(T::read_from_section(&mut cursor)?);
-        }
-    }
     pub fn write_all<T: WriteToSection>(
         &mut self,
         section_id: usize,
@@ -203,12 +295,12 @@ mod tests {
 
     #[test]
     fn test_header() -> Result<(), Error> {
-        let mut file = File::new();
-        file.add_section(Section::with_bytes(vec![0, 1, 2, 3, 4]));
-        file.add_section(Section::with_bytes(0xffffu32.to_le_bytes().to_vec()));
+        let mut file_builder = FileBuilder::new();
+        file_builder.add_section(SectionBuilder::with_bytes(vec![0, 1, 2, 3, 4]));
+        file_builder.add_section(SectionBuilder::with_bytes(0xffffu32.to_le_bytes().to_vec()));
         let mut bytes = Cursor::new(Vec::<u8>::new());
-        file.write_to(&mut bytes)?;
-        let file_gotten = File::from_bytes(bytes.into_inner())?;
+        file_builder.write_to(&mut bytes)?;
+        let file_gotten = File::from_bytes(bytes.get_ref())?;
         #[derive(Debug)]
         #[allow(unused)]
         struct TestData(u32);
@@ -229,14 +321,14 @@ mod tests {
 
     #[test]
     fn test_string() -> Result<(), Error> {
-        let mut file = File::new();
+        let mut file = FileBuilder::new();
         let aaa = file.add_string("aaa");
         let bbb = file.add_string("bbb");
         let ccc = file.add_string("ccc");
         let ddd = file.add_string("ddd");
         let mut bytes = Cursor::new(Vec::<u8>::new());
         file.write_to(&mut bytes)?;
-        let file_gotten = File::from_bytes(bytes.into_inner())?;
+        let file_gotten = File::from_bytes(bytes.get_ref())?;
         dbg!(file_gotten.get_string(aaa));
         dbg!(file_gotten.get_string(bbb));
         dbg!(file_gotten.get_string(ccc));

@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use pura_lingua::runtime::virtual_machine::CpuID;
+use pura_lingua::{binary::prelude::Assembly, runtime::virtual_machine::CpuID};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -67,14 +67,17 @@ fn main() -> pura_lingua::global::Result<()> {
     let binaries = cli
         .assemblies
         .iter()
-        .map(
-            |x: &String| -> pura_lingua::global::Result<pura_lingua::binary::prelude::Assembly> {
-                let path = search_assembly(x)?;
-                pura_lingua::binary::prelude::Assembly::from_path(path).map_err(From::from)
-            },
-        )
+        .map(|x: &String| -> pura_lingua::global::Result<_> {
+            let path = search_assembly(x)?;
+            let bytes = std::fs::read(path)?;
+            pura_lingua::binary::assembly::AssemblyBuilder::from_bytes(bytes).map_err(From::from)
+        })
         .try_collect::<Vec<_>>()?;
-    vm.assembly_manager().load_binaries(&binaries)?;
+    let binary_refs = binaries
+        .iter()
+        .map(|x| Assembly::from_builder(x))
+        .collect::<Vec<_>>();
+    vm.assembly_manager().load_binaries(&binary_refs)?;
 
     let (main_assembly, main_class, main_method) = cli.main;
     let assembly = vm
