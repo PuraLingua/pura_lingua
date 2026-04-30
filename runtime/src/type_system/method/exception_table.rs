@@ -259,7 +259,7 @@ impl ExceptionTableEntry {
             *exception_type_cache = Some(cl);
             return Some(cl);
         }
-        match ty.get_non_generic_with_method(method) {
+        match ty.get_non_generic_with_method(method).unwrap() {
             NonGenericTypeHandle::Class(class) => Some(class),
             _ => None,
         }
@@ -280,7 +280,7 @@ impl ExceptionTableEntry {
                     .__get_assembly_ref()
                     .manager_ref(),
             )?;
-            match ty.get_non_generic_with_method(method) {
+            match ty.get_non_generic_with_method(method).unwrap() {
                 NonGenericTypeHandle::Class(cl) => {
                     let mt_ref = unsafe { cl.as_ref() }.method_table_ref();
                     let method = mt_ref.get_method_by_ref(m_ref)?;

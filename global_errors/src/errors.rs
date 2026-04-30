@@ -6,44 +6,8 @@ use std::panic::Location;
 
 use derive_more::Display;
 
-use string_name::StringName;
-
-pub enum TypeSystemError {}
-
 #[derive(Clone, Copy, Debug, Display, thiserror::Error)]
 pub struct UnwrapError;
-
-#[derive(thiserror::Error, Display, Debug)]
-pub enum BinaryError {
-    StringNotFound {
-        index: u64,
-    },
-    IndexOutOfRange,
-    IntOutOfRange,
-    #[display("Unexpected `TypeSpecificAttr`: {_0}")]
-    UnexpectedTypeSpecificAttr(&'static str),
-    WrongFileFormat,
-    SectionNotFound,
-    BinaryTooShort,
-    EnumOutOfBounds(&'static str),
-    #[display(
-        "MergeAssembliesWithDifferentName {{self_name: {self_name}, other_name: {other_name}}}"
-    )]
-    MergeAssembliesWithDifferentName {
-        self_name: StringName,
-        other_name: StringName,
-    },
-    #[display("MergeConflict({_0})")]
-    MergeConflict(StringName),
-}
-
-impl BinaryError {
-    #[track_caller]
-    #[inline(always)]
-    pub fn throw(self) -> GenericError<Self> {
-        GenericError::throw(self)
-    }
-}
 
 #[derive(Clone, Debug, Display)]
 #[display("Error: {e:#?}\n(caller: {caller})")]
@@ -64,11 +28,6 @@ impl<E: std::error::Error + 'static> GenericError<E> {
 }
 
 impl<E: std::error::Error + 'static> std::error::Error for GenericError<E> {}
-
-#[derive(Clone, Debug, Display, thiserror::Error)]
-pub enum EncodingError {
-    UnsupportedEncoding(&'static str),
-}
 
 pub use anyhow::{Error, anyhow};
 

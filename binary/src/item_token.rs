@@ -169,7 +169,8 @@ sub_enum_of! {
         TypeRef,
         TypeSpec,
 
-        Generic,
+        MethodGeneric,
+        TypeGeneric,
     } is_type
 }
 
@@ -186,7 +187,8 @@ pub enum ItemType {
 
     Field = 0x06,
 
-    Generic = 0xFF,
+    MethodGeneric = 0xFE,
+    TypeGeneric = 0xFF,
 }
 
 impl_for_tokens_types! {

@@ -38,7 +38,7 @@ impl From<CoreTypeRef> for MaybeUnloadedTypeHandle {
                 assembly_and_index: Either::Right(Box::new(main.static_type_ref().into())),
                 types: generics.into_iter().map(Self::from).collect(),
             }),
-            CoreTypeRef::Generic(g) => Self::Loaded(TypeHandle::Generic(g)),
+            CoreTypeRef::Generic(g) => Self::Loaded(TypeHandle::TypeGeneric(g)),
         }
     }
 }

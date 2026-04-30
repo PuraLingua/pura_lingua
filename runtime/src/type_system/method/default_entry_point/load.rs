@@ -104,10 +104,12 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
         }
 
         LoadContent::TypeValueSize(ty) => {
-            let Some(ty) = ty.load(cpu.vm_ref().assembly_manager()) else {
+            let Some(ty) = ty
+                .load(cpu.vm_ref().assembly_manager())
+                .and_then(|ty| ty.get_non_generic_with_method(method))
+            else {
                 return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
             };
-            let ty = ty.get_non_generic_with_method(method);
             let size = ty.val_layout().size();
             if !call_frame(cpu).write_typed(*register_addr, size) {
                 load_register_failed!(*register_addr);
@@ -167,6 +169,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             let Some(ty) = ty
                 .load(cpu.vm_ref().assembly_manager())
                 .map(|x| x.get_non_generic_with_method(method))
+                .flatten()
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
             };

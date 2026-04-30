@@ -4,13 +4,15 @@ use global::{attrs::FieldAttr, getset::Getters, non_purus_call_configuration::No
 
 use crate::{
     memory::GetLayoutOptions,
-    type_system::type_handle::{MaybeUnloadedTypeHandle, TypeHandle},
+    type_system::type_handle::{
+        IGenericResolver, MaybeUnloadedTypeHandle, TypeGenericResolver, TypeHandle,
+    },
 };
 
 use super::{
     assembly_manager::AssemblyManager,
     get_traits::{GetAssemblyRef, GetTypeVars},
-    type_handle::{NonGenericTypeHandle, type_generic_resolver},
+    type_handle::NonGenericTypeHandle,
 };
 
 #[derive(Getters, Clone, Debug)]
@@ -65,20 +67,27 @@ impl Field {
         })
     }
 
-    fn get_type_with_generic_resolver<F: Fn(u32) -> TypeHandle>(
+    fn get_type_with_generic_resolver<TResolver: IGenericResolver>(
         &self,
-        f: F,
+        resolver: &TResolver,
     ) -> NonGenericTypeHandle {
         let mut ty = self.ty.clone().assume_init();
         loop {
             match ty.as_non_generic() {
                 Some(ty) => return *ty,
                 _ => {
-                    let TypeHandle::Generic(g_index) = ty else {
-                        unreachable!()
-                    };
+                    ty = match ty {
+                        TypeHandle::MethodGeneric(g_index) => {
+                            resolver.resolve_method_generic(g_index)
+                        }
+                        TypeHandle::TypeGeneric(g_index) => resolver.resolve_type_generic(g_index),
 
-                    ty = f(g_index);
+                        _ => unreachable!(),
+                    }
+                    .unwrap();
+                    if let Some(ty) = ty.into_non_generic() {
+                        return ty;
+                    }
                 }
             }
         }
@@ -88,7 +97,7 @@ impl Field {
         &self,
         ty: &T,
     ) -> NonGenericTypeHandle {
-        self.get_type_with_generic_resolver(|g_index| type_generic_resolver(g_index, ty))
+        self.get_type_with_generic_resolver(TypeGenericResolver::new(ty))
     }
 
     pub fn layout_with_type<T: GetTypeVars + GetAssemblyRef>(
@@ -125,7 +134,7 @@ impl Field {
 
         let type_vars = ty.__get_type_vars();
 
-        if type_vars.is_none() && matches!(th, TypeHandle::Generic(_)) {
+        if type_vars.is_none() && matches!(th, TypeHandle::TypeGeneric(_)) {
             unimplemented!()
         }
 
@@ -133,7 +142,7 @@ impl Field {
             unreachable!()
         };
 
-        while let TypeHandle::Generic(g_index) = th {
+        while let TypeHandle::TypeGeneric(g_index) = th {
             if let Some(t) = type_vars.get(g_index as usize) {
                 th = t.load(ty.__get_assembly_ref().manager_ref()).unwrap();
             } else {
@@ -154,7 +163,7 @@ impl Field {
 
         let type_vars = ty.__get_type_vars();
 
-        if type_vars.is_none() && matches!(th, TypeHandle::Generic(_)) {
+        if type_vars.is_none() && matches!(th, TypeHandle::TypeGeneric(_)) {
             unimplemented!()
         }
 
@@ -162,7 +171,7 @@ impl Field {
             unreachable!()
         };
 
-        while let TypeHandle::Generic(g_index) = th {
+        while let TypeHandle::TypeGeneric(g_index) = th {
             if let Some(t) = type_vars.get(g_index as usize) {
                 th = t.load(ty.__get_assembly_ref().manager_ref()).unwrap();
             } else {

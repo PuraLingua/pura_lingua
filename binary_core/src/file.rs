@@ -73,7 +73,13 @@ impl<'a> FileParser<'a> {
     }
 
     pub const fn get_header(&self) -> &'a Header {
-        unsafe { &*std::ptr::from_raw_parts(self.as_ptr(), self.content_index) }
+        let section_info_len = u32::from_le_bytes(
+            *self.bytes[std::mem::offset_of!(Header, section_info_len)
+                ..(std::mem::offset_of!(Header, section_info_len) + size_of::<u32>())]
+                .as_array::<{ size_of::<u32>() }>()
+                .unwrap(),
+        );
+        unsafe { &*std::ptr::from_raw_parts(self.as_ptr(), section_info_len as usize) }
     }
 
     pub fn section_iter(self) -> Result<SectionIter<'a>, Error> {

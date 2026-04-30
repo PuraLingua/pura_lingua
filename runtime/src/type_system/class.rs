@@ -12,6 +12,7 @@ use global::getset::{Getters, MutGetters};
 use crate::memory::GetFieldOffsetOptions;
 use crate::type_system::assembly_manager::AssemblyManager;
 use crate::type_system::interface::InterfaceImplementation;
+use crate::type_system::type_handle::IGenericResolver;
 use crate::type_system::{
     assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
     type_handle::MaybeUnloadedTypeHandle,
@@ -34,6 +35,15 @@ impl LoadedClassParent {
         assembly_manager: &AssemblyManager,
         type_vars: &[MaybeUnloadedTypeHandle],
     ) -> Self {
+        struct Resolver<'a, 'b>(&'a [MaybeUnloadedTypeHandle], &'b AssemblyManager);
+        impl<'a, 'b> IGenericResolver for Resolver<'a, 'b> {
+            fn resolve_type_generic(&self, g_index: u32) -> Option<super::type_handle::TypeHandle> {
+                self.0[g_index as usize].load(self.1)
+            }
+            fn resolve_method_generic(&self, _: u32) -> Option<super::type_handle::TypeHandle> {
+                None
+            }
+        }
         match self {
             Self::Simple(class) => Self::Simple(*class),
             Self::WithGeneric(class, generics) => {
@@ -42,9 +52,11 @@ impl LoadedClassParent {
                     .map(|x| {
                         x.load(assembly_manager)
                             .map(|x| {
-                                x.get_non_generic_with_generic_resolver(|g| {
-                                    type_vars[g as usize].load(assembly_manager).unwrap()
-                                })
+                                x.get_non_generic_with_generic_resolver(&Resolver(
+                                    type_vars,
+                                    assembly_manager,
+                                ))
+                                .unwrap()
                             })
                             .map(MaybeUnloadedTypeHandle::from)
                     })

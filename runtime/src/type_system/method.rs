@@ -287,7 +287,7 @@ impl<T> Method<T> {
 impl<T: GetTypeVars + GetAssemblyRef> Method<T> {
     pub fn get_return_type(&self) -> NonGenericTypeHandle {
         match &self.return_type {
-            MaybeUnloadedTypeHandle::Loaded(ty) => ty.get_non_generic_with_method(self),
+            MaybeUnloadedTypeHandle::Loaded(ty) => ty.get_non_generic_with_method(self).unwrap(),
             MaybeUnloadedTypeHandle::Unloaded(_) => {
                 let ty = self
                     .return_type
@@ -306,7 +306,7 @@ impl<T: GetTypeVars + GetAssemblyRef> Method<T> {
                         MaybeUnloadedTypeHandle::Loaded(ty);
                 }
 
-                ty.get_non_generic_with_method(self)
+                ty.get_non_generic_with_method(self).unwrap()
             }
         }
     }

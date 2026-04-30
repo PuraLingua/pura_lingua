@@ -229,7 +229,7 @@ impl CPU {
                     if !ty.as_ref().type_vars().as_deref().is_some_and(|x| {
                         x.get(0).is_some_and(|x| {
                             x.load(self.vm_ref().assembly_manager())
-                                .map(|x| x.get_non_generic_with_type(ty.as_ref()))
+                                .and_then(|x| x.get_non_generic_with_type(ty.as_ref()))
                                 .is_some_and(|x| x.is_certain_core_type(CoreTypeId::System_Array_1))
                         })
                     }) {

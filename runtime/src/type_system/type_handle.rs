@@ -77,7 +77,8 @@ impl NonGenericTypeHandle {
             TypeHandle::Class(ty) => Some(Self::Class(ty)),
             TypeHandle::Struct(ty) => Some(Self::Struct(ty)),
             TypeHandle::Interface(ty) => Some(Self::Interface(ty)),
-            TypeHandle::Generic(_) => None,
+            TypeHandle::MethodGeneric(_) => None,
+            TypeHandle::TypeGeneric(_) => None,
         }
     }
 
@@ -143,7 +144,8 @@ pub enum TypeHandleKind {
     Class,
     Struct,
     Interface,
-    Generic,
+    MethodGeneric,
+    TypeGeneric,
 }
 
 #[repr(u8)]
@@ -152,7 +154,8 @@ pub enum TypeHandle {
     Class(NonNull<Class>) = TypeHandleKind::Class as _,
     Struct(NonNull<Struct>) = TypeHandleKind::Struct as _,
     Interface(NonNull<Interface>) = TypeHandleKind::Interface as _,
-    Generic(u32) = TypeHandleKind::Generic as _,
+    MethodGeneric(u32) = TypeHandleKind::MethodGeneric as _,
+    TypeGeneric(u32) = TypeHandleKind::TypeGeneric as _,
 }
 
 impl Debug for TypeHandle {
@@ -162,7 +165,8 @@ impl Debug for TypeHandle {
             Self::Struct(s) => write!(f, "Struct {}", unsafe { s.as_ref().name() }),
             Self::Interface(s) => write!(f, "Interface {}", unsafe { s.as_ref().name() }),
 
-            Self::Generic(g) => write!(f, "Generic {g}"),
+            Self::MethodGeneric(g) => write!(f, "!!{g}"),
+            Self::TypeGeneric(g) => write!(f, "!{g}"),
         }
     }
 }
@@ -173,62 +177,85 @@ impl PartialEq for TypeHandle {
             (Self::Class(p), Self::Class(po)) => p.addr() == po.addr(),
             (Self::Struct(p), Self::Struct(po)) => p.addr() == po.addr(),
             (Self::Interface(p), Self::Interface(po)) => p.addr() == po.addr(),
-            (Self::Generic(i1), Self::Generic(i2)) => i1.eq(i2),
+            (Self::MethodGeneric(i1), Self::MethodGeneric(i2)) => i1.eq(i2),
+            (Self::TypeGeneric(i1), Self::TypeGeneric(i2)) => i1.eq(i2),
             _ => false,
         }
     }
 }
 
-pub(crate) fn type_generic_resolver<T: GetTypeVars + GetAssemblyRef>(
-    g_index: u32,
-    ty: &T,
-) -> TypeHandle {
-    ty.__get_type_vars()
-        .as_ref()
-        .unwrap()
-        .get(g_index as usize)
-        .and_then(|x| x.load(ty.__get_assembly_ref().manager_ref()))
-        .unwrap()
+pub trait IGenericResolver {
+    fn resolve_type_generic(&self, g_index: u32) -> Option<TypeHandle>;
+    fn resolve_method_generic(&self, g_index: u32) -> Option<TypeHandle>;
 }
 
-pub(crate) fn method_generic_resolver<T: GetTypeVars + GetAssemblyRef>(
-    g_index: u32,
-    method: &Method<T>,
-) -> TypeHandle {
-    let ty = method.require_method_table_ref().ty_ref();
-    let ty_type_vars = ty.__get_type_vars();
-    let ty_type_var_len = ty_type_vars.as_ref().map(|x| x.len()).unwrap_or(0);
-    if (g_index as usize) >= ty_type_var_len {
-        method
+#[repr(transparent)]
+pub struct TypeGenericResolver<T>(T);
+
+impl<T> TypeGenericResolver<T> {
+    pub fn new<'a>(ty: &'a T) -> &'a Self {
+        unsafe { &*(ty as *const _ as *const Self) }
+    }
+}
+
+impl<T: GetTypeVars + GetAssemblyRef> IGenericResolver for TypeGenericResolver<T> {
+    fn resolve_type_generic(&self, g_index: u32) -> Option<TypeHandle> {
+        self.0
             .__get_type_vars()
             .as_ref()
             .unwrap()
-            .get((g_index as usize) - ty_type_var_len)
-            .and_then(|x| x.load(ty.__get_assembly_ref().manager_ref()))
-    } else {
-        // Safety: It's been checked
-        unsafe {
-            ty_type_vars
-                .as_ref()
-                .unwrap()
-                .get_unchecked(g_index as usize)
-                .load(ty.__get_assembly_ref().manager_ref())
-        }
+            .get(g_index as usize)
+            .and_then(|x| x.load(self.0.__get_assembly_ref().manager_ref()))
     }
-    .unwrap()
+    #[inline(always)]
+    fn resolve_method_generic(&self, _: u32) -> Option<TypeHandle> {
+        None
+    }
+}
+
+#[repr(transparent)]
+pub struct MethodGenericResolver<T>(Method<T>);
+
+impl<T> MethodGenericResolver<T> {
+    pub fn new<'a>(method: &'a Method<T>) -> &'a Self {
+        unsafe { &*(method as *const _ as *const Self) }
+    }
+}
+
+impl<T: GetTypeVars + GetAssemblyRef> IGenericResolver for MethodGenericResolver<T> {
+    fn resolve_type_generic(&self, g_index: u32) -> Option<TypeHandle> {
+        let ty = self.0.require_method_table_ref().ty_ref();
+        ty.__get_type_vars()
+            .as_ref()
+            .unwrap()
+            .get(g_index as usize)
+            .and_then(|x| x.load(ty.__get_assembly_ref().manager_ref()))
+    }
+
+    fn resolve_method_generic(&self, g_index: u32) -> Option<TypeHandle> {
+        let ty = self.0.require_method_table_ref().ty_ref();
+        self.0
+            .__get_type_vars()
+            .as_ref()
+            .unwrap()
+            .get(g_index as usize)
+            .and_then(|x| x.load(ty.__get_assembly_ref().manager_ref()))
+    }
 }
 
 impl TypeHandle {
     pub fn as_non_generic(&self) -> Option<&NonGenericTypeHandle> {
         match self {
-            Self::Generic(_) => None,
+            Self::MethodGeneric(_) => None,
+            Self::TypeGeneric(_) => None,
             _ => unsafe { Some(&*(self as *const Self as *const NonGenericTypeHandle)) },
         }
     }
 
     pub fn into_non_generic(self) -> Option<NonGenericTypeHandle> {
         match self {
-            Self::Generic(_) => None,
+            Self::MethodGeneric(_) => None,
+            Self::TypeGeneric(_) => None,
             x => unsafe { Some(std::mem::transmute::<Self, NonGenericTypeHandle>(x)) },
         }
     }
@@ -240,35 +267,39 @@ impl TypeHandle {
         unsafe { *(self as *const Self as *const u8) }
     }
 
-    pub fn get_non_generic_with_generic_resolver<F: Fn(u32) -> TypeHandle>(
+    pub fn get_non_generic_with_generic_resolver<TResolver: IGenericResolver>(
         &self,
-        f: F,
-    ) -> NonGenericTypeHandle {
+        resolver: &TResolver,
+    ) -> Option<NonGenericTypeHandle> {
         match self.as_non_generic() {
-            Some(x) => *x,
-            None => {
-                let Self::Generic(g_index) = self else {
-                    unreachable!()
-                };
-                f(*g_index).get_non_generic_with_generic_resolver(f)
-            }
+            Some(x) => Some(*x),
+            None => match self {
+                TypeHandle::MethodGeneric(g_index) => {
+                    TResolver::resolve_method_generic(resolver, *g_index)
+                        .and_then(|th| th.get_non_generic_with_generic_resolver(resolver))
+                }
+                TypeHandle::TypeGeneric(g_index) => {
+                    TResolver::resolve_type_generic(resolver, *g_index)
+                        .and_then(|th| th.get_non_generic_with_generic_resolver(resolver))
+                }
+
+                _ => unreachable!(),
+            },
         }
     }
 
     pub fn get_non_generic_with_type<T: GetTypeVars + GetAssemblyRef>(
         &self,
         ty: &T,
-    ) -> NonGenericTypeHandle {
-        self.get_non_generic_with_generic_resolver(|g_index| type_generic_resolver(g_index, ty))
+    ) -> Option<NonGenericTypeHandle> {
+        self.get_non_generic_with_generic_resolver(TypeGenericResolver::new(ty))
     }
 
     pub fn get_non_generic_with_method<T: GetTypeVars + GetAssemblyRef>(
         &self,
         method: &Method<T>,
-    ) -> NonGenericTypeHandle {
-        self.get_non_generic_with_generic_resolver(|g_index| {
-            method_generic_resolver(g_index, method)
-        })
+    ) -> Option<NonGenericTypeHandle> {
+        self.get_non_generic_with_generic_resolver(MethodGenericResolver::new(method))
     }
 
     pub fn val_layout(&self) -> Option<Layout> {
@@ -282,19 +313,24 @@ impl TypeHandle {
         self.as_non_generic().unwrap_unchecked().val_layout()
     }
 
-    pub fn val_layout_with_generic_resolver<F: Fn(u32) -> TypeHandle>(&self, f: F) -> Layout {
-        self.get_non_generic_with_generic_resolver(f).val_layout()
+    pub fn val_layout_with_generic_resolver<TResolver: IGenericResolver>(
+        &self,
+        resolver: &TResolver,
+    ) -> Layout {
+        self.get_non_generic_with_generic_resolver(resolver)
+            .unwrap()
+            .val_layout()
     }
 
     pub fn val_layout_with_type<T: GetTypeVars + GetAssemblyRef>(&self, ty: &T) -> Layout {
-        self.val_layout_with_generic_resolver(|g_index| type_generic_resolver(g_index, ty))
+        self.val_layout_with_generic_resolver(TypeGenericResolver::new(ty))
     }
 
     pub fn val_layout_with_method<T: GetTypeVars + GetAssemblyRef>(
         &self,
         method: &Method<T>,
     ) -> Layout {
-        self.val_layout_with_generic_resolver(|g_index| method_generic_resolver(g_index, method))
+        self.val_layout_with_generic_resolver(MethodGenericResolver::new(method))
     }
 }
 

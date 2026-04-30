@@ -1,4 +1,4 @@
-use std::{alloc::Layout, ffi::c_void, ptr::NonNull};
+use std::{alloc::Layout, ffi::c_void};
 
 use global::{attrs::ParameterAttr, derive_ctor::ctor};
 use stdlib_header::CoreTypeId;
@@ -35,7 +35,7 @@ impl Parameter {
         method: &Method<T>,
     ) -> NonGenericTypeHandle {
         match &self.ty {
-            MaybeUnloadedTypeHandle::Loaded(ty) => ty.get_non_generic_with_method(method),
+            MaybeUnloadedTypeHandle::Loaded(ty) => ty.get_non_generic_with_method(method).unwrap(),
             MaybeUnloadedTypeHandle::Unloaded(_) => {
                 let ty = unsafe {
                     self.ty
@@ -50,12 +50,8 @@ impl Parameter {
                         )
                         .unwrap()
                 };
-                // Hacking
-                unsafe {
-                    NonNull::from_ref(self).as_mut().ty = MaybeUnloadedTypeHandle::Loaded(ty);
-                }
 
-                ty.get_non_generic_with_method(method)
+                ty.get_non_generic_with_method(method).unwrap()
             }
         }
     }

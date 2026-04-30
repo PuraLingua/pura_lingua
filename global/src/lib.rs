@@ -36,9 +36,7 @@ pub extern crate paste;
 
 pub mod assertions;
 pub mod attrs;
-pub mod configs;
-pub mod find_util;
-pub mod freeze_lock;
+pub mod env_utils;
 pub mod instruction;
 pub mod io_utils;
 pub mod macros;
@@ -46,7 +44,6 @@ pub mod non_purus_call_configuration;
 pub mod sync;
 pub mod traits;
 
-pub mod color;
 pub mod path_searcher;
 
 // Re-exports
@@ -62,6 +59,7 @@ pub use indexmap::{
 pub use macros::*;
 pub use num_enum;
 pub use proc_macros::*;
+pub use slab;
 pub use string_name::StringName;
 
 #[doc(hidden)]

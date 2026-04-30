@@ -51,11 +51,28 @@ impl<T> OwnedSlicePtr<T> {
             ptr: Box::into_raw(s).cast(),
         }
     }
+    pub fn from_vec(s: Vec<T>) -> Self {
+        Self::from_box(s.into_boxed_slice())
+    }
 
     pub const fn empty() -> Self {
         Self {
             len: 0,
             ptr: NonNull::<T>::dangling().as_ptr(),
+        }
+    }
+    pub const fn zeroed() -> Self {
+        unsafe { std::mem::zeroed() }
+    }
+
+    pub const fn into_option(self) -> Option<Self> {
+        if self.len == 0 && self.ptr.is_null() {
+            None
+        } else {
+            Some(Self {
+                len: self.len,
+                ptr: self.ptr,
+            })
         }
     }
 

@@ -35,7 +35,7 @@ _define_struct!(
             }),
             Instruction::SLoad(Instruction_Load {
                 addr: ShortRegisterAddr::new(1), // size
-                content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                content: LoadContent::TypeValueSize(TypeHandle::TypeGeneric(0).into()),
             }),
             Instruction::SReadPointerTo(CommonReadPointerTo {
                 ptr: ShortRegisterAddr::new(0),
@@ -67,7 +67,7 @@ _define_struct!(
             }),
             Instruction::SLoad(Instruction_Load {
                 addr: ShortRegisterAddr::new(2), // size
-                content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                content: LoadContent::TypeValueSize(TypeHandle::TypeGeneric(0).into()),
             }),
             Instruction::SWritePointer(CommonWritePointer {
                 source: ShortRegisterAddr::new(1),

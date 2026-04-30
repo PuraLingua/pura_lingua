@@ -93,6 +93,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             let Some(ty) = ty
                 .load(cpu.vm_ref().assembly_manager())
                 .map(|x| x.get_non_generic_with_method(method))
+                .flatten()
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
             };

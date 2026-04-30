@@ -43,7 +43,7 @@ pub extern "system" fn ToString(
         .unwrap()
         .element_type_handle()
         .unwrap();
-    let element_type = element_type.get_non_generic_with_method(method);
+    let element_type = element_type.get_non_generic_with_method(method).unwrap();
     let elements = unsafe {
         this.access_unchecked::<ArrayAccessor>()
             .as_raw_slices()
@@ -176,7 +176,7 @@ _define_class!(
                     }),
                     Instruction::SLoad(Instruction_Load {
                         addr: t_size,
-                        content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                        content: LoadContent::TypeValueSize(TypeHandle::TypeGeneric(0).into()),
                     }),
                     Instruction::SReadPointerTo(CommonReadPointerTo {
                         ptr: ptr2result,
@@ -219,7 +219,7 @@ _define_class!(
 
                     Instruction::SLoad(Instruction_Load {
                         addr: t_size,
-                        content: LoadContent::TypeValueSize(TypeHandle::Generic(0).into()),
+                        content: LoadContent::TypeValueSize(TypeHandle::TypeGeneric(0).into()),
                     }),
 
                     Instruction::SCall(Instruction_Call::InstanceCall {

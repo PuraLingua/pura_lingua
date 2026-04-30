@@ -667,8 +667,9 @@ impl MaybeUnloadedTypeHandle {
                 }
                 .into())
             }
-            binary::prelude::TypeType::Generic => Ok(MaybeUnloadedTypeHandle::Loaded(
-                TypeHandle::Generic(tt.index()),
+            binary::prelude::TypeType::MethodGeneric => todo!(),
+            binary::prelude::TypeType::TypeGeneric => Ok(MaybeUnloadedTypeHandle::Loaded(
+                TypeHandle::TypeGeneric(tt.index()),
             )),
         }
     }

@@ -390,7 +390,8 @@ impl CommonCallStackFrame {
             let ty = ty
                 .load(ty_ref.__get_assembly_ref().manager_ref())
                 .unwrap()
-                .get_non_generic_with_method(method);
+                .get_non_generic_with_method(method)
+                .unwrap();
             let layout = ty.val_layout();
             let offset;
             (full_layout, offset) = full_layout.extend(layout).unwrap();

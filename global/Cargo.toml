@@ -37,6 +37,7 @@ binary_proc_macros = { package = "pura_lingua_binary_proc_macros", path = "../bi
 
 proc_macros = { package = "pura_lingua_proc_macros", path = "../global_proc_macros" }
 global_errors = { package = "pura_lingua_global_errors", path = "../global_errors" }
+slab = { version = "0.4" }
 
 [dev-dependencies]
 env_logger = { version = "0.11" }

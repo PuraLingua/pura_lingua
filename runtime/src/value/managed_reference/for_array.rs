@@ -228,6 +228,7 @@ impl ArrayAccessor {
     pub fn element_layout(&self) -> Option<Layout> {
         self.element_type_handle().map(|th| {
             th.get_non_generic_with_type(unsafe { self.0.method_table_ref_unchecked().ty_ref() })
+                .unwrap()
                 .val_layout()
         })
     }

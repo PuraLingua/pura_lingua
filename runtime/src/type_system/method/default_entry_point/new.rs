@@ -61,10 +61,12 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             len,
             output,
         } => {
-            let Some(element_th) = element_type.load(cpu.vm_ref().assembly_manager()) else {
+            let Some(element_th) = element_type
+                .load(cpu.vm_ref().assembly_manager())
+                .and_then(|th| th.get_non_generic_with_method(method))
+            else {
                 return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
             };
-            let element_th = element_th.get_non_generic_with_method(method);
             let arr = match element_th {
                 NonGenericTypeHandle::Class(ty) => unsafe {
                     ManagedReference::alloc_array(cpu, ty.as_ref().method_table, (*len) as usize)
@@ -88,10 +90,12 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             let Some(&len) = call_frame(cpu).get_typed::<usize, _>(*len_addr) else {
                 load_register_failed!(*len_addr);
             };
-            let Some(element_th) = element_type.load(cpu.vm_ref().assembly_manager()) else {
+            let Some(element_th) = element_type
+                .load(cpu.vm_ref().assembly_manager())
+                .and_then(|th| th.get_non_generic_with_method(method))
+            else {
                 return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
             };
-            let element_th = element_th.get_non_generic_with_method(method);
             let arr = match element_th {
                 NonGenericTypeHandle::Class(ty) => unsafe {
                     ManagedReference::alloc_array(cpu, ty.as_ref().method_table, len)

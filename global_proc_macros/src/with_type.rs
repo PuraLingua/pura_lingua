@@ -83,7 +83,7 @@ pub(crate) fn derive_with_type_impl(input: DeriveInput) -> syn::Result<TokenStre
             #v
         }
         impl #impl_generics #owner_name #ty_generics #where_clause {
-            #vis fn to_type(&self) -> #name {
+            #vis const fn to_type(&self) -> #name {
                 match self {
                     #to_type_fn_match_arms
                 }
