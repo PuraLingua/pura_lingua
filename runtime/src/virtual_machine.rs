@@ -5,7 +5,7 @@ use std::{
     mem::MaybeUninit,
     num::NonZero,
     pin::Pin,
-    ptr::{NonNull, Unique},
+    ptr::NonNull,
     sync::{LockResult, Mutex, Once, RwLock, RwLockWriteGuard},
 };
 
@@ -13,6 +13,7 @@ use cpu::CPU;
 use global::{ThreadSafe, getset::Getters};
 
 use crate::{
+    memory::OwnedPtr,
     type_system::{
         assembly_manager::AssemblyManager, class::Class, get_traits::GetStaticConstructorId,
         r#struct::Struct, type_handle::NonGenericTypeHandle,
@@ -90,19 +91,19 @@ impl VirtualMachine {
         AssemblyManager::construct_in(this);
     }
 
-    pub fn new_in<A: Allocator>(allocator: &A) -> Unique<Self> {
+    pub fn new_in<A: Allocator>(allocator: &A) -> OwnedPtr<Self> {
         let this = allocator.allocate(Layout::new::<Self>()).unwrap().cast();
 
         Self::construct_in(this);
 
-        Unique::from_non_null(this)
+        OwnedPtr::from_non_null(this)
     }
 
-    pub fn new() -> Unique<Self> {
+    pub fn new() -> OwnedPtr<Self> {
         Self::new_in(&std::alloc::Global)
     }
 
-    pub fn new_system() -> Unique<Self> {
+    pub fn new_system() -> OwnedPtr<Self> {
         Self::new_in(&std::alloc::System)
     }
 

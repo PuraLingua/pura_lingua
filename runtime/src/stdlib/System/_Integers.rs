@@ -7,6 +7,7 @@ use crate::{
     type_system::{
         assembly::Assembly,
         class::Class,
+        generics::GenericCountRequirement,
         method::{ExceptionTable, Method, Parameter},
         method_table::MethodTable,
         r#struct::Struct,
@@ -90,6 +91,7 @@ assembly, mt, method_info, RustT:
         global::attr!(
             method Public {Static}
         ),
+        GenericCountRequirement::default(),
         vec![Parameter::new(
             MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_UInt8.static_type_ref()),
             global::attr!(parameter { ByRef }),

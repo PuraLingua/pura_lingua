@@ -1,7 +1,7 @@
 use std::{
     alloc::{Allocator, Layout},
     mem::offset_of,
-    ptr::{NonNull, Unique},
+    ptr::NonNull,
     sync::MappedRwLockReadGuard,
 };
 
@@ -11,6 +11,7 @@ use global::{
 };
 
 use crate::{
+    memory::OwnedPtr,
     type_system::{
         assembly::Assembly, class::Class, generics::GenericBounds, method::Method,
         method_table::MethodTable, type_handle::MaybeUnloadedTypeHandle,
@@ -94,7 +95,7 @@ impl Interface {
         mt_generator: F,
 
         generic_bounds: Option<Vec<GenericBounds>>,
-    ) -> Unique<Self> {
+    ) -> OwnedPtr<Self> {
         let this = Box::new(Self {
             assembly,
             generic: None,
@@ -123,7 +124,7 @@ impl Interface {
             this_m.method_table = mt;
         }
 
-        Unique::from_non_null(this)
+        OwnedPtr::from_non_null(this)
     }
 }
 

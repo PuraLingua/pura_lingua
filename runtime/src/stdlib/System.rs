@@ -1,4 +1,4 @@
-use std::{pin::Pin, ptr::NonNull};
+use std::{pin::Pin, ptr::NonNull, range::RangeFrom};
 
 use global::attrs::{MethodAttr, ParameterAttr};
 use stdlib_header::{CoreTypeId, CoreTypeInfo, CoreTypeKind, CoreTypeRef, FieldInfo, MethodInfo};
@@ -7,6 +7,7 @@ use crate::type_system::{
     assembly::Assembly,
     class::Class,
     field::Field,
+    generics::GenericCountRequirement,
     method::{Method, Parameter},
     method_table::MethodTable,
     r#struct::Struct,
@@ -43,6 +44,10 @@ pub(crate) macro common_new_method($mt:ident $TMethodId:ident $id:ident $f:path)
         Some($mt),
         $TMethodId::$id.get_name().to_owned(),
         $crate::stdlib::System::map_method_attr($TMethodId::$id.get_attr()),
+        $TMethodId::$id
+            .get_generic_count()
+            .map(From::from)
+            .unwrap_or_default(),
         $TMethodId::$id
             .get_parameters()
             .into_iter()
@@ -191,7 +196,7 @@ pub fn define_class(
             attr,
             name,
             // TODO: impl it
-            generic_count: _,
+            generic_count,
             parent,
             parent_generics,
             methods,
@@ -204,6 +209,15 @@ pub fn define_class(
                 NonNull::from_ref(assembly),
                 name,
                 attr,
+                generic_count
+                    .map(|x| {
+                        if x.is_infinite {
+                            GenericCountRequirement::AtLeast(RangeFrom { start: x.count })
+                        } else {
+                            GenericCountRequirement::Exact(x.count)
+                        }
+                    })
+                    .unwrap_or_default(),
                 parent.map(|x| match x {
                     stdlib_header::CoreTypeRef::Core(core_type_id) => {
                         *assembly.get_class(core_type_id as _).unwrap().unwrap()
@@ -242,8 +256,7 @@ pub fn define_struct(
             kind,
             attr,
             name,
-            // TODO: impl it
-            generic_count: _,
+            generic_count,
             parent,
             parent_generics,
             methods,
@@ -258,6 +271,7 @@ pub fn define_struct(
                 NonNull::from_ref(assembly),
                 name,
                 attr,
+                generic_count.map(From::from).unwrap_or_default(),
                 MethodTable::wrap_as_method_generator(|mt| {
                     methods
                         .into_iter()

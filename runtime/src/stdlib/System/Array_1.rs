@@ -13,6 +13,7 @@ use crate::{
     stdlib::System::{_define_class, common_new_method, default_sctor},
     type_system::{
         class::Class,
+        generics::GenericCountRequirement,
         method::{ExceptionTable, Method},
         type_handle::{NonGenericTypeHandle, TypeHandle},
     },
@@ -150,6 +151,7 @@ _define_class!(
             mt,
             TMethodId::get_Index.get_name().to_owned(),
             super::map_method_attr(TMethodId::get_Index.get_attr()),
+            GenericCountRequirement::default(),
             TMethodId::get_Index.get_parameters()
                 .into_iter()
                 .map(super::map_parameter)
@@ -203,6 +205,7 @@ _define_class!(
             mt,
             TMethodId::set_Index.get_name().to_owned(),
             super::map_method_attr(TMethodId::set_Index.get_attr()),
+            GenericCountRequirement::default(),
             TMethodId::set_Index.get_parameters()
                 .into_iter()
                 .map(super::map_parameter)

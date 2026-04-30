@@ -262,15 +262,20 @@ impl LocalVariable {
     /// # Safety
     /// See [`std::ptr::NonNull::copy_from`]
     pub const unsafe fn copy_from(self, src: NonNull<u8>, count: usize) {
-        #[cfg(debug_assertions)]
         fn check(this_size: usize, count: usize) {
-            assert!(
-                this_size >= count,
-                "Requirement {count} too large(maximum: {this_size})"
-            );
+            cfg_select! {
+                debug_assertions => {
+                    assert!(
+                        this_size >= count,
+                        "Requirement {count} too large(maximum: {this_size})"
+                    );
+                }
+                _ => {
+                    let _ = this_size;
+                    let _ = count;
+                }
+            }
         }
-        #[cfg(not(debug_assertions))]
-        fn check(this: &LocalVariable, count: usize) {}
         const fn const_check(this_size: usize, count: usize) {
             assert!(this_size >= count);
         }
@@ -283,10 +288,10 @@ impl LocalVariable {
     /// See [`std::ptr::NonNull::copy_to`]
     pub const unsafe fn copy_to(self, dest: NonNull<u8>, count: usize) {
         #[inline(always)]
-        const fn noop_check(_: Layout, _: usize) {}
-        cfg_select! {
-            debug_assertions => {
-                fn check(layout: Layout, count: usize) {
+        const fn const_check(_: Layout, _: usize) {}
+        fn check(layout: Layout, count: usize) {
+            cfg_select! {
+                debug_assertions => {
                     if layout.size() < count {
                         panic!(
                             "Size at most: {} while require {count} byte(s)",
@@ -294,13 +299,14 @@ impl LocalVariable {
                         )
                     }
                 }
-            }
-            _ => {
-                #[inline(always)]
-                fn check(_: Layout, _: usize) {}
+                _ => {
+                    let _ = layout;
+                    let _ = count;
+                }
             }
         }
-        std::intrinsics::const_eval_select((self.layout, count), noop_check, check);
+
+        std::intrinsics::const_eval_select((self.layout, count), const_check, check);
         unsafe {
             self.ptr.copy_to(dest, count);
         }

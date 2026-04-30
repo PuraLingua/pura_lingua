@@ -18,6 +18,7 @@ use crate::{
         assembly_manager::{AssemblyManager, AssemblyRef},
         class::Class,
         field::Field,
+        generics::GenericCountRequirement,
         method::{ExceptionTable, Method, MethodRef},
         method_table::MethodTable,
         type_ref::TypeRef,
@@ -51,6 +52,7 @@ fn simple_dynamic_lib_test() {
                     global::attr!(
                         class Public {}
                     ),
+                    GenericCountRequirement::default(),
                     Some(
                         assembly_manager
                             .get_core_type(CoreTypeId::System_Object)
@@ -68,6 +70,7 @@ fn simple_dynamic_lib_test() {
                                     g_core_type!(System_String),
                                     g_core_type!(System_DynamicLibrary),
                                 ),
+                                GenericCountRequirement::default(),
                                 vec![],
                                 assembly_manager
                                     .get_core_type(CoreTypeId::System_Void)
@@ -203,6 +206,7 @@ fn gen_simple_dynamic_lib_to_invoke(
             /* 17 */ g_core_type!(System_DynamicLibrary), // Library
             /* 18 */ g_core_type!(System_String), // MethodName
         ),
+        GenericCountRequirement::default(),
         vec![],
         g_core_type!(System_Int32),
         CallConvention::PlatformDefault,

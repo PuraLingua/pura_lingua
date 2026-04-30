@@ -1,4 +1,4 @@
-use std::{alloc::Layout, intrinsics::const_eval_select, mem::offset_of, ptr::NonNull};
+use std::{alloc::Layout, mem::offset_of, ptr::NonNull};
 
 use crate::{
     stdlib::CoreTypeId,
@@ -201,15 +201,7 @@ impl ArrayAccessor {
     ///
     ///   (i.e. [`Self::can_get_element_type_handle`] returns true)
     pub unsafe fn element_type_handle_unchecked(&self) -> TypeHandle {
-        #[inline(always)]
-        fn assert_get_element_type_handle(this: &ArrayAccessor) {
-            debug_assert!(this.can_get_element_type_handle());
-        }
-        const_eval_select(
-            (self,),
-            precondition_check_const,
-            assert_get_element_type_handle,
-        );
+        debug_assert!(self.can_get_element_type_handle());
         unsafe {
             let mt = self.0.method_table_ref_unchecked();
             let type_vars = mt.ty_ref().type_vars().as_ref().unwrap_unchecked();
@@ -241,7 +233,7 @@ impl ArrayAccessor {
     /// # Safety
     /// T'size * len == data's layout
     pub const unsafe fn as_slice<T>(&self) -> Option<&[T]> {
-        const_eval_select(
+        std::intrinsics::const_eval_select(
             (self,),
             precondition_check_const,
             Self::check_element_layout::<T>,
@@ -262,7 +254,7 @@ impl ArrayAccessor {
     /// # Safety
     /// T'size * len == data's layout && self is not null
     pub const unsafe fn as_slice_unchecked<T>(&self) -> &[T] {
-        const_eval_select(
+        std::intrinsics::const_eval_select(
             (self,),
             precondition_check_const,
             Self::check_element_layout::<T>,
@@ -283,7 +275,7 @@ impl ArrayAccessor {
     /// # Safety
     /// T'size * len == data's layout
     pub const unsafe fn as_slice_mut<T>(&mut self) -> Option<&mut [T]> {
-        const_eval_select(
+        std::intrinsics::const_eval_select(
             (&*self,),
             precondition_check_const,
             Self::check_element_layout::<T>,
@@ -303,7 +295,7 @@ impl ArrayAccessor {
     /// # Safety
     /// T'size * len == data's layout && self is not null
     pub const unsafe fn as_slice_unchecked_mut<T>(&mut self) -> &mut [T] {
-        const_eval_select(
+        std::intrinsics::const_eval_select(
             (&*self,),
             precondition_check_const,
             Self::check_element_layout::<T>,

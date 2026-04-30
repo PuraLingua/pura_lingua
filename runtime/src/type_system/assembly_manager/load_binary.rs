@@ -8,7 +8,7 @@ use crate::type_system::{
     assembly_manager::AssemblyRef,
     class::{Class, ClassParent, LoadedClassParent},
     field::Field,
-    generics::GenericBounds,
+    generics::{GenericBounds, GenericCountRequirement},
     get_traits::{GetAssemblyRef, GetTypeVars},
     interface::{Interface, InterfaceImplementation},
     method::{ExceptionTable, ExceptionTableEntry, Method, MethodRef, Parameter},
@@ -168,6 +168,7 @@ impl AssemblyManager {
             class_def.main,
             name.to_owned(),
             class_def.attr,
+            class_def.generic_count_requirement.into(),
             class_def
                 .parent
                 .as_ref()
@@ -267,6 +268,7 @@ impl AssemblyManager {
             NonNull::from_ref(assembly),
             name.to_owned(),
             struct_def.attr,
+            struct_def.generic_count_requirement.into(),
             |rt_struct| {
                 MethodTable::new(rt_struct, |mt| {
                     self.load_binary_methods(
@@ -420,6 +422,7 @@ impl AssemblyManager {
             mt,
             name,
             attr,
+            method.generic_count_requirement.into(),
             method
                 .args
                 .iter()
@@ -710,6 +713,18 @@ impl MethodRef {
                 })
             }
             binary::prelude::MethodType::MethodByRuntime => Ok(Self::Index(tt.index())),
+        }
+    }
+}
+
+impl const From<binary::ty::GenericCountRequirement> for GenericCountRequirement {
+    fn from(value: binary::ty::GenericCountRequirement) -> Self {
+        match value {
+            binary::ty::GenericCountRequirement::AtLeast(range_from) => Self::AtLeast(range_from),
+            binary::ty::GenericCountRequirement::NoMoreThan(range_to_inclusive) => {
+                Self::NoMoreThan(range_to_inclusive)
+            }
+            binary::ty::GenericCountRequirement::Exact(val) => Self::Exact(val),
         }
     }
 }

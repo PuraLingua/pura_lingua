@@ -2,12 +2,16 @@ use binary_core::traits::StringRef;
 use global::attrs::TypeAttr;
 use proc_macros::{ReadFromSection, WriteToSection};
 
+use crate::ty::GenericCountRequirement;
+
 use super::{Field, GenericBounds, Method};
 
 #[derive(Clone, Debug, ReadFromSection, WriteToSection)]
 pub struct StructDef {
     pub name: StringRef,
     pub attr: TypeAttr,
+
+    pub generic_count_requirement: GenericCountRequirement,
 
     // Note that Struct does not have parents
     pub method_table: Vec<Method>,

@@ -2,14 +2,14 @@ use std::{
     alloc::Layout,
     cell::Cell,
     pin::Pin,
-    ptr::{NonNull, Unique},
+    ptr::NonNull,
     sync::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
 };
 
 use enumflags2::BitFlags;
 
 use crate::{
-    memory::{GetFieldOffsetOptions, GetLayoutOptions},
+    memory::{GetFieldOffsetOptions, GetLayoutOptions, OwnedPtr},
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::{class::Class, method::Method, r#struct::Struct},
 };
@@ -133,7 +133,7 @@ where
     pub fn new<F: FnOnce(NonNull<Self>) -> Vec<Pin<Box<Method<T>>>>>(
         ty: NonNull<T>,
         method_generator: F,
-    ) -> Unique<Self> {
+    ) -> OwnedPtr<Self> {
         let this = Box::new(Self {
             ty,
             methods: RwLock::new(Vec::new()),
@@ -175,7 +175,7 @@ where
             this.as_mut().methods = RwLock::new(methods);
         }
 
-        Unique::from_non_null(this)
+        OwnedPtr::from_non_null(this)
     }
 }
 

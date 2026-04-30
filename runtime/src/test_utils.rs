@@ -11,6 +11,7 @@ use crate::{
     type_system::{
         assembly::Assembly,
         class::Class,
+        generics::GenericCountRequirement,
         method::{ExceptionTable, Method, MethodRef},
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
@@ -61,6 +62,7 @@ pub fn try_invoke_instructions(
                 assembly,
                 "Test::TryInvoke::Test".to_owned(),
                 global::attr!(class Public {}),
+                GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
@@ -74,6 +76,7 @@ pub fn try_invoke_instructions(
                                 None,
                                 locals,
                             ),
+                            GenericCountRequirement::default(),
                             vec![],
                             return_type,
                             CallConvention::PlatformDefault,

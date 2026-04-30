@@ -2,15 +2,17 @@ use std::alloc::{Allocator, Layout};
 use std::assert_matches;
 use std::cell::Cell;
 use std::mem::{ManuallyDrop, offset_of};
-use std::ptr::{NonNull, Unique};
+use std::ops::RangeBounds;
+use std::ptr::NonNull;
 use std::sync::{MappedRwLockReadGuard, RwLock};
 
 use either::Either;
 use global::attrs::TypeAttr;
 use global::getset::{Getters, MutGetters};
 
-use crate::memory::GetFieldOffsetOptions;
+use crate::memory::{GetFieldOffsetOptions, OwnedPtr};
 use crate::type_system::assembly_manager::AssemblyManager;
+use crate::type_system::generics::GenericCountRequirement;
 use crate::type_system::interface::InterfaceImplementation;
 use crate::type_system::type_handle::IGenericResolver;
 use crate::type_system::{
@@ -100,6 +102,7 @@ pub struct Class {
 
     name: Box<str>,
     attr: TypeAttr,
+    generic_count_requirement: GenericCountRequirement,
 
     #[getset(skip)]
     #[debug(
@@ -141,6 +144,14 @@ impl Class {
 impl Class {
     pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
         assert_matches!(self.load_state, TypeLoadState::Finished);
+        assert!(
+            self.generic_count_requirement
+                .contains(&(type_vars.len() as u32)),
+            "Failed to instantiate class {} with count requirement {:?} while provided type var len is {}",
+            self.name(),
+            self.generic_count_requirement,
+            type_vars.len(),
+        );
         for has_instantiated in self.generic_instances.iter() {
             if unsafe { has_instantiated.as_ref() }
                 .type_vars
@@ -159,6 +170,7 @@ impl Class {
 
             name: self.name.clone(),
             attr: self.attr,
+            generic_count_requirement: self.generic_count_requirement,
 
             m_parent: self.m_parent.as_ref().map(|parent| unsafe {
                 ClassParent {
@@ -216,6 +228,7 @@ impl Class {
 
         name: String,
         attr: TypeAttr,
+        generic_count_requirement: GenericCountRequirement,
 
         parent: Option<NonNull<Class>>,
         parent_generics: Vec<MaybeUnloadedTypeHandle>,
@@ -227,7 +240,7 @@ impl Class {
         implemented_interfaces: Vec<InterfaceImplementation>,
 
         generic_bounds: Option<Vec<GenericBounds>>,
-    ) -> Unique<Self> {
+    ) -> OwnedPtr<Self> {
         if let Some(parent) = parent.as_ref().map(|x| unsafe { x.as_ref() }) {
             let mut current_fields = fields;
             fields = parent.fields.clone();
@@ -241,6 +254,7 @@ impl Class {
 
             name: name.into_boxed_str(),
             attr,
+            generic_count_requirement,
 
             m_parent: parent.map(|parent| {
                 if parent_generics.is_empty() {
@@ -280,7 +294,7 @@ impl Class {
             this_m.method_table = mt;
         }
 
-        Unique::from_non_null(this)
+        OwnedPtr::from_non_null(this)
     }
 
     /// The NonNull passed to mt_generator is always valid to be cast to &Self
@@ -292,6 +306,7 @@ impl Class {
 
         name: String,
         attr: TypeAttr,
+        generic_count_requirement: GenericCountRequirement,
 
         parent: Option<Either<LoadedClassParent, TypeRef>>,
 
@@ -302,7 +317,7 @@ impl Class {
         implemented_interfaces: Vec<InterfaceImplementation>,
 
         generic_bounds: Option<Vec<GenericBounds>>,
-    ) -> Unique<Self> {
+    ) -> OwnedPtr<Self> {
         let mut load_state = TypeLoadState::Finished;
         let parent = parent.map(|x| match x {
             Either::Left(loaded) => ClassParent {
@@ -323,6 +338,7 @@ impl Class {
 
             name: name.into_boxed_str(),
             attr,
+            generic_count_requirement,
 
             m_parent: parent,
 
@@ -359,7 +375,7 @@ impl Class {
             this_m.method_table = mt;
         }
 
-        Unique::from_non_null(this)
+        OwnedPtr::from_non_null(this)
     }
 
     pub(crate) fn rediscover_sctor(&mut self, hint: Option<u32>) {

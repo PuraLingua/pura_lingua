@@ -9,6 +9,7 @@ use global::{
 use crate::{
     stdlib::System::{_define_struct, default_sctor, map_method_attr, map_parameters},
     type_system::{
+        generics::GenericCountRequirement,
         method::{ExceptionTable, Method},
         type_handle::TypeHandle,
     },
@@ -24,6 +25,7 @@ _define_struct!(
         mt,
         method_info.name,
         map_method_attr(method_info.attr),
+        GenericCountRequirement::default(),
         map_parameters(method_info.args),
         method_info.return_type.into(),
         CallConvention::PlatformDefault,
@@ -52,6 +54,7 @@ _define_struct!(
         mt,
         method_info.name,
         map_method_attr(method_info.attr),
+        GenericCountRequirement::default(),
         map_parameters(method_info.args),
         method_info.return_type.into(),
         CallConvention::PlatformDefault,

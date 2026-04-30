@@ -1,12 +1,10 @@
 #![feature(allocator_api)]
-#![feature(ptr_internals)]
 #![feature(mapped_lock_guards)]
 #![feature(box_vec_non_null)]
 #![feature(iterator_try_collect)]
 #![feature(lock_value_accessors)]
 // lints
 #![allow(nonstandard_style)]
-#![allow(internal_features)]
 
 use std::{
     ptr::NonNull,

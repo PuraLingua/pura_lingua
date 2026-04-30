@@ -2,7 +2,8 @@ use std::{
     alloc::{Allocator, Layout},
     cell::Cell,
     mem::offset_of,
-    ptr::{NonNull, Unique},
+    ops::RangeBounds,
+    ptr::NonNull,
     sync::MappedRwLockReadGuard,
 };
 
@@ -14,10 +15,13 @@ use global::{
 use stdlib_header::CoreTypeId;
 
 use crate::{
-    memory::GetLayoutOptions,
+    memory::{GetLayoutOptions, OwnedPtr},
     stdlib::CoreTypeIdExt as _,
     type_system::{
-        assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
+        assembly::Assembly,
+        field::Field,
+        generics::{GenericBounds, GenericCountRequirement},
+        method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle,
     },
 };
@@ -32,6 +36,7 @@ pub struct Struct {
 
     name: Box<str>,
     attr: TypeAttr,
+    generic_count_requirement: GenericCountRequirement,
 
     // Note that Struct does not have parents
     pub(crate) method_table: NonNull<MethodTable<Self>>,
@@ -50,19 +55,21 @@ impl Struct {
 
         name: String,
         attr: TypeAttr,
+        generic_count_requirement: GenericCountRequirement,
 
         mt_generator: F,
         fields: Vec<Field>,
         sctor: Option<u32>,
 
         generic_bounds: Option<Vec<GenericBounds>>,
-    ) -> Unique<Self> {
+    ) -> OwnedPtr<Self> {
         let this = Box::new(Self {
             assembly,
             generic: None,
 
             name: name.into_boxed_str(),
             attr,
+            generic_count_requirement,
 
             // MethodTable is initialized afterwards
             method_table: NonNull::dangling(),
@@ -89,10 +96,14 @@ impl Struct {
             this_m.method_table = mt;
         }
 
-        Unique::from_non_null(this)
+        OwnedPtr::from_non_null(this)
     }
 
     pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
+        assert!(
+            self.generic_count_requirement
+                .contains(&(type_vars.len() as u32))
+        );
         for has_instantiated in self.generic_instances.iter() {
             if unsafe { has_instantiated.as_ref() }
                 .type_vars
@@ -111,6 +122,7 @@ impl Struct {
                 self.assembly,
                 self.name.clone().into_string(),
                 self.attr,
+                self.generic_count_requirement,
                 |x| {
                     let mut mt = MethodTable::dup(self.method_table);
                     unsafe {
@@ -150,6 +162,7 @@ impl Struct {
 
             name: self.name.clone(),
             attr: self.attr,
+            generic_count_requirement: self.generic_count_requirement,
 
             method_table: MethodTable::dup(self.method_table),
             fields: self

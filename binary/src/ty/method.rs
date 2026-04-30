@@ -7,7 +7,10 @@ use global::{
 };
 use proc_macros::{ReadFromSection, WriteToSection};
 
-use crate::item_token::{MethodToken, TypeToken};
+use crate::{
+    item_token::{MethodToken, TypeToken},
+    ty::GenericCountRequirement,
+};
 
 use super::GenericBounds;
 
@@ -17,6 +20,7 @@ pub type BinaryInstruction = Instruction<StringRef, TypeToken, MethodToken, u32>
 pub struct Method {
     pub name: StringRef,
     pub attr: MethodAttr<TypeToken>,
+    pub generic_count_requirement: GenericCountRequirement,
     pub args: Vec<Parameter>,
     pub return_type: TypeToken,
     pub call_convention: CallConvention,

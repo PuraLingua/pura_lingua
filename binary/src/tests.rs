@@ -13,7 +13,7 @@ use stdlib_header::{CoreTypeId, System};
 use crate::{
     assembly::{AssemblyBuilder, ExtraHeader},
     prelude::{MethodTokenBuilder, MethodType, TypeTokenBuilder, TypeType},
-    ty::{ClassDef, Method, TypeDef, TypeRef},
+    ty::{ClassDef, GenericCountRequirement, Method, TypeDef, TypeRef},
 };
 
 macro core_type_ref($s_section:expr => $i:ident) {
@@ -64,6 +64,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                 .as_string_section_mut()
                 .add_string("TestNormalF::Test"),
             attr: global::attr!(class Public {}),
+            generic_count_requirement: GenericCountRequirement::Exact(0),
             parent: Some(
                 TypeTokenBuilder::new()
                     .with_ty(TypeType::TypeRef)
@@ -88,6 +89,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                             .with_index(4)
                             .build(),
                     ),
+                    generic_count_requirement: GenericCountRequirement::Exact(0),
                     args: vec![],
                     return_type: TypeTokenBuilder::new()
                         .with_ty(TypeType::TypeRef)
@@ -137,6 +139,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                             .with_index(1)
                             .build(),
                     ),
+                    generic_count_requirement: GenericCountRequirement::Exact(0),
                     args: vec![],
                     return_type: TypeTokenBuilder::new()
                         .with_ty(TypeType::TypeRef)
@@ -164,6 +167,7 @@ fn emit_test_normal_f() -> binary_core::BinaryResult<()> {
                     attr: global::attr!(
                         method Public {Static}
                     ),
+                    generic_count_requirement: GenericCountRequirement::Exact(0),
                     args: Vec::new(),
                     return_type: TypeTokenBuilder::new()
                         .with_ty(TypeType::TypeRef)

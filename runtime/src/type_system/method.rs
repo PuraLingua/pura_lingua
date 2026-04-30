@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::offset_of, pin::Pin, ptr::NonNull};
+use std::{ffi::c_void, mem::offset_of, ops::RangeBounds, pin::Pin, ptr::NonNull};
 
 use global::{
     attrs::{CallConvention, MethodAttr, MethodImplementationFlags},
@@ -10,7 +10,9 @@ use libffi::low::CodePtr;
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::{
-        generics::GenericBounds, method_table::MethodTable, type_handle::MaybeUnloadedTypeHandle,
+        generics::{GenericBounds, GenericCountRequirement},
+        method_table::MethodTable,
+        type_handle::MaybeUnloadedTypeHandle,
     },
     virtual_machine::cpu::CPU,
 };
@@ -38,6 +40,7 @@ pub struct Method<T> {
 
     name: Box<str>,
     attr: MethodAttr<MaybeUnloadedTypeHandle>,
+    generic_count_requirement: GenericCountRequirement,
     args: Vec<Parameter>,
     return_type: MaybeUnloadedTypeHandle,
     #[getset(skip)]
@@ -75,6 +78,7 @@ where
 
         name: String,
         attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
         return_type: MaybeUnloadedTypeHandle,
         call_convention: CallConvention,
@@ -91,6 +95,7 @@ where
 
             name: name.into_boxed_str(),
             attr,
+            generic_count_requirement,
             args,
             return_type,
             call_convention,
@@ -115,6 +120,7 @@ where
 
         name: String,
         attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
         return_type: MaybeUnloadedTypeHandle,
         call_convention: CallConvention,
@@ -131,6 +137,7 @@ where
 
             name: name.into_boxed_str(),
             attr,
+            generic_count_requirement,
             args,
             return_type,
             call_convention,
@@ -158,6 +165,7 @@ impl<T> Method<T> {
 
         name: String,
         attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
         return_type: MaybeUnloadedTypeHandle,
         call_convention: CallConvention,
@@ -174,6 +182,7 @@ impl<T> Method<T> {
 
             name: name.into_boxed_str(),
             attr,
+            generic_count_requirement,
             args,
             return_type,
             call_convention,
@@ -215,6 +224,7 @@ impl<T> Method<T> {
             mt,
             ".sctor".to_owned(),
             attr,
+            GenericCountRequirement::default(),
             vec![],
             CoreTypeId::System_Void.static_type_ref().into(),
             CallConvention::PlatformDefault,
@@ -227,6 +237,10 @@ impl<T> Method<T> {
 
 impl<T> Method<T> {
     pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
+        assert!(
+            self.generic_count_requirement
+                .contains(&(type_vars.len() as u32))
+        );
         for has_instantiated in self.generic_instances.iter() {
             if unsafe { has_instantiated.as_ref() }
                 .type_vars
@@ -243,6 +257,7 @@ impl<T> Method<T> {
 
             name: self.name.clone(),
             attr: self.attr.clone(),
+            generic_count_requirement: self.generic_count_requirement,
 
             args: self.args.clone(),
             return_type: self.return_type.clone(),

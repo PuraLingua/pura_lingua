@@ -16,6 +16,7 @@ use crate::{
         assembly_manager::AssemblyRef,
         class::Class,
         field::Field,
+        generics::GenericCountRequirement,
         interface::{Interface, InterfaceImplementation},
         type_ref::TypeRef,
     },
@@ -158,6 +159,7 @@ fn test_interface_call() {
                         global::attr!(
                             method Public {}
                         ),
+                        GenericCountRequirement::default(),
                         vec![],
                         g_core_type!(System_String),
                         Default::default(),
@@ -173,6 +175,7 @@ fn test_interface_call() {
                 assembly,
                 "Test::Test1".to_owned(),
                 global::attr!(class Public {}),
+                GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
@@ -183,6 +186,7 @@ fn test_interface_call() {
                             global::attr!(
                                 method Public {}
                             ),
+                            GenericCountRequirement::default(),
                             vec![],
                             g_core_type!(System_Void),
                             Default::default(),
@@ -196,6 +200,7 @@ fn test_interface_call() {
                             global::attr!(
                                 method Public {}
                             ),
+                            GenericCountRequirement::default(),
                             vec![],
                             g_core_type!(System_Void),
                             Default::default(),
@@ -210,6 +215,7 @@ fn test_interface_call() {
                                 method Public {}
                                 g_core_type!(System_String)
                             ),
+                            GenericCountRequirement::default(),
                             vec![],
                             g_core_type!(System_String),
                             Default::default(),
@@ -245,6 +251,7 @@ fn test_interface_call() {
                 assembly,
                 "Test::Test2".to_owned(),
                 global::attr!(class Public {}),
+                GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
@@ -255,6 +262,7 @@ fn test_interface_call() {
                             global::attr!(
                                 method Public {}
                             ),
+                            GenericCountRequirement::default(),
                             vec![],
                             g_core_type!(System_Void),
                             Default::default(),
@@ -269,6 +277,7 @@ fn test_interface_call() {
                                 method Public {}
                                 g_core_type!(System_String)
                             ),
+                            GenericCountRequirement::default(),
                             vec![],
                             g_core_type!(System_String),
                             Default::default(),
@@ -304,6 +313,7 @@ fn test_interface_call() {
                 assembly,
                 "Test::Main".to_owned(),
                 global::attr!(class Public {}),
+                GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
@@ -324,6 +334,7 @@ fn test_interface_call() {
                                 g_core_type!(System_String),
                                 g_core_type!(System_Void),
                             ),
+                            GenericCountRequirement::default(),
                             vec![],
                             g_core_type!(System_Void),
                             Default::default(),
@@ -398,6 +409,7 @@ fn test_interface_call() {
                             Some(mt),
                             "Println".to_owned(),
                             global::attr!(method Public {Static}),
+                            GenericCountRequirement::default(),
                             vec![Parameter::new(
                                 g_core_type!(System_String),
                                 global::attr!(parameter {}),

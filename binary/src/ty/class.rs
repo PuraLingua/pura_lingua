@@ -2,7 +2,10 @@ use binary_core::traits::StringRef;
 use global::attrs::TypeAttr;
 use proc_macros::{ReadFromSection, WriteToSection};
 
-use crate::{item_token::TypeToken, ty::InterfaceImplementation};
+use crate::{
+    item_token::TypeToken,
+    ty::{GenericCountRequirement, InterfaceImplementation},
+};
 
 use super::{Field, GenericBounds, Method};
 
@@ -12,6 +15,8 @@ pub struct ClassDef {
 
     pub name: StringRef,
     pub attr: TypeAttr,
+
+    pub generic_count_requirement: GenericCountRequirement,
 
     pub parent: Option<TypeToken>,
 

@@ -1,10 +1,11 @@
-use std::ptr::{NonNull, Unique};
+use std::ptr::NonNull;
 
 use either::Either;
 use global::traits::IUnwrap;
 use stdlib_header::CoreTypeRef;
 
 use crate::{
+    memory::OwnedPtr,
     stdlib::CoreTypeIdConstExt,
     type_system::{class::Class, interface::Interface, r#struct::Struct, type_ref::TypeRef},
 };
@@ -19,8 +20,8 @@ const _: () = {
             }
         }
 
-        impl const From<Unique<$Source>> for $Target {
-            fn from(value: Unique<$Source>) -> Self {
+        impl const From<OwnedPtr<$Source>> for $Target {
+            fn from(value: OwnedPtr<$Source>) -> Self {
                 Self::$Source(value.as_non_null_ptr())
             }
         }

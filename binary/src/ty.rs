@@ -6,12 +6,14 @@ use crate::item_token::TypeToken;
 
 mod class;
 mod field;
+mod generic;
 mod interface;
 mod method;
 mod r#struct;
 
 pub use class::ClassDef;
 pub use field::Field;
+pub use generic::GenericCountRequirement;
 pub use interface::{InterfaceDef, InterfaceImplementation};
 pub use method::{BinaryInstruction, ExceptionTableEntry, Method, MethodSpec, Parameter};
 pub use r#struct::StructDef;

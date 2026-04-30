@@ -1,3 +1,4 @@
+/* cSpell:disable */
 #![feature(box_vec_non_null)]
 #![feature(mapped_lock_guards)]
 #![feature(str_as_str)]
@@ -10,7 +11,6 @@
 #![feature(likely_unlikely)]
 #![feature(associated_type_defaults)]
 #![feature(decl_macro)]
-#![feature(ptr_internals)]
 #![feature(const_convert)]
 #![feature(const_clone)]
 #![feature(clone_from_ref)]
@@ -32,12 +32,9 @@
 #![feature(more_qualified_paths)]
 #![feature(try_find)]
 #![feature(impl_trait_in_bindings)]
-/* cSpell:disable-next-line */
 #![feature(exitcode_exit_method)]
 #![feature(extern_types)]
-/* cSpell:disable-next-line */
 #![feature(macro_metavar_expr_concat)]
-/* cSpell:disable-next-line */
 #![feature(macro_metavar_expr)]
 #![feature(doc_cfg)]
 #![feature(unboxed_closures)]
@@ -48,10 +45,15 @@
 #![feature(extend_one)]
 #![feature(super_let)]
 #![feature(const_range)]
+#![feature(trivial_clone)]
+#![feature(sized_hierarchy)]
+#![feature(unsize)]
+#![feature(coerce_unsized)]
+#![feature(dispatch_from_dyn)]
 #![cfg_attr(test, feature(vec_from_fn))]
 #![cfg_attr(all(unix, test), feature(cstr_display))]
 #![cfg_attr(all(unix, test), feature(c_variadic))]
-//
+/* cSpell:enable */
 #![allow(static_mut_refs)]
 #![allow(internal_features, incomplete_features)]
 #![allow(clippy::mut_from_ref)]

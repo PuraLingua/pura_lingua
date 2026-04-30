@@ -6,6 +6,7 @@ use crate::{
         assembly::Assembly,
         class::Class,
         field::Field,
+        generics::GenericCountRequirement,
         method::Method,
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
@@ -29,6 +30,7 @@ fn test_layout() {
                     global::attr!(
                         class Public {}
                     ),
+                    GenericCountRequirement::default(),
                     None,
                     Vec::new(),
                     |class| {

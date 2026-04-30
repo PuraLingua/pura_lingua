@@ -103,7 +103,7 @@ pub enum CoreTypeKind {
     Struct,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct GenericCount {
     pub count: u32,

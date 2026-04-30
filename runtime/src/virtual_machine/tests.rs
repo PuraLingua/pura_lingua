@@ -12,6 +12,7 @@ use crate::{
         assembly::Assembly,
         assembly_manager::AssemblyRef,
         field::Field,
+        generics::GenericCountRequirement,
         method::{ExceptionTable, Method},
         method_table::MethodTable,
         type_ref::TypeRef,
@@ -37,6 +38,7 @@ fn test_static() {
                         global::attr!(
                             class Public {}
                         ),
+                        GenericCountRequirement::default(),
                         Some(g_core_class!(System_Object)),
                         vec![],
                         |class| {
@@ -52,6 +54,7 @@ fn test_static() {
                                         g_core_type!(System_UInt32),
                                         g_core_type!(System_UInt16),
                                     ),
+                                    GenericCountRequirement::default(),
                                     vec![],
                                     g_core_type!(System_Void),
                                     CallConvention::PlatformDefault,

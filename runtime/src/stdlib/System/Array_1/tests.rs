@@ -7,8 +7,8 @@ use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _},
     test_utils::g_core_type,
     type_system::{
-        assembly::Assembly, method_table::MethodTable, type_handle::MaybeUnloadedTypeHandle,
-        type_ref::TypeRef,
+        assembly::Assembly, generics::GenericCountRequirement, method_table::MethodTable,
+        type_handle::MaybeUnloadedTypeHandle, type_ref::TypeRef,
     },
     virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
 };
@@ -74,6 +74,7 @@ fn array_get_set() -> global::Result<()> {
                         global::attr!(
                             class Public {}
                         ),
+                        GenericCountRequirement::default(),
                         Some(
                             global_vm()
                                 .assembly_manager()
@@ -91,7 +92,7 @@ fn array_get_set() -> global::Result<()> {
                                             method Public {Static}
                                             /* 0 */ MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
                                                 assembly_and_index: either::Either::Right(Box::new(
-                                                    g_core_type!(System_String),
+                                                    g_core_type!(System_Array_1),
                                                 )),
                                                 types: vec![g_core_type!(System_String)],
                                             }),
@@ -100,10 +101,11 @@ fn array_get_set() -> global::Result<()> {
                                             /* 3 */	g_core_type!(System_USize),
                                             /* 4 */ g_core_type!(System_Void),
                                         ),
+                                        GenericCountRequirement::default(),
                                         vec![],
                                         MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
                                             assembly_and_index: either::Either::Right(Box::new(
-                                                g_core_type!(System_String),
+                                                g_core_type!(System_Array_1),
                                             )),
                                             types: vec![g_core_type!(System_String)],
                                         }),

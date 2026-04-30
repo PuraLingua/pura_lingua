@@ -65,7 +65,7 @@ pub const fn arrayed_layout(element_layout: Layout, len: usize) -> Option<Layout
 
         // SAFETY: the maximum possible alignment is `isize::MAX + 1`,
         // so the subtraction cannot overflow.
-        unsafe { std::intrinsics::unchecked_sub(isize::MAX as usize + 1, align.as_usize()) }
+        unsafe { usize::unchecked_sub(isize::MAX as usize + 1, align.as_usize()) }
     }
 
     #[inline(always)]
@@ -90,7 +90,7 @@ pub const fn arrayed_layout(element_layout: Layout, len: usize) -> Option<Layout
     // This is a useless hint inside this function, but after inlining this helps
     // deduplicate checks for whether the overall capacity is zero (e.g., in RawVec's
     // allocation path) before/after this multiplication.
-    let array_size = unsafe { std::intrinsics::unchecked_mul(element_size, len) };
+    let array_size = unsafe { usize::unchecked_mul(element_size, len) };
 
     // SAFETY: We just checked above that the `array_size` will not
     // exceed `isize::MAX` even when rounded up to the alignment.
@@ -107,3 +107,6 @@ pub const fn get_return_layout_for_libffi(layout: Layout) -> Layout {
         layout
     }
 }
+
+mod owned_ptr;
+pub use owned_ptr::OwnedPtr;

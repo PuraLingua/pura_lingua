@@ -18,6 +18,7 @@ use crate::{
     type_system::{
         assembly::Assembly,
         class::Class,
+        generics::GenericCountRequirement,
         method::{ExceptionTable, Method},
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
@@ -44,6 +45,7 @@ fn test_call_stack() {
                         global::attr!(
                             class Public {}
                         ),
+                        GenericCountRequirement::default(),
                         Some(
                             global_vm()
                                 .assembly_manager()
@@ -64,6 +66,7 @@ fn test_call_stack() {
                                             g_core_type!(System_UInt32),
                                             g_core_type!(System_UInt16),
                                         ),
+                                        GenericCountRequirement::default(),
                                         vec![],
                                         MaybeUnloadedTypeHandle::from(
                                             CoreTypeId::System_Void.global_type_handle(),
