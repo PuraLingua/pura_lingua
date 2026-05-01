@@ -20,20 +20,20 @@ proc_macros::define_core_class! {
             CoreTypeRef::Core(CoreTypeId::System_USize), // arg 0
             CoreTypeRef::Core(CoreTypeId::System_Pointer),
             CoreTypeRef::Core(CoreTypeId::System_USize), // Size of T
-            CoreTypeRef::Generic(0),
+            CoreTypeRef::TypeGeneric(0),
         ] get_Index (
             #[{}] CoreTypeRef::Core(CoreTypeId::System_USize)
-        ) -> CoreTypeRef::Generic(0);
+        ) -> CoreTypeRef::TypeGeneric(0);
         #[
             Public {}
             CoreTypeRef::Core(CoreTypeId::System_Object), // this
             CoreTypeRef::Core(CoreTypeId::System_USize), // arg 0
-            CoreTypeRef::Generic(0), // arg 1
+            CoreTypeRef::TypeGeneric(0), // arg 1
             CoreTypeRef::Core(CoreTypeId::System_USize), // size of T
             CoreTypeRef::Core(CoreTypeId::System_Pointer), // pointer of result
         ] set_Index (
             #[{}] CoreTypeRef::Core(CoreTypeId::System_USize)
-            #[{}] CoreTypeRef::Generic(0)
+            #[{}] CoreTypeRef::TypeGeneric(0)
         ) -> CoreTypeRef::Core(CoreTypeId::System_Void);
     ] []
 }

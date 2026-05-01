@@ -249,8 +249,17 @@ pub enum Visibility {
     serde::Serialize,
     serde::Deserialize,
 )]
-#[with_type(derive = (TryFromPrimitive, IntoPrimitive, Clone, Copy, ReadFromSection,
-    WriteToSection,))]
+#[with_type(derive = (
+    TryFromPrimitive,
+    IntoPrimitive,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    ReadFromSection,
+    WriteToSection,
+    std::marker::ConstParamTy,
+))]
 #[unwrap_enum(ref, ref_mut, owned)]
 pub enum TypeSpecificAttr {
     Class(BitFlags<ClassImplementationFlags>),

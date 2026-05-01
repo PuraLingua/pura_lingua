@@ -86,7 +86,8 @@ pub enum CoreTypeId {
 pub enum CoreTypeRef {
     Core(CoreTypeId),
     WithGeneric(CoreTypeId, Vec<Self>),
-    Generic(u32),
+    MethodGeneric(u32),
+    TypeGeneric(u32),
 }
 
 impl const From<CoreTypeId> for CoreTypeRef {

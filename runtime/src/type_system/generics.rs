@@ -49,7 +49,9 @@ impl GenericCountRequirement {
                 let _ = out.write_fmt(format_args!("`-{}", range_to_inclusive.last));
             }
             Self::Exact(val) => {
-                let _ = out.write_fmt(format_args!("`{val}"));
+                if 0.ne(val) {
+                    let _ = out.write_fmt(format_args!("`{val}"));
+                }
             }
         }
     }
