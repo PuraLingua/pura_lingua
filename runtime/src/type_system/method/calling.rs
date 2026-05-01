@@ -31,6 +31,12 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             builder = builder.arg(param.get_libffi_type(self));
         }
 
+        if self.attr.allow_extra_args() {
+            builder = builder
+                .arg(/* Pointer to extra args */ Type::pointer())
+                .arg(/* extra arg length */ Type::usize());
+        }
+
         builder.into_cif()
     }
 
@@ -38,6 +44,8 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         self: &&Self,
         cpu: &&CPU,
         this: Option<&NonNull<()>>,
+        rest_arg_ptr: &mut NonNull<*mut c_void>,
+        rest_arg_len: &mut usize,
         args: &[*mut c_void],
     ) -> Vec<*mut c_void> {
         // It will be either 0 or 1
@@ -51,12 +59,14 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         }
 
         #[cfg(debug_assertions)]
-        if self.call_convention() != CallConvention::CDeclWithVararg {
+        if (self.call_convention() != CallConvention::CDeclWithVararg)
+            && (!self.attr.allow_extra_args())
+        {
             assert_eq!(args.len(), self.args.len());
         }
 
-        for (ind, a) in args.iter().enumerate() {
-            if !self.args[ind].attr.is_by_ref() {
+        for (ind, param) in self.args.iter().enumerate() {
+            if !param.attr.is_by_ref() {
                 // let layout = self.args[ind].get_layout(self);
                 // if layout.size() == 0 {
                 //     complete_arg.push(NonNull::dangling().as_ptr());
@@ -73,10 +83,21 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
                 //         ptr.cast::<u8>().copy_from(a.cast(), layout.size());
                 //     }
                 // }
-                complete_arg.push(*a);
+                complete_arg.push(args[ind]);
             } else {
-                complete_arg.push((&raw const *a).cast_mut().cast());
+                complete_arg.push((&raw const args[ind]).cast_mut().cast());
             }
+        }
+
+        if self.attr.allow_extra_args() {
+            *rest_arg_len = args.len() - self.args.len();
+            *rest_arg_ptr = if (*rest_arg_len) == 0 {
+                NonNull::dangling()
+            } else {
+                NonNull::from_ref(unsafe { args.get_unchecked(self.args.len()) })
+            };
+            complete_arg.push((&raw mut *rest_arg_ptr).cast());
+            complete_arg.push((&raw mut *rest_arg_len).cast());
         }
 
         complete_arg
@@ -106,7 +127,16 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         cpu.push_call_stack_native(self);
         let cif = self.get_cif();
 
-        let mut args = self.handle_args(&&*cpu, this.as_ref(), args);
+        let mut rest_arg_ptr = NonNull::dangling();
+        let mut rest_arg_len = 0;
+
+        let mut args = self.handle_args(
+            &&*cpu,
+            this.as_ref(),
+            &mut rest_arg_ptr,
+            &mut rest_arg_len,
+            args,
+        );
 
         let mut ret_layout = self.get_return_type().val_layout();
         if ret_layout.size() < size_of::<usize>() {

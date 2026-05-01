@@ -23,6 +23,7 @@ members = [
 	"c_definitions",
 	"c_basic",
 	"native_exports/runtime",
+	"dynamic_format",
 ]
 
 [lib]
@@ -40,6 +41,7 @@ runtime = { path = "./runtime", package = "pura_lingua_runtime", optional = true
 global = { package = "pura_lingua_global", path = "./global" }
 global_proc_macros = { package = "pura_lingua_proc_macros", path = "./global_proc_macros" }
 
+dynamic_format = { package = "pura_lingua_dynamic_format", path = "./dynamic_format" }
 c_definitions = { package = "pura_lingua_c_definitions", path = "./c_definitions" }
 
 string_name = { package = "pura_lingua_string_name", path = "./string_name" }

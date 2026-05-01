@@ -1,0 +1,6 @@
+[package]
+name = "pura_lingua_dynamic_format"
+edition = "2024"
+version.workspace = true
+
+[dependencies]

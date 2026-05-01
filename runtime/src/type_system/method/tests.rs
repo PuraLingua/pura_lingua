@@ -478,3 +478,149 @@ fn test_interface_from_binary() {
         MainResult::Void
     );
 }
+
+#[test]
+fn test_extra_args() {
+    extern "system" fn Println(
+        cpu: &CPU,
+        method: &Method<Class>,
+        val: ManagedReference<Class>,
+        extra_arg_ptr: NonNull<*mut c_void>,
+        extra_arg_len: usize,
+    ) {
+        let val = val.access::<StringAccessor>().unwrap().get_str().unwrap();
+        let extra_args: &mut [*mut c_void] =
+            unsafe { std::slice::from_raw_parts_mut(extra_arg_ptr.as_ptr(), extra_arg_len) };
+
+        for extra_arg in extra_args.iter().copied() {
+            let arg = unsafe { extra_arg.cast::<ManagedReference<Class>>().read() };
+            let arg = arg.access::<StringAccessor>().unwrap().get_str().unwrap();
+            println!("Extra arg: {}", arg.display());
+        }
+    }
+
+    let assembly = crate::test_utils::new_global_assembly("Test", |assembly| {
+        vec![
+            Class::new(
+                assembly,
+                "Test::Main".to_owned(),
+                global::attr!(class Public {}),
+                GenericCountRequirement::default(),
+                Some(g_core_class!(System_Object)),
+                vec![],
+                MethodTable::wrap_as_method_generator(|mt| {
+                    vec![
+                        Method::new(
+                            mt,
+                            "Main".to_owned(),
+                            global::attr!(
+                                method Public {Static}
+                                g_core_type!(System_String),
+                                g_core_type!(System_String),
+                                g_core_type!(System_String),
+                                g_core_type!(System_Void),
+                            ),
+                            GenericCountRequirement::default(),
+                            vec![],
+                            g_core_type!(System_Void),
+                            Default::default(),
+                            None,
+                            vec![
+                                Instruction::SLoad(Instruction_Load {
+                                    addr: ShortRegisterAddr::new(0),
+                                    content: LoadContent::String("FORMAT".to_owned()),
+                                }),
+                                Instruction::SLoad(Instruction_Load {
+                                    addr: ShortRegisterAddr::new(1),
+                                    content: LoadContent::String("ARG1".to_owned()),
+                                }),
+                                Instruction::SLoad(Instruction_Load {
+                                    addr: ShortRegisterAddr::new(2),
+                                    content: LoadContent::String("ARG2".to_owned()),
+                                }),
+                                // Call no extra
+                                Instruction::SCall(Instruction_Call::StaticCall {
+                                    ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
+                                        assembly: AssemblyRef::Name(string_name!("Test")),
+                                        ind: 0,
+                                    }),
+                                    method: MethodRef::Index(
+                                        stdlib_header::System::Object::MethodId::__END as u32 + 1,
+                                    ),
+                                    args: vec![ShortRegisterAddr::new(0)],
+                                    ret_at: ShortRegisterAddr::new(3),
+                                }),
+                                // Call 1 extra
+                                Instruction::SCall(Instruction_Call::StaticCall {
+                                    ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
+                                        assembly: AssemblyRef::Name(string_name!("Test")),
+                                        ind: 0,
+                                    }),
+                                    method: MethodRef::Index(
+                                        stdlib_header::System::Object::MethodId::__END as u32 + 1,
+                                    ),
+                                    args: vec![
+                                        ShortRegisterAddr::new(0),
+                                        ShortRegisterAddr::new(1),
+                                    ],
+                                    ret_at: ShortRegisterAddr::new(3),
+                                }),
+                                // Call 2 extra
+                                Instruction::SCall(Instruction_Call::StaticCall {
+                                    ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
+                                        assembly: AssemblyRef::Name(string_name!("Test")),
+                                        ind: 0,
+                                    }),
+                                    method: MethodRef::Index(
+                                        stdlib_header::System::Object::MethodId::__END as u32 + 1,
+                                    ),
+                                    args: vec![
+                                        ShortRegisterAddr::new(0),
+                                        ShortRegisterAddr::new(1),
+                                        ShortRegisterAddr::new(2),
+                                    ],
+                                    ret_at: ShortRegisterAddr::new(3),
+                                }),
+                            ],
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::native(
+                            Some(mt),
+                            "Println".to_owned(),
+                            global::attr!(method Public {Static AllowExtraArgs}),
+                            GenericCountRequirement::default(),
+                            vec![Parameter::new(
+                                g_core_type!(System_String),
+                                global::attr!(parameter {}),
+                            )],
+                            g_core_type!(System_Void),
+                            Default::default(),
+                            None,
+                            Println as _,
+                            ExceptionTable::gen_new(),
+                        ),
+                        Method::default_sctor(Some(mt), global::attr!(method Public {Static})),
+                    ]
+                }),
+                vec![],
+                None,
+                vec![],
+                None,
+            )
+            .into(),
+        ]
+    });
+
+    let main_class = assembly.get_class(0).unwrap().unwrap();
+    let mut main_class = *main_class;
+    unsafe {
+        *main_class.as_mut().main_mut() =
+            Some(stdlib_header::System::Object::MethodId::__END as u32);
+    }
+
+    let mut cpu = CpuID::new_write_global();
+    assert_eq!(
+        cpu.invoke_main_class(unsafe { main_class.as_ref() }, vec![]),
+        MainResult::Void
+    );
+}

@@ -46,7 +46,7 @@ impl FieldAttr {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MethodImplementationFlags {
     Static,
-    ImplementedByRuntime,
+    AllowExtraArgs,
     HideWhenCapturing,
 }
 
@@ -130,6 +130,10 @@ impl<TType> MethodAttr<TType> {
     pub fn is_static(&self) -> bool {
         self.impl_flags()
             .contains(MethodImplementationFlags::Static)
+    }
+    pub fn allow_extra_args(&self) -> bool {
+        self.impl_flags()
+            .contains(MethodImplementationFlags::AllowExtraArgs)
     }
     pub fn map_types<_TType, F>(self, f: F) -> MethodAttr<_TType>
     where
