@@ -68,6 +68,7 @@ string-interner = "0.19.0"
 sealed = "0.6"
 indexmap = { version = "2.13" }
 anyhow = { version = "1.0.98", features = ["backtrace"] }
+thiserror = "2.0.12"
 
 [features]
 default = []
