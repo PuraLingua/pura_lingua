@@ -1,6 +1,6 @@
 use either::Either;
 
-use crate::type_system::type_handle::MaybeUnloadedTypeHandle;
+use crate::type_system::type_handle::{IGenericResolver, MaybeUnloadedTypeHandle};
 
 use super::{
     assembly_manager::{AssemblyManager, AssemblyRef},
@@ -20,7 +20,11 @@ pub enum TypeRef {
 }
 
 impl TypeRef {
-    pub fn load(&self, assembly_manager: &AssemblyManager) -> Option<TypeHandle> {
+    pub fn load_with_generic_resolver<TResolver: IGenericResolver>(
+        &self,
+        assembly_manager: &AssemblyManager,
+        resolver: &TResolver,
+    ) -> Option<TypeHandle> {
         match self {
             TypeRef::Index { assembly, ind } => {
                 let assembly = assembly_manager.get_assembly_by_ref(assembly).unwrap()?;
@@ -33,20 +37,29 @@ impl TypeRef {
             TypeRef::Specific {
                 assembly_and_index,
                 types,
-            } => match assembly_and_index {
-                Either::Left((assembly, ind)) => {
-                    let assembly = assembly_manager.get_assembly_by_ref(assembly).unwrap()?;
-                    let ty = assembly.get_type_handle(*ind).unwrap()?;
-                    Some(ty.instantiate(types).into())
-                }
-                Either::Right(mth) => {
-                    mth.load(assembly_manager)
+            } => {
+                let type_vars: Vec<_> = types
+                    .iter()
+                    .map(|x| {
+                        x.load_with_generic_resolver(assembly_manager, resolver)
+                            .and_then(|x| x.get_non_generic_with_generic_resolver(resolver))
+                    })
+                    .try_collect()?;
+
+                match assembly_and_index {
+                    Either::Left((assembly, ind)) => {
+                        let assembly = assembly_manager.get_assembly_by_ref(assembly).unwrap()?;
+                        let ty = assembly.get_type_handle(*ind).unwrap()?;
+                        Some(ty.instantiate(&type_vars).into())
+                    }
+                    Either::Right(mth) => mth
+                        .load_with_generic_resolver(assembly_manager, resolver)
                         .map(|x| match x.as_non_generic() {
                             None => x,
-                            Some(x) => x.instantiate(types).into(),
-                        })
+                            Some(x) => x.instantiate(&type_vars).into(),
+                        }),
                 }
-            },
+            }
         }
     }
 }

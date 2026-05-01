@@ -22,7 +22,7 @@ use crate::{
         field::Field,
         generics::{GenericBounds, GenericCountRequirement},
         method_table::MethodTable,
-        type_handle::MaybeUnloadedTypeHandle,
+        type_handle::NonGenericTypeHandle,
     },
 };
 
@@ -45,7 +45,7 @@ pub struct Struct {
 
     generic_instances: Vec<NonNull<Struct>>,
     generic_bounds: Option<NonNull<[GenericBounds]>>,
-    type_vars: Option<Box<[MaybeUnloadedTypeHandle]>>,
+    type_vars: Option<Box<[NonGenericTypeHandle]>>,
 }
 
 impl Struct {
@@ -99,7 +99,7 @@ impl Struct {
         OwnedPtr::from_non_null(this)
     }
 
-    pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
+    pub fn instantiate(&self, type_vars: &[NonGenericTypeHandle]) -> NonNull<Self> {
         assert!(
             self.generic_count_requirement
                 .contains(&(type_vars.len() as u32))
@@ -137,7 +137,7 @@ impl Struct {
                         Field::new(
                             index.to_string(),
                             global::attr!(field Public {}),
-                            ty.clone(),
+                            (*ty).into(),
                         )
                     })
                     .collect(),

@@ -6,7 +6,7 @@ use crate::{
         class::Class,
         get_traits::GetValLayout,
         method_table::MethodTable,
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandleKind, TypeHandle},
+        type_handle::{NonGenericTypeHandle, NonGenericTypeHandleKind},
     },
     value::{managed_reference::ManagedReferenceInner, object_header::ObjectHeader},
     virtual_machine::cpu::{CPU, MemoryRecord},
@@ -17,7 +17,7 @@ use super::{IAccessor, ManagedReference};
 impl ManagedReference<Class> {
     pub fn alloc_array<T>(cpu: &mut CPU, element_type: NonNull<MethodTable<T>>, len: usize) -> Self
     where
-        TypeHandle: From<NonNull<T>>,
+        NonGenericTypeHandle: From<NonNull<T>>,
         T: GetValLayout,
     {
         let array_t = cpu
@@ -27,10 +27,9 @@ impl ManagedReference<Class> {
             .unwrap_class();
 
         let array_t = unsafe { array_t.as_ref() };
-        let instantiated_array_t =
-            array_t.instantiate(&[MaybeUnloadedTypeHandle::Loaded(unsafe {
-                TypeHandle::from(NonNull::from_ref(element_type.as_ref().ty_ref()))
-            })]);
+        let instantiated_array_t = array_t.instantiate(&[NonGenericTypeHandle::from(
+            NonNull::from_ref(unsafe { element_type.as_ref() }.ty_ref()),
+        )]);
 
         let mut layout = Layout::new::<usize>();
         let element_layout = unsafe { element_type.as_ref().ty_ref().__get_val_layout() };
@@ -69,7 +68,7 @@ impl ManagedReference<Class> {
         slice: Box<[T]>,
     ) -> Self
     where
-        TypeHandle: From<NonNull<TType>>,
+        NonGenericTypeHandle: From<NonNull<TType>>,
         TType: GetValLayout,
     {
         let array_t = cpu
@@ -79,10 +78,9 @@ impl ManagedReference<Class> {
             .unwrap_class();
 
         let array_t = unsafe { array_t.as_ref() };
-        let instantiated_array_t =
-            array_t.instantiate(&[MaybeUnloadedTypeHandle::Loaded(unsafe {
-                TypeHandle::from(NonNull::from_ref(element_type.as_ref().ty_ref()))
-            })]);
+        let instantiated_array_t = array_t.instantiate(&[NonGenericTypeHandle::from(
+            NonNull::from_ref(unsafe { element_type.as_ref() }.ty_ref()),
+        )]);
 
         let mut layout = Layout::new::<usize>();
         let element_layout = unsafe { element_type.as_ref().ty_ref().__get_val_layout() };
@@ -181,7 +179,7 @@ impl ArrayAccessor {
     /// * The type must exist.
     fn can_get_element_type_handle(&self) -> bool {
         #[allow(clippy::borrowed_box)]
-        const fn non_empty(x: &Box<[MaybeUnloadedTypeHandle]>) -> bool {
+        const fn non_empty(x: &Box<[NonGenericTypeHandle]>) -> bool {
             !x.is_empty()
         }
         (!self.0.is_null())
@@ -200,16 +198,15 @@ impl ArrayAccessor {
     ///   * The type must exist.
     ///
     ///   (i.e. [`Self::can_get_element_type_handle`] returns true)
-    pub unsafe fn element_type_handle_unchecked(&self) -> TypeHandle {
+    pub unsafe fn element_type_handle_unchecked(&self) -> NonGenericTypeHandle {
         debug_assert!(self.can_get_element_type_handle());
         unsafe {
             let mt = self.0.method_table_ref_unchecked();
             let type_vars = mt.ty_ref().type_vars().as_ref().unwrap_unchecked();
-            let t = type_vars.get_unchecked(0);
-            t.load(mt.ty_ref().assembly_ref().manager_ref()).unwrap()
+            *type_vars.get_unchecked(0)
         }
     }
-    pub fn element_type_handle(&self) -> Option<TypeHandle> {
+    pub fn element_type_handle(&self) -> Option<NonGenericTypeHandle> {
         if self.can_get_element_type_handle() {
             unsafe { Some(self.element_type_handle_unchecked()) }
         } else {
@@ -218,11 +215,7 @@ impl ArrayAccessor {
     }
 
     pub fn element_layout(&self) -> Option<Layout> {
-        self.element_type_handle().map(|th| {
-            th.get_non_generic_with_type(unsafe { self.0.method_table_ref_unchecked().ty_ref() })
-                .unwrap()
-                .val_layout()
-        })
+        self.element_type_handle().map(|th| th.val_layout())
     }
 
     fn check_element_layout<T>(&self) {

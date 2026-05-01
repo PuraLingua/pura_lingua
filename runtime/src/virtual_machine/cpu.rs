@@ -6,7 +6,6 @@ use crate::{
         class::Class,
         get_traits::{GetAssemblyRef, GetNonGenericTypeHandleKind, GetTypeVars},
         method::{Method, MethodRef},
-        type_handle::{MaybeUnloadedTypeHandle, TypeHandle},
     },
     value::managed_reference::{ArrayAccessor, FieldAccessor, ManagedReference},
 };
@@ -227,11 +226,8 @@ impl CPU {
 
                 unsafe {
                     if !ty.as_ref().type_vars().as_deref().is_some_and(|x| {
-                        x.get(0).is_some_and(|x| {
-                            x.load(self.vm_ref().assembly_manager())
-                                .and_then(|x| x.get_non_generic_with_type(ty.as_ref()))
-                                .is_some_and(|x| x.is_certain_core_type(CoreTypeId::System_Array_1))
-                        })
+                        x.get(0)
+                            .is_some_and(|x| x.is_certain_core_type(CoreTypeId::System_Array_1))
                     }) {
                         dt_println!(
                             "Main's first argument should be of type System::Array`1[System::String]"
@@ -323,14 +319,10 @@ impl CPU {
 impl CPU {
     pub fn new_object(
         &mut self,
-        ty: &MaybeUnloadedTypeHandle,
+        class: NonNull<Class>,
         ctor_name: &MethodRef,
         args: &[*mut c_void],
     ) -> Option<ManagedReference<Class>> {
-        let Some(TypeHandle::Class(class)) = ty.load(self.vm_ref().assembly_manager()) else {
-            return None;
-        };
-
         let class_ref = unsafe { class.as_ref() };
         let mt = class_ref.method_table_ref();
 

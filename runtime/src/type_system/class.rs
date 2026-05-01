@@ -14,7 +14,9 @@ use crate::memory::{GetFieldOffsetOptions, OwnedPtr};
 use crate::type_system::assembly_manager::AssemblyManager;
 use crate::type_system::generics::GenericCountRequirement;
 use crate::type_system::interface::InterfaceImplementation;
-use crate::type_system::type_handle::IGenericResolver;
+use crate::type_system::type_handle::{
+    GenericUnresolvable, IGenericResolver, NonGenericTypeHandle,
+};
 use crate::type_system::{
     assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
     type_handle::MaybeUnloadedTypeHandle,
@@ -35,12 +37,12 @@ impl LoadedClassParent {
     fn instantiate(
         &self,
         assembly_manager: &AssemblyManager,
-        type_vars: &[MaybeUnloadedTypeHandle],
+        type_vars: &[NonGenericTypeHandle],
     ) -> Self {
-        struct Resolver<'a, 'b>(&'a [MaybeUnloadedTypeHandle], &'b AssemblyManager);
-        impl<'a, 'b> IGenericResolver for Resolver<'a, 'b> {
+        struct Resolver<'a>(&'a [NonGenericTypeHandle]);
+        impl<'a> IGenericResolver for Resolver<'a> {
             fn resolve_type_generic(&self, g_index: u32) -> Option<super::type_handle::TypeHandle> {
-                self.0[g_index as usize].load(self.1)
+                self.0.get(g_index as usize).copied().map(From::from)
             }
             fn resolve_method_generic(&self, _: u32) -> Option<super::type_handle::TypeHandle> {
                 None
@@ -52,15 +54,11 @@ impl LoadedClassParent {
                 let generics = generics
                     .iter()
                     .map(|x| {
-                        x.load(assembly_manager)
+                        x.load_with_generic_resolver(assembly_manager, &GenericUnresolvable)
                             .map(|x| {
-                                x.get_non_generic_with_generic_resolver(&Resolver(
-                                    type_vars,
-                                    assembly_manager,
-                                ))
-                                .unwrap()
+                                x.get_non_generic_with_generic_resolver(&Resolver(type_vars))
+                                    .unwrap()
                             })
-                            .map(MaybeUnloadedTypeHandle::from)
                     })
                     .try_collect::<Box<[_]>>()
                     .unwrap();
@@ -122,7 +120,7 @@ pub struct Class {
 
     generic_instances: Vec<NonNull<Class>>,
     generic_bounds: Option<NonNull<[GenericBounds]>>,
-    type_vars: Option<Box<[MaybeUnloadedTypeHandle]>>,
+    type_vars: Option<Box<[NonGenericTypeHandle]>>,
 
     implemented_interfaces: Vec<InterfaceImplementation>,
 
@@ -142,7 +140,7 @@ impl Class {
 }
 
 impl Class {
-    pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
+    pub fn instantiate(&self, type_vars: &[NonGenericTypeHandle]) -> NonNull<Self> {
         assert_matches!(self.load_state, TypeLoadState::Finished);
         assert!(
             self.generic_count_requirement

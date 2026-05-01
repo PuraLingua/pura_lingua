@@ -11,7 +11,9 @@ use enumflags2::BitFlags;
 use crate::{
     memory::{GetFieldOffsetOptions, GetLayoutOptions, OwnedPtr},
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
-    type_system::{class::Class, method::Method, r#struct::Struct},
+    type_system::{
+        class::Class, method::Method, r#struct::Struct, type_handle::TypeGenericResolver,
+    },
 };
 
 use super::{
@@ -102,21 +104,38 @@ impl<T> MethodTable<T> {
             .map(|x| x as u32)
     }
 
-    pub fn get_method_by_ref(&self, r: &MethodRef) -> Option<NonNull<Method<T>>> {
-        match r {
-            MethodRef::Index(i) => self.get_method(*i).map(|x| *x),
-            MethodRef::Specific { index, types } => self
-                .get_method(*index)
-                .map(|x| unsafe { x.as_ref().instantiate(types) }),
-        }
-    }
-
     pub fn get_static_constructor(&self) -> MappedRwLockReadGuard<'_, NonNull<Method<T>>>
     where
         T: GetStaticConstructorId,
     {
         self.get_method(self.ty_ref().__get_static_constructor_id())
             .unwrap()
+    }
+}
+
+impl<T> MethodTable<T>
+where
+    T: GetTypeVars + GetAssemblyRef,
+{
+    pub fn get_method_by_ref(&self, r: &MethodRef) -> Option<NonNull<Method<T>>> {
+        match r {
+            MethodRef::Index(i) => self.get_method(*i).map(|x| *x),
+            MethodRef::Specific { index, types } => {
+                let type_vars: Vec<_> = types
+                    .iter()
+                    .map(|x| {
+                        x.load_with_generic_resolver(
+                            self.ty_ref().__get_assembly_ref().manager_ref(),
+                            TypeGenericResolver::new(self.ty_ref()),
+                        )
+                        .and_then(|x| x.get_non_generic_with_type(self.ty_ref()))
+                    })
+                    .try_collect()?;
+
+                self.get_method(*index)
+                    .map(|x| unsafe { (*x).as_ref() }.instantiate(&type_vars))
+            }
+        }
     }
 }
 

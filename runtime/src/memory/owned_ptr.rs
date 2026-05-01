@@ -74,11 +74,7 @@ impl<T: Sized> OwnedPtr<T> {
     #[must_use]
     #[inline]
     pub const fn dangling() -> Self {
-        // FIXME(const-hack) replace with `From`
-        OwnedPtr {
-            pointer: NonNull::dangling(),
-            _marker: PhantomData,
-        }
+        NonNull::dangling().into()
     }
 }
 
@@ -165,12 +161,8 @@ impl<T: PointeeSized> OwnedPtr<T> {
     #[must_use = "`self` will be dropped if the result is not used"]
     #[inline]
     pub const fn cast<U>(self) -> OwnedPtr<U> {
-        // FIXME(const-hack): replace with `From`
         // SAFETY: is `NonNull`
-        OwnedPtr {
-            pointer: self.pointer.cast(),
-            _marker: PhantomData,
-        }
+        self.pointer.cast().into()
     }
 }
 

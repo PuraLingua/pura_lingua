@@ -18,7 +18,7 @@ use crate::{
         generics::{GenericBounds, GenericCountRequirement},
         method::Method,
         method_table::MethodTable,
-        type_handle::MaybeUnloadedTypeHandle,
+        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
     value::managed_reference::ManagedReference,
 };
@@ -42,11 +42,11 @@ pub struct Interface {
 
     generic_instances: Vec<NonNull<Self>>,
     generic_bounds: Option<NonNull<[GenericBounds]>>,
-    type_vars: Option<Box<[MaybeUnloadedTypeHandle]>>,
+    type_vars: Option<Box<[NonGenericTypeHandle]>>,
 }
 
 impl Interface {
-    pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
+    pub fn instantiate(&self, type_vars: &[NonGenericTypeHandle]) -> NonNull<Self> {
         for has_instantiated in self.generic_instances.iter() {
             if unsafe { has_instantiated.as_ref() }
                 .type_vars

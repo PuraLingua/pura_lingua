@@ -14,7 +14,7 @@ use crate::type_system::{
     method::{ExceptionTable, ExceptionTableEntry, Method, MethodRef, Parameter},
     method_table::MethodTable,
     r#struct::Struct,
-    type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle, TypeHandle},
+    type_handle::{GenericUnresolvable, MaybeUnloadedTypeHandle, NonGenericTypeHandle, TypeHandle},
     type_ref::TypeRef,
 };
 
@@ -82,7 +82,7 @@ impl AssemblyManager {
                                             .ok_or(binary::binary_core::Error::UnknownType(ind))?
                                     }
                                     Either::Right(x) => x
-                                        .load(self)
+                                        .load_with_generic_resolver(self, &GenericUnresolvable)
                                         .unwrap()
                                         .into_non_generic()
                                         .unwrap()

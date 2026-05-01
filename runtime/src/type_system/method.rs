@@ -12,7 +12,7 @@ use crate::{
     type_system::{
         generics::{GenericBounds, GenericCountRequirement},
         method_table::MethodTable,
-        type_handle::MaybeUnloadedTypeHandle,
+        type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver},
     },
     virtual_machine::cpu::CPU,
 };
@@ -48,7 +48,7 @@ pub struct Method<T> {
 
     generic_instances: Vec<NonNull<Self>>,
     generic_bounds: Option<NonNull<[GenericBounds]>>,
-    type_vars: Option<Box<[MaybeUnloadedTypeHandle]>>,
+    type_vars: Option<Box<[NonGenericTypeHandle]>>,
 
     instructions: Vec<RuntimeInstruction>,
     entry_point: CodePtr,
@@ -236,7 +236,7 @@ impl<T> Method<T> {
 }
 
 impl<T> Method<T> {
-    pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> NonNull<Self> {
+    pub fn instantiate(&self, type_vars: &[NonGenericTypeHandle]) -> NonNull<Self> {
         assert!(
             self.generic_count_requirement
                 .contains(&(type_vars.len() as u32))
@@ -306,14 +306,17 @@ impl<T: GetTypeVars + GetAssemblyRef> Method<T> {
             MaybeUnloadedTypeHandle::Unloaded(_) => {
                 let ty = self
                     .return_type
-                    .load(unsafe {
-                        self.mt
-                            .unwrap()
-                            .as_ref()
-                            .ty_ref()
-                            .__get_assembly_ref()
-                            .manager_ref()
-                    })
+                    .load_with_generic_resolver(
+                        unsafe {
+                            self.mt
+                                .unwrap()
+                                .as_ref()
+                                .ty_ref()
+                                .__get_assembly_ref()
+                                .manager_ref()
+                        },
+                        MethodGenericResolver::new(self),
+                    )
                     .unwrap();
                 // Hacking
                 unsafe {

@@ -14,7 +14,7 @@ use crate::{
         interface::Interface,
         method::{Method, MethodDisplayOptions},
         r#struct::Struct,
-        type_handle::{NonGenericTypeHandle, NonGenericTypeHandleKind},
+        type_handle::{MethodGenericResolver, NonGenericTypeHandle, NonGenericTypeHandleKind},
     },
     value::managed_reference::ManagedReference,
     virtual_machine::cpu::NonPurusCallArg,
@@ -394,7 +394,10 @@ impl CommonCallStackFrame {
 
         for ty in types {
             let ty = ty
-                .load(ty_ref.__get_assembly_ref().manager_ref())
+                .load_with_generic_resolver(
+                    ty_ref.__get_assembly_ref().manager_ref(),
+                    MethodGenericResolver::new(method),
+                )
                 .unwrap()
                 .get_non_generic_with_method(method)
                 .unwrap();

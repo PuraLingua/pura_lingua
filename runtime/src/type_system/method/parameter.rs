@@ -7,7 +7,7 @@ use crate::{
     stdlib::CoreTypeIdConstExt,
     type_system::{
         get_traits::{GetAssemblyRef, GetTypeVars},
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle},
     },
 };
 
@@ -39,7 +39,7 @@ impl Parameter {
             MaybeUnloadedTypeHandle::Unloaded(_) => {
                 let ty = unsafe {
                     self.ty
-                        .load(
+                        .load_with_generic_resolver(
                             method
                                 .mt
                                 .unwrap()
@@ -47,6 +47,7 @@ impl Parameter {
                                 .ty_ref()
                                 .__get_assembly_ref()
                                 .manager_ref(),
+                            MethodGenericResolver::new(method),
                         )
                         .unwrap()
                 };

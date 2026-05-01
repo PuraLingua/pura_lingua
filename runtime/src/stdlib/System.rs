@@ -241,7 +241,6 @@ pub fn define_class(
             kind,
             attr,
             name,
-            // TODO: impl it
             generic_count,
             parent,
             parent_generics,
@@ -350,7 +349,6 @@ pub fn define_interface(
             kind,
             attr,
             name,
-            // TODO: impl it
             generic_count,
             parent,
             parent_generics,

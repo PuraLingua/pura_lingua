@@ -5,7 +5,8 @@ use global::{attrs::FieldAttr, getset::Getters, non_purus_call_configuration::No
 use crate::{
     memory::GetLayoutOptions,
     type_system::type_handle::{
-        IGenericResolver, MaybeUnloadedTypeHandle, TypeGenericResolver, TypeHandle,
+        GenericUnresolvable, IGenericResolver, MaybeUnloadedTypeHandle, TypeGenericResolver,
+        TypeHandle,
     },
 };
 
@@ -62,9 +63,11 @@ impl Field {
     }
 
     fn load_type(&self, manager: &AssemblyManager) -> Option<TypeHandle> {
-        self.ty.load(manager).inspect(|ty| unsafe {
-            NonNull::from_ref(self).as_mut().ty = MaybeUnloadedTypeHandle::Loaded(*ty);
-        })
+        self.ty
+            .load_with_generic_resolver(manager, &GenericUnresolvable)
+            .inspect(|ty| unsafe {
+                NonNull::from_ref(self).as_mut().ty = MaybeUnloadedTypeHandle::Loaded(*ty);
+            })
     }
 
     fn get_type_with_generic_resolver<TResolver: IGenericResolver>(
@@ -144,7 +147,7 @@ impl Field {
 
         while let TypeHandle::TypeGeneric(g_index) = th {
             if let Some(t) = type_vars.get(g_index as usize) {
-                th = t.load(ty.__get_assembly_ref().manager_ref()).unwrap();
+                th = (*t).into();
             } else {
                 break; // It leads to panicking at the unwrap method
             }
@@ -172,8 +175,8 @@ impl Field {
         };
 
         while let TypeHandle::TypeGeneric(g_index) = th {
-            if let Some(t) = type_vars.get(g_index as usize) {
-                th = t.load(ty.__get_assembly_ref().manager_ref()).unwrap();
+            if let Some(&t) = type_vars.get(g_index as usize) {
+                th = t.into();
             } else {
                 break; // It leads to panicking at the unwrap method
             }

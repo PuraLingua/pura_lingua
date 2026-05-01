@@ -7,7 +7,8 @@ use crate::type_system::{
     get_traits::{GetAssemblyRef, GetTypeVars},
     method::{Method, MethodRef},
     type_handle::{
-        MaybeUnloadedTypeHandle, NonGenericTypeHandle, NonGenericTypeHandleKind, TypeHandle,
+        MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle,
+        NonGenericTypeHandleKind, TypeHandle,
     },
 };
 
@@ -248,12 +249,13 @@ impl ExceptionTableEntry {
         if let Some(cache) = *exception_type_cache {
             return Some(cache);
         }
-        let ty = self.exception_type.load(
+        let ty = self.exception_type.load_with_generic_resolver(
             method
                 .require_method_table_ref()
                 .ty_ref()
                 .__get_assembly_ref()
                 .manager_ref(),
+            MethodGenericResolver::new(method),
         )?;
         if let TypeHandle::Class(cl) = ty {
             *exception_type_cache = Some(cl);
@@ -273,12 +275,13 @@ impl ExceptionTableEntry {
             if let Some(cache) = *cache {
                 return Some(cache);
             }
-            let ty = ty.load(
+            let ty = ty.load_with_generic_resolver(
                 method
                     .require_method_table_ref()
                     .ty_ref()
                     .__get_assembly_ref()
                     .manager_ref(),
+                MethodGenericResolver::new(method),
             )?;
             match ty.get_non_generic_with_method(method).unwrap() {
                 NonGenericTypeHandle::Class(cl) => {

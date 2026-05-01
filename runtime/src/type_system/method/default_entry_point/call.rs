@@ -10,7 +10,7 @@ use crate::{
             Method, MethodRef,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle},
     },
     value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
@@ -82,9 +82,11 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             ret_at,
         } => {
             let Some(ty) = ty
-                .load(cpu.vm_ref().assembly_manager())
-                .map(|x| x.get_non_generic_with_method(method))
-                .flatten()
+                .load_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
+                .and_then(|x| x.get_non_generic_with_method(method))
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
             };
@@ -143,15 +145,15 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             ret_at,
         } => {
             let Some(interface) = interface
-                .load(
+                .load_with_generic_resolver(
                     method
                         .require_method_table_ref()
                         .ty_ref()
                         .__get_assembly_ref()
                         .manager_ref(),
+                    MethodGenericResolver::new(method),
                 )
-                .map(|x| x.get_non_generic_with_method(method))
-                .flatten()
+                .and_then(|x| x.get_non_generic_with_method(method))
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(interface.clone())));
             };
@@ -172,12 +174,13 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                     .try_find(|x| {
                         let Some(target) = x
                             .target
-                            .load(
+                            .load_with_generic_resolver(
                                 method
                                     .require_method_table_ref()
                                     .ty_ref()
                                     .__get_assembly_ref()
                                     .manager_ref(),
+                                MethodGenericResolver::new(method),
                             )
                             .map(|x| x.get_non_generic_with_method(method))
                             .flatten()

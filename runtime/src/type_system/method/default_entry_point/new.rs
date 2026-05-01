@@ -10,7 +10,7 @@ use crate::{
             Method, MethodRef,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle},
     },
     value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
@@ -45,7 +45,25 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 })
                 .collect::<Vec<_>>();
 
-            match cpu.new_object(ty, ctor_name, &args) {
+            let Some(class) = ty
+                .load_with_generic_resolver(
+                    method
+                        .require_method_table_ref()
+                        .ty_ref()
+                        .__get_assembly_ref()
+                        .manager_ref(),
+                    MethodGenericResolver::new(method),
+                )
+                .and_then(|x| x.get_non_generic_with_method(method))
+                .and_then(|x| match x {
+                    NonGenericTypeHandle::Class(c) => Some(c),
+                    _ => None,
+                })
+            else {
+                return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
+            };
+
+            match cpu.new_object(class, ctor_name, &args) {
                 Some(obj) => {
                     if !call_frame(cpu).write_typed(*output, obj) {
                         load_register_failed!(*output);
@@ -62,7 +80,10 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             output,
         } => {
             let Some(element_th) = element_type
-                .load(cpu.vm_ref().assembly_manager())
+                .load_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
                 .and_then(|th| th.get_non_generic_with_method(method))
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
@@ -91,7 +112,10 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 load_register_failed!(*len_addr);
             };
             let Some(element_th) = element_type
-                .load(cpu.vm_ref().assembly_manager())
+                .load_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
                 .and_then(|th| th.get_non_generic_with_method(method))
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));

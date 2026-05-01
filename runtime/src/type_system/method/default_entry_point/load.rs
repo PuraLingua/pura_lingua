@@ -10,7 +10,7 @@ use crate::{
             Method,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle},
     },
     value::managed_reference::{FieldAccessor, ManagedReference},
     virtual_machine::cpu::CPU,
@@ -105,7 +105,10 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
 
         LoadContent::TypeValueSize(ty) => {
             let Some(ty) = ty
-                .load(cpu.vm_ref().assembly_manager())
+                .load_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
                 .and_then(|ty| ty.get_non_generic_with_method(method))
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
@@ -167,7 +170,10 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
 
         LoadContent::Static { ty, field } => {
             let Some(ty) = ty
-                .load(cpu.vm_ref().assembly_manager())
+                .load_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
                 .map(|x| x.get_non_generic_with_method(method))
                 .flatten()
             else {

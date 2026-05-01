@@ -33,7 +33,7 @@ pub extern "system" fn Destructor(
 
 pub extern "system" fn ToString(
     cpu: &mut CPU,
-    method: &Method<Class>,
+    _method: &Method<Class>,
     this: &ManagedReference<Class>,
 ) -> ManagedReference<Class> {
     let element_type = this
@@ -41,7 +41,6 @@ pub extern "system" fn ToString(
         .unwrap()
         .element_type_handle()
         .unwrap();
-    let element_type = element_type.get_non_generic_with_method(method).unwrap();
     let elements = unsafe {
         this.access_unchecked::<ArrayAccessor>()
             .as_raw_slices()

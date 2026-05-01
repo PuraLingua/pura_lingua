@@ -16,15 +16,11 @@ mod _sealed {
 
 use std::{alloc::Layout, ptr::NonNull};
 
-use crate::type_system::interface::Interface;
+use crate::type_system::{interface::Interface, type_handle::NonGenericTypeHandle};
 
 use super::{
-    assembly::Assembly,
-    class::Class,
-    method::Method,
-    method_table::MethodTable,
-    r#struct::Struct,
-    type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandleKind},
+    assembly::Assembly, class::Class, method::Method, method_table::MethodTable, r#struct::Struct,
+    type_handle::NonGenericTypeHandleKind,
 };
 
 use _sealed::*;
@@ -34,7 +30,7 @@ pub const trait GetAssemblyRef: TypeSealed {
 }
 
 pub trait GetTypeVars {
-    fn __get_type_vars(&self) -> &Option<Box<[MaybeUnloadedTypeHandle]>>;
+    fn __get_type_vars(&self) -> &Option<Box<[NonGenericTypeHandle]>>;
 }
 
 pub trait GetFields: TypeSealed {
@@ -86,7 +82,7 @@ macro get_assembly_ref_default_impl($($T:ty)*) {$(
 
 macro get_type_vars_default_impl($($T:ty)*) {$(
 	impl GetTypeVars for $T {
-		fn __get_type_vars(&self) -> &Option<Box<[MaybeUnloadedTypeHandle]>> {
+		fn __get_type_vars(&self) -> &Option<Box<[$crate::type_system::type_handle::NonGenericTypeHandle]>> {
 			self.type_vars()
 		}
 	}
@@ -149,7 +145,7 @@ impl const GetAssemblyRef for Interface {
     }
 }
 impl GetTypeVars for Interface {
-    fn __get_type_vars(&self) -> &Option<Box<[MaybeUnloadedTypeHandle]>> {
+    fn __get_type_vars(&self) -> &Option<Box<[NonGenericTypeHandle]>> {
         self.type_vars()
     }
 }
@@ -160,7 +156,7 @@ impl GetMethodTableRef for Interface {
 }
 
 impl<T> GetTypeVars for Method<T> {
-    fn __get_type_vars(&self) -> &Option<Box<[MaybeUnloadedTypeHandle]>> {
+    fn __get_type_vars(&self) -> &Option<Box<[NonGenericTypeHandle]>> {
         self.type_vars()
     }
 }

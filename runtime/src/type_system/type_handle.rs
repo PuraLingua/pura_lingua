@@ -1,7 +1,7 @@
 use std::{alloc::Layout, fmt::Debug, ptr::NonNull};
 
 use derive_more::Display;
-use global::{UnwrapEnum, non_purus_call_configuration::NonPurusCallType};
+use global::{UnwrapEnum, dt_println, non_purus_call_configuration::NonPurusCallType};
 
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdExt},
@@ -27,12 +27,22 @@ pub enum NonGenericTypeHandleKind {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, UnwrapEnum)]
+#[derive(Clone, Copy, UnwrapEnum, PartialEq, Eq)]
 #[unwrap_enum(owned)]
 pub enum NonGenericTypeHandle {
     Class(NonNull<Class>) = NonGenericTypeHandleKind::Class as _,
     Struct(NonNull<Struct>) = NonGenericTypeHandleKind::Struct as _,
     Interface(NonNull<Interface>) = NonGenericTypeHandleKind::Interface as _,
+}
+
+impl Debug for NonGenericTypeHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Class(cl) => write!(f, "Class {}", unsafe { cl.as_ref().name() }),
+            Self::Struct(s) => write!(f, "Struct {}", unsafe { s.as_ref().name() }),
+            Self::Interface(s) => write!(f, "Interface {}", unsafe { s.as_ref().name() }),
+        }
+    }
 }
 
 impl NonGenericTypeHandle {
@@ -115,7 +125,7 @@ impl NonGenericTypeHandle {
         }
     }
 
-    pub fn instantiate(&self, type_vars: &[MaybeUnloadedTypeHandle]) -> Self {
+    pub fn instantiate(&self, type_vars: &[NonGenericTypeHandle]) -> Self {
         unsafe {
             match self {
                 Self::Class(ty) => Self::Class(ty.as_ref().instantiate(type_vars)),
@@ -189,6 +199,21 @@ pub trait IGenericResolver {
     fn resolve_method_generic(&self, g_index: u32) -> Option<TypeHandle>;
 }
 
+/// Return None for every generic
+pub struct GenericUnresolvable;
+
+impl IGenericResolver for GenericUnresolvable {
+    fn resolve_type_generic(&self, _g_index: u32) -> Option<TypeHandle> {
+        dt_println!("Unreachable code may be reached");
+        None
+    }
+
+    fn resolve_method_generic(&self, _g_index: u32) -> Option<TypeHandle> {
+        dt_println!("Unreachable code may be reached");
+        None
+    }
+}
+
 #[repr(transparent)]
 pub struct TypeGenericResolver<T>(T);
 
@@ -205,7 +230,8 @@ impl<T: GetTypeVars + GetAssemblyRef> IGenericResolver for TypeGenericResolver<T
             .as_ref()
             .unwrap()
             .get(g_index as usize)
-            .and_then(|x| x.load(self.0.__get_assembly_ref().manager_ref()))
+            .copied()
+            .map(TypeHandle::from)
     }
     #[inline(always)]
     fn resolve_method_generic(&self, _: u32) -> Option<TypeHandle> {
@@ -229,17 +255,18 @@ impl<T: GetTypeVars + GetAssemblyRef> IGenericResolver for MethodGenericResolver
             .as_ref()
             .unwrap()
             .get(g_index as usize)
-            .and_then(|x| x.load(ty.__get_assembly_ref().manager_ref()))
+            .copied()
+            .map(TypeHandle::from)
     }
 
     fn resolve_method_generic(&self, g_index: u32) -> Option<TypeHandle> {
-        let ty = self.0.require_method_table_ref().ty_ref();
         self.0
             .__get_type_vars()
             .as_ref()
             .unwrap()
             .get(g_index as usize)
-            .and_then(|x| x.load(ty.__get_assembly_ref().manager_ref()))
+            .copied()
+            .map(TypeHandle::from)
     }
 }
 
@@ -395,10 +422,14 @@ impl MaybeUnloadedTypeHandle {
             _ => raise(),
         }
     }
-    pub fn load(&self, assembly_manager: &AssemblyManager) -> Option<TypeHandle> {
+    pub fn load_with_generic_resolver<TResolver: IGenericResolver>(
+        &self,
+        assembly_manager: &AssemblyManager,
+        resolver: &TResolver,
+    ) -> Option<TypeHandle> {
         match self {
             Self::Loaded(th) => Some(*th),
-            Self::Unloaded(r) => r.load(assembly_manager),
+            Self::Unloaded(r) => r.load_with_generic_resolver(assembly_manager, resolver),
         }
     }
 }

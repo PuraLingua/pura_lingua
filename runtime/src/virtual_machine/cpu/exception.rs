@@ -35,12 +35,11 @@ pub struct ThrowHelper(CPU);
 impl ThrowHelper {
     pub fn alloc(&mut self) -> bool {
         let exception = match self.0.new_object(
-            &self
-                .0
+            self.0
                 .vm_ref()
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_AllocException)
-                .into(),
+                .unwrap_class(),
             &stdlib_header::MethodId!(AllocException::Constructor).into(),
             &[],
         ) {
@@ -56,12 +55,11 @@ impl ThrowHelper {
         let mut message = ManagedReference::new_string(&mut self.0, message);
 
         let exception = match self.0.new_object(
-            &self
-                .0
+            self.0
                 .vm_ref()
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_InvalidEnumException)
-                .into(),
+                .unwrap_class(),
             &stdlib_header::MethodId!(InvalidEnumException::Constructor_String_String).into(),
             &[(&raw mut enum_name).cast(), (&raw mut message).cast()],
         ) {
@@ -80,12 +78,11 @@ impl ThrowHelper {
     #[cfg(windows)]
     pub fn win32(&mut self, mut code: i32) -> bool {
         let exception = match self.0.new_object(
-            &self
-                .0
+            self.0
                 .vm_ref()
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_Win32Exception)
-                .into(),
+                .unwrap_class(),
             &stdlib_header::MethodId!(Win32Exception::Constructor_I32).into(),
             &[(&raw mut code).cast()],
         ) {
@@ -107,12 +104,11 @@ impl ThrowHelper {
     #[cfg(unix)]
     pub fn errno(&mut self, mut code: i32) -> bool {
         let exception = match self.0.new_object(
-            &self
-                .0
+            self.0
                 .vm_ref()
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_ErrnoException)
-                .into(),
+                .unwrap_class(),
             &stdlib_header::MethodId!(ErrnoException::Constructor_I32).into(),
             &[(&raw mut code).cast()],
         ) {
@@ -143,12 +139,11 @@ impl ThrowHelper {
         );
 
         let exception = match self.0.new_object(
-            &self
-                .0
+            self.0
                 .vm_ref()
                 .assembly_manager()
                 .get_core_type(CoreTypeId::System_DlErrorException)
-                .into(),
+                .unwrap_class(),
             &stdlib_header::MethodId!(Exception::Constructor_String).into(),
             &[(&raw const message).cast_mut().cast()],
         ) {
