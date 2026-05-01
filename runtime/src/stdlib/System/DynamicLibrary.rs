@@ -1,13 +1,12 @@
 use std::ffi::c_void;
 use std::ptr::NonNull;
 
-use global::dt_println;
 use stdlib_header::System::DynamicLibrary::FieldId;
 
 use crate::{
     stdlib::System::{_define_class, common_new_method, default_sctor},
     type_system::{class::Class, method::Method},
-    value::managed_reference::{FieldAccessor, ManagedReference, StringAccessor},
+    value::managed_reference::{FieldAccessor, ManagedReference},
     virtual_machine::cpu::CPU,
 };
 
@@ -20,14 +19,6 @@ pub extern "system" fn Constructor_String(
     this: &mut ManagedReference<Class>,
     file: ManagedReference<Class>,
 ) {
-    dt_println!(
-        "Loading lib: {}",
-        file.access::<StringAccessor>()
-            .unwrap()
-            .get_str()
-            .unwrap()
-            .display()
-    );
     let handle_out = this
         .const_access_mut::<FieldAccessor<Class>>()
         .typed_field_mut::<LibraryPointer>(FieldId::Handle as _, Default::default())
@@ -36,7 +27,6 @@ pub extern "system" fn Constructor_String(
         return;
     };
     *handle_out = handle;
-    println!("finish loading successfully");
 }
 
 pub extern "system" fn GetSymbol(

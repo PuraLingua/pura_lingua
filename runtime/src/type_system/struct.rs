@@ -209,7 +209,7 @@ impl Struct {
         unsafe { self.assembly.as_ref() }
     }
 
-    pub fn method_table_ref(&self) -> &MethodTable<Self> {
+    pub const fn method_table_ref(&self) -> &MethodTable<Self> {
         unsafe { self.method_table.as_ref() }
     }
 

@@ -2,7 +2,6 @@ use std::ptr::NonNull;
 
 use global::{
     attrs::CallConvention,
-    dt_println,
     instruction::{
         CommonReadPointerTo, CommonWritePointer, IRegisterAddr, Instruction_Call, Instruction_Load,
         LoadContent,
@@ -29,8 +28,6 @@ pub extern "system" fn Destructor(
     method: &Method<Class>,
     this: &mut ManagedReference<Class>,
 ) {
-    dt_println!("Dropping Array`1");
-
     super::Object::Destructor(cpu, method, this);
 }
 

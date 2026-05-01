@@ -54,7 +54,10 @@ fn test_to_string() {
             )
     };
 
-    dbg!(s.access::<StringAccessor>().unwrap().to_string_lossy());
+    assert_eq!(
+        s.access::<StringAccessor>().unwrap().get_str().unwrap(),
+        widestring::u16cstr!("[aaa, bbb]")
+    );
 }
 
 #[test]
@@ -192,19 +195,20 @@ fn array_get_set() -> global::Result<()> {
             .typed_res_call::<ManagedReference<Class>>(&mut cpu, None, &[])
     };
     assert!(!arr.is_null());
-    for x in unsafe {
+
+    let expected_elements = [widestring::u16cstr!("aaa"), widestring::u16cstr!("bbb")];
+
+    for (x, expected) in unsafe {
         arr.access::<ArrayAccessor>()
             .unwrap()
             .as_slice::<ManagedReference<Class>>()
             .unwrap()
+            .iter()
+            .zip(expected_elements)
     } {
-        println!(
-            "{}",
-            x.access::<StringAccessor>()
-                .unwrap()
-                .get_str()
-                .unwrap()
-                .display()
+        assert_eq!(
+            x.access::<StringAccessor>().unwrap().get_str().unwrap(),
+            expected
         );
     }
     Ok(())

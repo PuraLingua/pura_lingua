@@ -317,6 +317,7 @@ impl AssemblyManager {
             NonNull::from_ref(assembly),
             name.to_owned(),
             interface_def.attr,
+            GenericCountRequirement::default(),
             interface_def
                 .required_interfaces
                 .iter()

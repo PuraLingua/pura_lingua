@@ -167,7 +167,7 @@ fn gtest_test_fn() -> global::Result<()> {
         .unwrap()
         .get_str()
         .unwrap();
-    println!("Result gotten: `{}`", res.display());
+    assert_eq!(res, widestring::u16cstr!("10"));
 
     Ok(())
 }

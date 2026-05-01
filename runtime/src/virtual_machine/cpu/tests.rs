@@ -113,7 +113,7 @@ fn test_call_stack() {
             .find_first_method_by_name("F")
             .unwrap()
     };
-    unsafe { dbg!(method.as_ref().attr().local_variable_types().len()) };
+    unsafe { assert_eq!(method.as_ref().attr().local_variable_types().len(), 4) };
 
     let mut cpu = CpuID::new_write_global();
     cpu.prepare_call_stack_for_method(unsafe { method.as_ref() });
@@ -134,14 +134,24 @@ fn test_call_stack() {
         u16_var.ptr.cast::<u16>().write(u16::MAX - 3);
     }
 
-    dbg!(call_frame.as_slice());
+    assert_eq!(
+        call_frame.as_slice(),
+        [
+            255, 255, 255, 255, 255, 255, 255, 255, 254, 0, 0, 0, 253, 255, 255, 255, 252, 255,
+        ]
+    );
 }
 
 #[test]
 fn static_non_purus_call() {
     extern "system" fn test(a: u64, b: &u32, c: u8, p: *const u16) -> u64 {
-        dbg!(a, *b, c);
-        println!("{}", unsafe { U16CStr::from_ptr_str(p).display() });
+        assert_eq!(a, 0x1ff1u64);
+        assert_eq!(*b, 10u32);
+        assert_eq!(c, 15u8);
+        assert_eq!(
+            unsafe { U16CStr::from_ptr_str(p) },
+            widestring::u16cstr!("aaa")
+        );
         0
     }
     let f_ptr = test as *const u8;
@@ -175,7 +185,7 @@ fn static_non_purus_call() {
         ],
     );
     unsafe {
-        dbg!(result.cast::<u64>().as_ref());
+        assert_eq!(result.cast::<u64>().read(), 0);
     }
     d.destroy(&mut cpu);
 
@@ -187,8 +197,13 @@ fn static_non_purus_call() {
 #[test]
 fn non_purus_call_marshal() {
     extern "system" fn test(a: u64, b: &u32, c: u8, p: *const u16) -> u64 {
-        dbg!(a, *b, c);
-        println!("{}", unsafe { U16CStr::from_ptr_str(p).display() });
+        assert_eq!(a, 0x1ff1u64);
+        assert_eq!(*b, 10u32);
+        assert_eq!(c, 15u8);
+        assert_eq!(
+            unsafe { U16CStr::from_ptr_str(p) },
+            widestring::u16cstr!("aaa")
+        );
         0
     }
     let f_ptr = test as *const u8;
@@ -224,7 +239,7 @@ fn non_purus_call_marshal() {
         ],
     );
     unsafe {
-        dbg!(result.cast::<u64>().as_ref());
+        assert_eq!(result.cast::<u64>().read(), 0);
     }
     d.destroy(&mut cpu);
 
@@ -236,8 +251,13 @@ fn non_purus_call_marshal() {
 #[test]
 fn dynamic_non_purus_call() -> global::Result<()> {
     extern "system" fn test(a: u64, b: &u32, c: u8, p: *const u16) -> u64 {
-        dbg!(a, *b, c);
-        println!("{}", unsafe { U16CStr::from_ptr_str(p).display() });
+        assert_eq!(a, 0x1ff1u64);
+        assert_eq!(*b, 10u32);
+        assert_eq!(c, 15u8);
+        assert_eq!(
+            unsafe { U16CStr::from_ptr_str(p) },
+            widestring::u16cstr!("aaa")
+        );
         0
     }
 
@@ -443,7 +463,7 @@ fn dynamic_non_purus_call() -> global::Result<()> {
         std::alloc::Allocator::deallocate(&std::alloc::Global, result_ptr, result_layout);
         data
     };
-    dbg!(result);
+    assert_eq!(result, 0);
 
     Ok(())
 }
@@ -785,7 +805,7 @@ fn dynamic_message_box() -> global::Result<()> {
         std::alloc::Allocator::deallocate(&std::alloc::Global, result_ptr, result_layout);
         data
     };
-    dbg!(result);
+    assert_eq!(result, 1);
 
     Ok(())
 }

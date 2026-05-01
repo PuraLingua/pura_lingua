@@ -48,24 +48,19 @@ fn test_call() {
         .unwrap();
 
     let u8_v = 10u8;
-    let u8_v_r = &u8_v;
     let ret = unsafe { u8_ToString.as_ref() }.typed_res_call::<ManagedReference<Class>>(
         &mut cpu,
         None,
-        &[(&raw const u8_v_r).cast::<c_void>().cast_mut()],
+        &[(&raw const u8_v).cast::<c_void>().cast_mut()],
     );
-    let ret_s = unsafe {
-        ret.access::<StringAccessor>()
-            .unwrap()
-            .to_string_lossy()
-            .unwrap()
-    };
-    dbg!(&ret_s);
+    let ret_s = unsafe { ret.access::<StringAccessor>().unwrap().get_str().unwrap() };
+    assert_eq!(ret_s, widestring::u16cstr!("10"));
 
     let string_t = assembly_manager
         .get_core_type(CoreTypeId::System_String)
         .unwrap_class();
-    let string_t_mt = unsafe { string_t.as_ref().method_table_ref() };
+    let string_t_mt: &MethodTable<crate::type_system::class::Class> =
+        unsafe { string_t.as_ref().method_table_ref() };
     let string_ToString = string_t_mt
         .get_method(stdlib_header::MethodId!(String::ToString) as u32)
         .unwrap();
@@ -74,13 +69,8 @@ fn test_call() {
         Some(NonNull::from_ref(&ret).cast()),
         &[],
     );
-    let ret2_s = unsafe {
-        ret2.access::<StringAccessor>()
-            .unwrap()
-            .to_string_lossy()
-            .unwrap()
-    };
-    dbg!(&ret2_s);
+    let ret2_s = unsafe { ret2.access::<StringAccessor>().unwrap().get_str().unwrap() };
+    assert_eq!(ret2_s, widestring::u16cstr!("10"));
 }
 
 #[test]
@@ -111,13 +101,11 @@ fn test_normal_f() {
     );
 
     let f2_id = unsafe {
-        dbg!(
-            class
-                .as_ref()
-                .method_table_ref()
-                .find_last_method_by_name_ret_id("F2")
-                .unwrap()
-        )
+        class
+            .as_ref()
+            .method_table_ref()
+            .find_last_method_by_name_ret_id("F2")
+            .unwrap()
     };
 
     let f2 = unsafe { class.as_ref().get_method(f2_id).unwrap() };
@@ -151,6 +139,7 @@ fn test_interface_call() {
                 global::attr!(
                     interface Public {}
                 ),
+                GenericCountRequirement::default(),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![Method::new(

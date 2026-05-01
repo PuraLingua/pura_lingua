@@ -174,12 +174,13 @@ mod tests {
             .typed_field::<ManagedReference<Class>>(FieldId::Message as _, Default::default())
             .unwrap();
 
-        dbg!(
+        assert_eq!(
             f_message
                 .access::<StringAccessor>()
                 .unwrap()
-                .to_string_lossy()
-                .unwrap()
+                .get_str()
+                .unwrap(),
+            widestring::u16cstr!("AAA"),
         );
 
         let f_stack_trace = exception_ptr
@@ -198,8 +199,9 @@ mod tests {
                     stack
                         .access::<StringAccessor>()
                         .unwrap()
-                        .to_string_lossy()
+                        .get_str()
                         .unwrap()
+                        .display()
                 );
             }
         }

@@ -8,6 +8,7 @@ use crate::type_system::{
     class::Class,
     field::Field,
     generics::GenericCountRequirement,
+    interface::{Interface, InterfaceImplementation},
     method::{Method, Parameter},
     method_table::MethodTable,
     r#struct::Struct,
@@ -22,6 +23,7 @@ pub mod DlErrorException;
 pub mod DynamicLibrary;
 pub mod ErrnoException;
 pub mod Exception;
+pub mod IDispose;
 pub mod InvalidEnumException;
 pub mod LargeString;
 pub mod NonPurusCallConfiguration;
@@ -68,6 +70,20 @@ pub(crate) macro default_sctor($mt:ident $TMethodId:ident) {
         Some($mt),
         $crate::stdlib::System::map_method_attr($TMethodId::StaticConstructor.get_attr()),
     )
+}
+
+fn map_interface_requirement(i: stdlib_header::InterfaceImplementation) -> MaybeUnloadedTypeHandle {
+    debug_assert!(i.map.is_none());
+    i.target.into()
+}
+
+fn map_interface_implementation(
+    i: stdlib_header::InterfaceImplementation,
+) -> InterfaceImplementation {
+    InterfaceImplementation {
+        target: i.target.into(),
+        map: i.map.unwrap(),
+    }
 }
 
 fn map_method_attr(val: MethodAttr<CoreTypeRef>) -> MethodAttr<MaybeUnloadedTypeHandle> {
@@ -184,6 +200,36 @@ macro _define_struct(
     }
 }
 
+macro _define_interface(
+    fn $load:ident($assembly:ident, $mt:ident, $method_info:ident)
+    $id:ident
+#methods($TMethodId:ident):
+    $(
+        $MethodName:ident => $f:expr;
+    )*
+) {
+    impl From<::stdlib_header::System::$id::MethodId> for $crate::type_system::method::MethodRef {
+        fn from(value: ::stdlib_header::System::$id::MethodId) -> Self {
+            Self::Index(value as u32)
+        }
+    }
+    pub fn $load(
+        $assembly: &$crate::type_system::assembly::Assembly,
+    )
+    -> $crate::type_system::type_handle::NonGenericTypeHandle {
+        type $TMethodId = ::stdlib_header::System::$id::MethodId;
+        $crate::stdlib::System::define_interface(
+            ::stdlib_header::CoreTypeId::${concat(System_, $id)},
+            |#[allow(unused)] $mt, #[allow(unused)] $method_info| match unsafe { $method_info.get_id::<$TMethodId>() } {
+                $(
+                    $TMethodId::$MethodName => $f,
+                )*
+                $TMethodId::__END => unreachable!(),
+            },
+        )($assembly)
+    }
+}
+
 pub fn define_class(
     id: CoreTypeId,
     get_method: impl Fn(NonNull<MethodTable<Class>>, MethodInfo) -> Pin<Box<Method<Class>>>,
@@ -199,6 +245,7 @@ pub fn define_class(
             generic_count,
             parent,
             parent_generics,
+            implemented_interfaces,
             methods,
             static_methods,
             fields,
@@ -237,7 +284,10 @@ pub fn define_class(
                 }),
                 fields.into_iter().map(map_field_info).collect(),
                 None,
-                vec![],
+                implemented_interfaces
+                    .into_iter()
+                    .map(map_interface_implementation)
+                    .collect(),
                 None,
             )
             .as_non_null_ptr(),
@@ -259,12 +309,14 @@ pub fn define_struct(
             generic_count,
             parent,
             parent_generics,
+            implemented_interfaces,
             methods,
             static_methods,
             fields,
         } = id.get_core_type_info()();
         debug_assert!(parent.is_none());
         debug_assert!(parent_generics.is_empty());
+        debug_assert_eq!(implemented_interfaces.len(), 0);
         debug_assert_eq!(kind, CoreTypeKind::Struct);
         NonGenericTypeHandle::Struct(
             Struct::new(
@@ -281,6 +333,58 @@ pub fn define_struct(
                 }),
                 fields.into_iter().map(map_field_info).collect(),
                 None,
+                None,
+            )
+            .as_non_null_ptr(),
+        )
+    }
+}
+
+pub fn define_interface(
+    id: CoreTypeId,
+    get_method: impl Fn(NonNull<MethodTable<Interface>>, MethodInfo) -> Pin<Box<Method<Interface>>>,
+) -> impl FnOnce(&Assembly) -> NonGenericTypeHandle {
+    move |assembly| {
+        let CoreTypeInfo {
+            id: _,
+            kind,
+            attr,
+            name,
+            // TODO: impl it
+            generic_count,
+            parent,
+            parent_generics,
+            implemented_interfaces,
+            methods,
+            static_methods,
+            fields,
+        } = id.get_core_type_info()();
+        debug_assert_eq!(kind, CoreTypeKind::Interface);
+        debug_assert!(parent.is_none());
+        debug_assert!(parent_generics.is_empty());
+        debug_assert_eq!(static_methods.len(), 0);
+        debug_assert_eq!(fields.len(), 0);
+        NonGenericTypeHandle::Interface(
+            Interface::new(
+                NonNull::from_ref(assembly),
+                name,
+                attr,
+                generic_count
+                    .map(|x| {
+                        if x.is_infinite {
+                            GenericCountRequirement::AtLeast(RangeFrom { start: x.count })
+                        } else {
+                            GenericCountRequirement::Exact(x.count)
+                        }
+                    })
+                    .unwrap_or_default(),
+                implemented_interfaces
+                    .into_iter()
+                    .map(map_interface_requirement)
+                    .collect(),
+                MethodTable::wrap_as_method_generator(|mt| {
+                    methods.into_iter().map(|x| get_method(mt, x)).collect()
+                }),
                 None,
             )
             .as_non_null_ptr(),

@@ -38,6 +38,8 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
         },
     }));
 
+    let implemented_interfaces = &ast.implemented_interfaces;
+
     let field_definition = ast.define_fields(&[
         quote!(derive(serde::Serialize, serde::Deserialize)),
         quote!(derive(#global_crate::AllVariants)),
@@ -360,6 +362,7 @@ pub fn _impl(ast: DefineCoreClassAst) -> syn::Result<TokenStream> {
                 generic_count: #generic_count,
                 parent,
                 parent_generics,
+                implemented_interfaces: vec![#(#implemented_interfaces),*],
                 methods: #method_id_enum_ident::ALL_VARIANTS
                     .into_iter()
                     .filter(|x| !matches!(x, #method_id_enum_ident::__END))

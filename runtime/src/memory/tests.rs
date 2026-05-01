@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::{alloc::Layout, ptr::NonNull};
 
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
@@ -79,5 +79,8 @@ fn test_layout() {
     let class = assem.get_type::<NonNull<Class>>(0).unwrap().unwrap();
 
     let mt = unsafe { class.as_ref().method_table_ref() };
-    dbg!(mt.mem_layout(Default::default()));
+    assert_eq!(
+        mt.mem_layout(Default::default()),
+        Layout::from_size_align(16, 8).unwrap()
+    );
 }

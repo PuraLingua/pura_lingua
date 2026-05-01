@@ -389,7 +389,7 @@ mod tests {
                 .as_slice::<u8>()
                 .unwrap()
         };
-        dbg!(arr_ref);
+        assert_eq!(arr_ref, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
         arr.destroy(&mut cpu_write);
 
         let mut arr_by_new = ManagedReference::new_array::<_, u8>(
@@ -404,7 +404,7 @@ mod tests {
                 .as_slice::<u8>()
                 .unwrap()
         };
-        dbg!(arr_by_new_ref);
+        assert_eq!(arr_by_new_ref, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
         arr_by_new.destroy(&mut cpu_write);
     }
 }

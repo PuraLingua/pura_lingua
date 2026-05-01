@@ -107,5 +107,7 @@ fn test_static() {
     let s_field = global_vm()
         .get_static_field((*test_class).into(), 0)
         .unwrap();
-    dbg!(unsafe { s_field.0.cast::<u64>().read() }, s_field.1);
+
+    assert_eq!(s_field.1, Layout::from_size_align(8, 8).unwrap());
+    assert_eq!(unsafe { s_field.0.cast::<u64>().read() }, 10);
 }

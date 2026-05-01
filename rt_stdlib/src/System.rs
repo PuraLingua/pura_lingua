@@ -6,6 +6,7 @@ pub mod DlErrorException;
 pub mod DynamicLibrary;
 pub mod ErrnoException;
 pub mod Exception;
+pub mod IDispose;
 pub mod InvalidEnumException;
 pub mod LargeString;
 pub mod NonPurusCallConfiguration;

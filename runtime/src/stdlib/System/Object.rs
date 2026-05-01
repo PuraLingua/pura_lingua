@@ -5,9 +5,7 @@ use crate::{
     virtual_machine::cpu::CPU,
 };
 
-pub extern "system" fn Destructor(_: &mut CPU, _: &Method<Class>, _: &ManagedReference<Class>) {
-    println!("DEFAULT Destructor");
-}
+pub extern "system" fn Destructor(_: &mut CPU, _: &Method<Class>, _: &ManagedReference<Class>) {}
 
 pub extern "system" fn ToString(
     cpu: &mut CPU,

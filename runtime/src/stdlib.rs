@@ -94,6 +94,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
 
             Self::System_DynamicLibrary => None,
 
+            Self::System_IDispose => None,
+
             Self::System_Tuple => None,
 
             CoreTypeId::System_Array_1 => Some(Layout::new::<usize>()),
@@ -146,7 +148,10 @@ impl const CoreTypeIdConstExt for CoreTypeId {
                 Some(Layout::new::<ManagedReference<Class>>())
             }
             Self::System_NonPurusCallType => Some(Layout::new::<ManagedReference<Class>>()),
+
             Self::System_DynamicLibrary => Some(Layout::new::<ManagedReference<Class>>()),
+
+            Self::System_IDispose => None,
 
             CoreTypeId::System_Tuple => None,
 
@@ -202,6 +207,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             Self::System_NonPurusCallType => of!(NonPurusCallType),
 
             Self::System_DynamicLibrary => of!(DynamicLibrary),
+
+            Self::System_IDispose => of!(IDispose),
 
             Self::System_Tuple => of!(Tuple),
 
@@ -265,6 +272,8 @@ impl CoreTypeIdExt for CoreTypeId {
 
             Self::System_DynamicLibrary => Some(Type::pointer()),
 
+            Self::System_IDispose => None,
+
             Self::System_Tuple => None,
 
             Self::System_Array_1 => Some(Type::pointer()),
@@ -315,6 +324,8 @@ impl CoreTypeIdExt for CoreTypeId {
             Self::System_NonPurusCallType => Some(NonPurusCallType::Object),
 
             Self::System_DynamicLibrary => Some(NonPurusCallType::Object),
+
+            Self::System_IDispose => None,
 
             Self::System_Tuple => None,
 

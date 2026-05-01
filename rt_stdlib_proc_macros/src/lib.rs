@@ -5,6 +5,7 @@ use proc_macro2::{Span, TokenStream};
 use shared::common::{GenericCount, Parameter};
 
 mod define_core_class;
+mod define_core_interface;
 mod define_core_struct;
 
 mod serializing;
@@ -12,6 +13,7 @@ mod serializing;
 define_macros! {
     define_core_class => define_core_class::_impl as shared::define_core_class::DefineCoreClassAst;
     define_core_struct => define_core_struct::_impl as shared::define_core_struct::DefineCoreStructAst;
+    define_core_interface => define_core_interface::_impl as shared::define_core_interface::DefineCoreInterfaceAst;
 }
 
 fn parameter2token_stream(p: &Parameter) -> TokenStream {

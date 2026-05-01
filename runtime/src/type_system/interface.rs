@@ -13,8 +13,12 @@ use global::{
 use crate::{
     memory::OwnedPtr,
     type_system::{
-        assembly::Assembly, class::Class, generics::GenericBounds, method::Method,
-        method_table::MethodTable, type_handle::MaybeUnloadedTypeHandle,
+        assembly::Assembly,
+        class::Class,
+        generics::{GenericBounds, GenericCountRequirement},
+        method::Method,
+        method_table::MethodTable,
+        type_handle::MaybeUnloadedTypeHandle,
     },
     value::managed_reference::ManagedReference,
 };
@@ -27,6 +31,8 @@ pub struct Interface {
 
     name: Box<str>,
     attr: TypeAttr,
+
+    generic_count_requirement: GenericCountRequirement,
 
     /// They should be Interface
     required_interfaces: Vec<MaybeUnloadedTypeHandle>,
@@ -57,6 +63,8 @@ impl Interface {
 
             name: self.name.clone(),
             attr: self.attr,
+
+            generic_count_requirement: self.generic_count_requirement,
 
             required_interfaces: self.required_interfaces.clone(),
 
@@ -90,6 +98,8 @@ impl Interface {
         name: String,
         attr: TypeAttr,
 
+        generic_count_requirement: GenericCountRequirement,
+
         required_interfaces: Vec<MaybeUnloadedTypeHandle>,
 
         mt_generator: F,
@@ -102,6 +112,8 @@ impl Interface {
 
             name: name.into_boxed_str(),
             attr,
+
+            generic_count_requirement,
 
             required_interfaces,
 

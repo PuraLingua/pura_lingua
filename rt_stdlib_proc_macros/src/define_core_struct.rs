@@ -272,6 +272,7 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
                 generic_count: #generic_count,
                 parent: None,
                 parent_generics: Vec::new(),
+                implemented_interfaces: Vec::new(),
                 methods: #method_id_enum_ident::ALL_VARIANTS
                     .into_iter()
                     .filter(|x| !matches!(x, #method_id_enum_ident::__END))

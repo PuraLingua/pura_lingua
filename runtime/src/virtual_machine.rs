@@ -218,9 +218,6 @@ impl VirtualMachine {
                     drop(static_map);
                     let mut static_map = self.class_static_map.write().unwrap();
                     let mut static_cpu = self.write_cpu_for_static().unwrap();
-                    println!("Initializing static for {}", unsafe {
-                        class.as_ref().name()
-                    });
                     let obj = ManagedReference::<Class>::common_alloc(
                         &mut static_cpu,
                         unsafe { *class.as_ref().method_table() },

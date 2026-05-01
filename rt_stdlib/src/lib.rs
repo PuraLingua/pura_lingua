@@ -64,6 +64,8 @@ pub enum CoreTypeId {
 
     System_DynamicLibrary,
 
+    System_IDispose,
+
     System_Tuple,
 
     System_Array_1,
@@ -102,6 +104,7 @@ impl const From<CoreTypeId> for CoreTypeRef {
 pub enum CoreTypeKind {
     Class,
     Struct,
+    Interface,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
@@ -121,9 +124,33 @@ pub struct CoreTypeInfo {
     pub generic_count: Option<crate::GenericCount>,
     pub parent: Option<crate::CoreTypeRef>,
     pub parent_generics: Vec<CoreTypeRef>,
+    /// `required_interfaces` if it's an interface
+    pub implemented_interfaces: Vec<InterfaceImplementation>,
     pub methods: Vec<MethodInfo>,
     pub static_methods: Vec<MethodInfo>,
     pub fields: Vec<FieldInfo>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InterfaceImplementation {
+    pub target: CoreTypeRef,
+    pub map: Option<Vec<u32>>,
+}
+
+impl InterfaceImplementation {
+    pub const fn new(target: CoreTypeRef, map: Vec<u32>) -> Self {
+        Self {
+            target,
+            map: Some(map),
+        }
+    }
+    pub const fn new_as_require(interface: CoreTypeRef) -> Self {
+        Self {
+            target: interface,
+            map: None,
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -194,6 +221,8 @@ impl CoreTypeId {
 
             Self::System_DynamicLibrary => "System::DynamicLibrary",
 
+            Self::System_IDispose => "System::IDispose",
+
             Self::System_Tuple => "System::Tuple",
 
             Self::System_Array_1 => "System::Array`1",
@@ -259,6 +288,8 @@ impl CoreTypeId {
             System_NonPurusCallType in of!(NonPurusCallType),
 
             System_DynamicLibrary in of!(DynamicLibrary),
+
+            System_IDispose in of!(IDispose),
 
             System_Tuple in of!(Tuple),
 

@@ -107,6 +107,7 @@ pub struct DefineCoreClassAst {
     pub generic_count: Option<GenericCount>,
     pub name: LitStr,
     pub parent: Option<Expr>,
+    pub implemented_interfaces: Vec<Expr>,
     pub generic_bounds: Option<Expr>,
     pub field_parent: Option<Path>,
     pub fields: Vec<FieldAst>,
@@ -128,11 +129,23 @@ impl Parse for DefineCoreClassAst {
             None
         };
         let name = input.parse()?;
-        let parent = if !input.peek(Token![=>]) {
+
+        let parent = if (!input.peek(Token![=>])) && (!input.peek(Token![impl])) {
             Some(input.parse()?)
         } else {
             None
         };
+
+        let mut implemented_interfaces = Vec::new();
+        if input.parse::<Token![impl]>().is_ok() {
+            while !input.peek(Token![=>]) {
+                implemented_interfaces.push(input.parse()?);
+                if input.parse::<Token![,]>().is_err() {
+                    break;
+                }
+            }
+        }
+
         input.parse::<Token![=>]>()?;
         let generic_bounds = if let Ok(brackets) = syn::__private::parse_brackets(input) {
             Some(brackets.content.parse()?)
@@ -196,6 +209,7 @@ impl Parse for DefineCoreClassAst {
             generic_count,
             name,
             parent,
+            implemented_interfaces,
             generic_bounds,
             field_parent,
             fields,
