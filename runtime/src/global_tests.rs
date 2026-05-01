@@ -257,48 +257,6 @@ fn gtest_simple_console() -> global::Result<()> {
 }
 
 #[test]
-#[ignore = "Not yet ready"]
-#[cfg(windows)]
-fn gtest_middle_ir_simple_console() -> global::Result<()> {
-    let vm = global_vm();
-
-    let b_assembly =
-        binary::assembly::AssemblyBuilder::from_path("../TestData/MiddleIR.SimpleConsole.plb")?;
-
-    vm.assembly_manager()
-        .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
-
-    let mut cpu = CpuID::new_write_global();
-
-    let assembly = vm
-        .assembly_manager()
-        .get_assembly_by_name("MiddleIR::SimpleConsole")
-        .unwrap()
-        .unwrap();
-
-    let console_class = assembly.get_class(0).unwrap().unwrap();
-
-    let to_write = ManagedReference::new_string(&mut cpu, "aaa\n");
-    let write_stdout = unsafe {
-        console_class
-            .as_ref()
-            .method_table_ref()
-            .find_first_method_by_name("WriteStdout")
-            .unwrap()
-    };
-
-    unsafe {
-        write_stdout.as_ref().typed_res_call::<()>(
-            &mut cpu,
-            None,
-            &[(&raw const to_write).cast_mut().cast()],
-        );
-    }
-
-    Ok(())
-}
-
-#[test]
 fn calculating() {
     let (res_ptr, res_layout) = try_invoke_instructions(
         vec![
