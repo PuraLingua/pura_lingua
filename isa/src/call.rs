@@ -1,14 +1,13 @@
 use std::fmt::Display;
 
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-use proc_macros::{Transpose, WithType};
+use global_proc_macros::{Transpose, WithType};
+use non_purus_call::NonPurusCallConfiguration;
 
-use crate::{
-    instruction::v2::{IRegisterAddr, display_args},
-    non_purus_call_configuration::NonPurusCallConfiguration,
-};
+use crate::{IRegisterAddr, display_args};
 
 #[repr(u8)]
 #[derive(Debug, Clone, WithType, ReadFromSection, WriteToSection, Transpose)]

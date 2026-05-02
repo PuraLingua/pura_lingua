@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 
-use crate::instruction::v2::{IRegisterAddr, RegisterAddr, ShortRegisterAddr};
+use crate::{IRegisterAddr, RegisterAddr, ShortRegisterAddr};
 
 #[derive(Debug, Copy, ReadFromSection, WriteToSection)]
 pub struct CommonReadPointerTo<TRegisterAddr: IRegisterAddr> {

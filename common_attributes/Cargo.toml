@@ -1,0 +1,17 @@
+[package]
+name = "pura_lingua_common_attributes"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+num_enum = { workspace = true }
+derive-ctor = { workspace = true }
+getset = { workspace = true }
+enumflags2 = { workspace = true }
+derive_more = { workspace = true }
+serde = { workspace = true }
+
+global_proc_macros = { workspace = true }
+
+binary_core = { package = "pura_lingua_binary_core", path = "../binary_core" }
+binary_proc_macros = { package = "pura_lingua_binary_proc_macros", path = "../binary_proc_macros" }

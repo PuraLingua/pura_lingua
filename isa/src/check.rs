@@ -2,10 +2,10 @@ use std::fmt::Display;
 
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 
+use global_proc_macros::WithType;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use proc_macros::WithType;
 
-use crate::instruction::v2::{IRegisterAddr, RegisterAddr, ShortRegisterAddr};
+use crate::{IRegisterAddr, RegisterAddr, ShortRegisterAddr};
 
 #[derive(Debug, Clone, ReadFromSection, WriteToSection)]
 pub struct Instruction_CommonCheck<TRegisterAddr: IRegisterAddr> {

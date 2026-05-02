@@ -1,12 +1,26 @@
-#![allow(non_camel_case_types)]
+#![allow(non_camel_case_types, internal_features)]
+#![feature(iterator_try_collect)]
+#![feature(derive_const)]
+#![feature(const_clone)]
+#![feature(const_cmp)]
+#![feature(const_default)]
+#![feature(unboxed_closures)]
+#![feature(core_intrinsics)]
+#![feature(const_trait_impl)]
+#![feature(fn_traits)]
+#![feature(decl_macro)]
+#![feature(const_try)]
+#![feature(const_convert)]
+#![feature(const_option_ops)]
+#![feature(const_result_trait_fn)]
 
 use std::fmt::Display;
 use std::ptr::NonNull;
 
 use binary_proc_macros::{ReadFromSection, WriteToSection};
+use global_proc_macros::WithType;
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
-use proc_macros::WithType;
 
 mod jumping;
 pub use jumping::*;

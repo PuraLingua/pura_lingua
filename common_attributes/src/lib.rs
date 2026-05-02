@@ -1,15 +1,22 @@
+#![feature(min_adt_const_params)]
+#![feature(iterator_try_collect)]
+#![feature(const_trait_impl)]
+#![feature(const_destruct)]
+#![feature(const_default)]
+#![feature(derive_const)]
+
 use std::fmt::Debug;
 
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 use derive_ctor::ctor;
 use enumflags2::{BitFlags, bitflags, make_bitflags};
 use getset::{CopyGetters, Getters, MutGetters, Setters};
+use global_proc_macros::{UnwrapEnum, WithType};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use proc_macros::{UnwrapEnum, WithType};
 
 #[bitflags]
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum FieldImplementationFlags {
     Static,
 }
@@ -30,6 +37,7 @@ pub enum FieldImplementationFlags {
 #[ctor(pub new)]
 #[getset(set = "pub", get_mut = "pub")]
 #[get_copy = "pub"]
+#[serde(deny_unknown_fields)]
 pub struct FieldAttr {
     vis: Visibility,
     impl_flags: BitFlags<FieldImplementationFlags>,
@@ -43,7 +51,7 @@ impl FieldAttr {
 
 #[bitflags]
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum MethodImplementationFlags {
     Static,
     AllowExtraArgs,
@@ -60,6 +68,8 @@ pub enum MethodImplementationFlags {
     PartialEq,
     ReadFromSection,
     WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[derive_const(Default)]
 #[repr(u8)]
@@ -201,6 +211,7 @@ impl<TType> MethodAttr<Option<TType>> {
 #[ctor(pub const new)]
 #[getset(set = "pub", get_mut = "pub")]
 #[get_copy = "pub"]
+#[serde(deny_unknown_fields)]
 pub struct ParameterAttr {
     impl_flags: BitFlags<ParameterImplementationFlags>,
 }
@@ -214,7 +225,9 @@ impl ParameterAttr {
 
 #[bitflags]
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, derive_more::Display)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, derive_more::Display, serde::Serialize, serde::Deserialize,
+)]
 pub enum ParameterImplementationFlags {
     ByRef,
 }
@@ -263,6 +276,8 @@ pub enum Visibility {
     ReadFromSection,
     WriteToSection,
     std::marker::ConstParamTy,
+    serde::Serialize,
+    serde::Deserialize,
 ))]
 #[unwrap_enum(ref, ref_mut, owned)]
 pub enum TypeSpecificAttr {

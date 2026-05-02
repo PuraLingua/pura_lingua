@@ -4,7 +4,7 @@ use binary_core::traits::{ReadFromSection, WriteToSection};
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 
 mod sealed {
-    use crate::instruction::{RegisterAddr, ShortRegisterAddr};
+    use crate::{RegisterAddr, ShortRegisterAddr};
 
     pub trait IRegisterSealed {}
     impl IRegisterSealed for RegisterAddr {}

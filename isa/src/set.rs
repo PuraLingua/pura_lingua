@@ -1,10 +1,10 @@
 use std::fmt::Display;
 
 use binary_proc_macros::{ReadFromSection, WriteToSection};
+use global_proc_macros::{DeriveMap, Transpose, WithType};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use proc_macros::{DeriveMap, Transpose, WithType};
 
-use crate::instruction::v2::IRegisterAddr;
+use crate::IRegisterAddr;
 
 #[repr(u8)]
 #[derive(Debug, Clone, WithType, ReadFromSection, WriteToSection, Transpose, DeriveMap)]

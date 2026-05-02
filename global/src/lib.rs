@@ -1,24 +1,13 @@
 #![feature(macro_metavar_expr)]
 #![feature(decl_macro)]
 #![feature(format_args_nl)]
-#![feature(iterator_try_collect)]
 #![feature(const_trait_impl)]
-#![feature(const_default)]
-#![feature(const_option_ops)]
-#![feature(const_format_args)]
 #![feature(derive_const)]
 #![feature(const_clone)]
-#![feature(const_convert)]
-#![feature(const_try)]
-#![feature(const_cmp)]
-#![feature(const_destruct)]
 #![feature(generic_const_exprs)]
 #![feature(negative_impls)]
 #![feature(adt_const_params)]
-#![feature(const_result_trait_fn)]
 #![feature(unboxed_closures)]
-#![feature(fn_traits)]
-#![feature(core_intrinsics)]
 //
 #![allow(internal_features)]
 #![allow(static_mut_refs)]
@@ -35,12 +24,9 @@ pub extern crate iota;
 pub extern crate paste;
 
 pub mod assertions;
-pub mod attrs;
 pub mod env_utils;
-pub mod instruction;
 pub mod io_utils;
 pub mod macros;
-pub mod non_purus_call_configuration;
 pub mod sync;
 pub mod traits;
 
@@ -49,6 +35,7 @@ pub mod path_searcher;
 // Re-exports
 pub use anyhow::{Error, Result};
 pub use cfg_if::cfg_if;
+pub use common_attributes as attrs;
 pub use derive_ctor;
 pub use faststr::FastStr;
 pub use getset;
@@ -57,8 +44,10 @@ pub use indexmap::{
     IndexMap, IndexSet, indexmap, indexmap_with_default, indexset, indexset_with_default,
 };
 pub use macros::*;
+pub use non_purus_call as non_purus_call_configuration;
 pub use num_enum;
 pub use proc_macros::*;
+pub use pura_lingua_isa as instruction;
 pub use slab;
 pub use string_name::StringName;
 

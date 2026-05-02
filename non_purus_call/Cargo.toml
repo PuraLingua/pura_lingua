@@ -1,0 +1,12 @@
+[package]
+name = "pura_lingua_non_purus_call"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+num_enum = { workspace = true }
+
+common_attributes = { workspace = true }
+
+binary_core = { workspace = true }
+binary_proc_macros = { workspace = true }

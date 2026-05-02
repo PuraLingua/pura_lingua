@@ -2,10 +2,11 @@ use std::fmt::Display;
 
 use binary_proc_macros::{ReadFromSection, WriteToSection};
 
+use global_proc_macros::{DeriveMap, Transpose, WithType};
+use non_purus_call::NonPurusCallConfiguration;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use proc_macros::{DeriveMap, Transpose, WithType};
 
-use crate::{instruction::IRegisterAddr, non_purus_call_configuration::NonPurusCallConfiguration};
+use crate::IRegisterAddr;
 
 #[derive(Debug, Clone, ReadFromSection, WriteToSection)]
 pub struct Instruction_Load<TString, TTypeRef, TFieldRef, TRegisterAddr: IRegisterAddr> {

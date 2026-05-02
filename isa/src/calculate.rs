@@ -1,10 +1,10 @@
 use std::fmt::Display;
 
 use binary_proc_macros::{ReadFromSection, WriteToSection};
+use global_proc_macros::WithType;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use proc_macros::WithType;
 
-use crate::instruction::{IRegisterAddr, RegisterAddr, ShortRegisterAddr};
+use crate::{IRegisterAddr, RegisterAddr, ShortRegisterAddr};
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, WithType, ReadFromSection, WriteToSection, derive_more::From)]
@@ -31,21 +31,12 @@ impl<TRegisterAddr: IRegisterAddr> Instruction_Calculate<TRegisterAddr> {
     pub const fn USize(ins: Instruction_UntypedCalculate<TRegisterAddr, usize>) -> Self {
         cfg_select! {
             target_pointer_width = "16" => {
-                const {
-                    assert!(crate::macros::layout_eq!(u16, usize));
-                }
                 Self::U16(unsafe { std::intrinsics::transmute_unchecked(ins) })
             }
             target_pointer_width = "32" => {
-                const {
-                    assert!(crate::macros::layout_eq!(u32, usize));
-                }
                 Self::U32(unsafe { std::intrinsics::transmute_unchecked(ins) })
             }
             target_pointer_width = "64" => {
-                const {
-                    assert!(crate::macros::layout_eq!(u64, usize));
-                }
                 Self::U64(unsafe { std::intrinsics::transmute_unchecked(ins) })
             }
         }
@@ -54,21 +45,12 @@ impl<TRegisterAddr: IRegisterAddr> Instruction_Calculate<TRegisterAddr> {
     pub const fn ISize(ins: Instruction_UntypedCalculate<TRegisterAddr, isize>) -> Self {
         cfg_select! {
             target_pointer_width = "16" => {
-                const {
-                    assert!(crate::macros::layout_eq!(i16, isize));
-                }
                 Self::I16(unsafe { std::intrinsics::transmute_unchecked(ins) })
             }
             target_pointer_width = "32" => {
-                const {
-                    assert!(crate::macros::layout_eq!(i32, isize));
-                }
                 Self::I32(unsafe { std::intrinsics::transmute_unchecked(ins) })
             }
             target_pointer_width = "64" => {
-                const {
-                    assert!(crate::macros::layout_eq!(i64, isize));
-                }
                 Self::I64(unsafe { std::intrinsics::transmute_unchecked(ins) })
             }
         }

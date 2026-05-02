@@ -5,16 +5,15 @@ edition = "2024"
 
 [dependencies]
 anyhow = { version = "1.0.98", features = ["backtrace"] }
-num_enum = "0.7.3"
+num_enum = { workspace = true }
 tracing = { version = "0.1.41" }
 paste = "1.0.15"
 
 thiserror = "2.0.12"
 iota = "0.2.3"
 
-derive-ctor = "1.0.6"
-getset = { git = "https://github.com/ExPuritate/getset.git" }
-
+derive-ctor = { workspace = true }
+getset = { workspace = true }
 
 faststr = { version = "0.2.31" }
 bon = "3.6.5"
@@ -31,6 +30,9 @@ sealed = { workspace = true }
 bitfields = { workspace = true }
 
 string_name = { workspace = true }
+common_attributes = { workspace = true }
+non_purus_call = { workspace = true }
+pura_lingua_isa = { workspace = true }
 
 binary_core = { package = "pura_lingua_binary_core", path = "../binary_core" }
 binary_proc_macros = { package = "pura_lingua_binary_proc_macros", path = "../binary_proc_macros" }
