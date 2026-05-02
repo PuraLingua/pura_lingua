@@ -512,8 +512,8 @@ fn non_purus_call_va_arg() {
     unsafe extern "C" fn _printf(format: *const libc::c_char, mut args: ...) -> std::ffi::c_int {
         use std::ffi::CStr;
 
-        let s = args.arg::<*const libc::c_char>();
-        let d = args.arg::<std::ffi::c_int>();
+        let s = args.next_arg::<*const libc::c_char>();
+        let d = args.next_arg::<std::ffi::c_int>();
         println!(
             "({}){}: {d}",
             CStr::from_ptr(format).display(),

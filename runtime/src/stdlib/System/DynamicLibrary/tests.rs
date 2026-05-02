@@ -436,6 +436,7 @@ fn gen_simple_dynamic_lib_to_invoke(
             /* 12 */ g_core_type!(System_Pointer), // tLoc
             /* 13 */ g_core_type!(System_Int64), // RET
         ),
+        GenericCountRequirement::default(),
         vec![],
         assembly_manager
             .get_core_type(CoreTypeId::System_Int64)

@@ -171,7 +171,7 @@ impl Field {
         }
 
         let Some(type_vars) = type_vars.as_ref() else {
-            unreachable!()
+            return th.into_non_generic().unwrap().non_purus_call_type();
         };
 
         while let TypeHandle::TypeGeneric(g_index) = th {

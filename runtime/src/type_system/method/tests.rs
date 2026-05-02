@@ -436,6 +436,7 @@ fn test_interface_call() {
 }
 
 #[test]
+#[cfg_attr(not(windows), ignore = "SimpleConsole is only accessible in Windows")]
 fn test_interface_from_binary() {
     let mut cpu = CpuID::new_write_global();
     let assembly_manager = global_vm().assembly_manager();
