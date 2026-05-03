@@ -362,6 +362,18 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                 };
 
                 match content {
+                    LoadContent::AddressOfRegister(r) => r
+                        .try_into_short()
+                        .map(|r| {
+                            SLoad(Instruction_Load {
+                                addr,
+                                content: LoadContent::AddressOfRegister(r),
+                            })
+                        })
+                        .unwrap_or(Load(Instruction_Load {
+                            addr: addr.into_generic(),
+                            content: LoadContent::AddressOfRegister(r),
+                        })),
                     LoadContent::True => SLoad(Instruction_Load {
                         addr,
                         content: LoadContent::True,
@@ -405,6 +417,10 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                         content: LoadContent::I64(x),
                     }),
 
+                    LoadContent::AddressOfThis => SLoad(Instruction_Load {
+                        addr,
+                        content: LoadContent::AddressOfThis,
+                    }),
                     LoadContent::This => SLoad(Instruction_Load {
                         addr,
                         content: LoadContent::This,
@@ -429,15 +445,35 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                         addr,
                         content: LoadContent::Arg(x),
                     }),
+                    LoadContent::ArgRef(x) => SLoad(Instruction_Load {
+                        addr,
+                        content: LoadContent::ArgRef(x),
+                    }),
                     LoadContent::ArgValue(x) => SLoad(Instruction_Load {
                         addr,
                         content: LoadContent::ArgValue(x),
                     }),
 
+                    LoadContent::AddressOfStatic { ty, field } => SLoad(Instruction_Load {
+                        addr,
+                        content: LoadContent::AddressOfStatic { ty, field },
+                    }),
                     LoadContent::Static { ty, field } => SLoad(Instruction_Load {
                         addr,
                         content: LoadContent::Static { ty, field },
                     }),
+                    LoadContent::AddressOfField { container, field } => {
+                        match container.try_into_short() {
+                            Some(container) => SLoad(Instruction_Load {
+                                addr,
+                                content: LoadContent::AddressOfField { container, field },
+                            }),
+                            None => Load(Instruction_Load {
+                                addr: addr.into_generic(),
+                                content: LoadContent::AddressOfField { container, field },
+                            }),
+                        }
+                    }
                     LoadContent::Field { container, field } => match container.try_into_short() {
                         Some(container) => SLoad(Instruction_Load {
                             addr,

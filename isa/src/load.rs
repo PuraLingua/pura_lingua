@@ -191,6 +191,7 @@ pub enum LoadContent<TString, TTypeRef, TFieldRef, TRegisterAddr>
 where
     TRegisterAddr: IRegisterAddr,
 {
+    AddressOfRegister(TRegisterAddr),
     True,
     False,
 
@@ -204,6 +205,7 @@ where
     I32(i32),
     I64(i64),
 
+    AddressOfThis,
     This,
 
     String(TString),
@@ -213,11 +215,20 @@ where
     NonPurusCallConfiguration(NonPurusCallConfiguration),
 
     Arg(u64),
+    ArgRef(u64),
     /// It will read the value if the arg is passed by ref
     ArgValue(u64),
 
+    AddressOfStatic {
+        ty: TTypeRef,
+        field: TFieldRef,
+    },
     Static {
         ty: TTypeRef,
+        field: TFieldRef,
+    },
+    AddressOfField {
+        container: TRegisterAddr,
         field: TFieldRef,
     },
     Field {
@@ -238,6 +249,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::AddressOfRegister(r) => f.write_fmt(format_args!("&{r:#x}")),
             LoadContent::True => f.write_str("True"),
             LoadContent::False => f.write_str("False"),
 
@@ -251,20 +263,31 @@ where
             LoadContent::I32(x) => f.write_fmt(format_args!("{x}i32({x:#x})")),
             LoadContent::I64(x) => f.write_fmt(format_args!("{x}i64({x:#x})")),
 
+            LoadContent::AddressOfThis => f.write_str("&this"),
             LoadContent::This => f.write_str("This"),
+
             LoadContent::String(x) => f.write_fmt(format_args!("`{x}`str")),
             LoadContent::TypeValueSize(ty) => f.write_fmt(format_args!("sizeof({ty})")),
             LoadContent::NonPurusCallConfiguration(conf) => {
                 f.write_fmt(format_args!("non_purus_call_configuration({conf:?})"))
             }
             LoadContent::Arg(arg) => f.write_fmt(format_args!("arg({arg}({arg:#x}))")),
+            LoadContent::ArgRef(arg) => f.write_fmt(format_args!("&arg({arg}({arg:#x}))")),
             LoadContent::ArgValue(arg) => f.write_fmt(format_args!("*arg({arg}({arg:#x}))")),
+
+            LoadContent::AddressOfStatic { ty, field } => {
+                f.write_fmt(format_args!("&static({field} at {ty})"))
+            }
             LoadContent::Static { ty, field } => {
                 f.write_fmt(format_args!("static({field} at {ty})"))
+            }
+            LoadContent::AddressOfField { container, field } => {
+                f.write_fmt(format_args!("&field({field} at {container})"))
             }
             LoadContent::Field { container, field } => {
                 f.write_fmt(format_args!("field({field} at {container})"))
             }
+
             LoadContent::CaughtException => f.write_fmt(format_args!("caught exception")),
         }
     }

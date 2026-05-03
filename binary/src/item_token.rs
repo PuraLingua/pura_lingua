@@ -201,7 +201,16 @@ macro ty_from_into_bits($t:ty) {
     impl const ::bitfields::FromBits for $t {
         type Number = u8;
         fn from_bits(i: u8) -> Self {
-            check_enum_cast!((Self)i);
+            const fn const_check(_: u8) {}
+            fn check(i: u8) {
+                check_enum_cast!(($t)i);
+            }
+
+            core::intrinsics::const_eval_select(
+                (i,),
+                const_check,
+                check,
+            );
 
             unsafe { std::mem::transmute(i) }
         }
@@ -227,7 +236,7 @@ macro check_enum_cast(($t:ty) $i:expr) {
             ind += 1;
         }
         if !found {
-            panic!("Cannot cast to ItemType");
+            panic!("Cannot cast to {}, {}", stringify!($t), $i);
         }
     }
 }

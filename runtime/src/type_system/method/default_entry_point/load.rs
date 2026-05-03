@@ -28,6 +28,14 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
 ) -> Option<Result<(), Termination>> {
     let register_addr = &ins.addr;
     match &ins.content {
+        LoadContent::AddressOfRegister(r) => {
+            let Some(val) = call_frame(cpu).get(*r) else {
+                load_register_failed!(*r);
+            };
+            if !call_frame(cpu).write_typed(ins.addr, val.ptr()) {
+                load_register_failed!(ins.addr);
+            }
+        }
         LoadContent::True => {
             if !call_frame(cpu).write_typed(ins.addr, true) {
                 load_register_failed!(ins.addr);
@@ -81,6 +89,18 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             }
         }
 
+        LoadContent::AddressOfThis => {
+            let Some(local_var) = call_frame(cpu).get(*register_addr) else {
+                load_register_failed!(*register_addr);
+            };
+            debug_assert!(local_var.layout.size() >= size_of::<*const ()>());
+            let Some(this) = this else {
+                return Some(Err(Termination::NullReference(
+                    core::panic::Location::caller(),
+                )));
+            };
+            local_var.write_typed(this);
+        }
         LoadContent::This => {
             let Some(local_var) = call_frame(cpu).get(*register_addr) else {
                 load_register_failed!(*register_addr);
@@ -92,7 +112,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 )));
             };
             unsafe {
-                local_var.ptr.copy_from(this.cast(), size_of::<*const ()>());
+                local_var.copy_from(this.cast(), size_of::<*const ()>());
             }
         }
 
@@ -150,7 +170,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 }
             }
         }
-        LoadContent::ArgValue(arg) => {
+        LoadContent::ArgRef(arg) => {
             let Some(arg) = args.get((*arg) as usize) else {
                 return Some(Err(Termination::LoadArgFailed(*arg)));
             };
@@ -163,11 +183,49 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                     let Some(out_var) = call_frame(cpu).get(*register_addr) else {
                         load_register_failed!(*register_addr);
                     };
+                    out_var.write_typed(p);
+                }
+            }
+        }
+        LoadContent::ArgValue(arg) => {
+            let Some(arg) = args.get((*arg) as usize) else {
+                return Some(Err(Termination::LoadArgFailed(*arg)));
+            };
+
+            match NonNull::new(*arg) {
+                None => {
+                    return Some(Err(Termination::NullReference(
+                        core::panic::Location::caller(),
+                    )));
+                }
+                Some(p) => {
+                    let Some(out_var) = call_frame(cpu).get(*register_addr) else {
+                        load_register_failed!(*register_addr);
+                    };
                     unsafe { out_var.copy_all_from(p.cast()) }
                 }
             }
         }
 
+        LoadContent::AddressOfStatic { ty, field } => {
+            let Some(ty) = ty
+                .load_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
+                .map(|x| x.get_non_generic_with_method(method))
+                .flatten()
+            else {
+                return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
+            };
+            let Some((f_ptr, _)) = cpu.vm_ref().get_static_field(ty, *field) else {
+                return Some(Err(Termination::LoadFieldFailed(*field)));
+            };
+            let Some(out_var) = call_frame(cpu).get(*register_addr) else {
+                load_register_failed!(*register_addr);
+            };
+            out_var.write_typed(f_ptr);
+        }
         LoadContent::Static { ty, field } => {
             let Some(ty) = ty
                 .load_with_generic_resolver(
@@ -187,6 +245,41 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             };
             unsafe {
                 out_var.copy_from(f_ptr.cast(), f_layout.size());
+            }
+        }
+        LoadContent::AddressOfField { container, field } => {
+            let Some(container) = call_frame(cpu).get(*container) else {
+                load_register_failed!(*container);
+            };
+            let Some(register_var) = call_frame(cpu).get(*register_addr) else {
+                load_register_failed!(*register_addr);
+            };
+            match container.ty {
+                NonGenericTypeHandle::Class(_) => {
+                    let Some((field_ptr, _)) = container
+                        .as_ref_typed::<ManagedReference<Class>>()
+                        .const_access::<FieldAccessor<Class>>()
+                        .field(*field, Default::default())
+                    else {
+                        return Some(Err(Termination::LoadFieldFailed(*field)));
+                    };
+                    debug_assert!(register_var.layout.size() >= size_of::<*const u8>());
+                    register_var.write_typed(field_ptr);
+                }
+                NonGenericTypeHandle::Struct(s) => {
+                    let Some(field_info) = unsafe { s.as_ref() }.method_table_ref().field_mem_info(
+                        *field,
+                        Default::default(),
+                        Default::default(),
+                    ) else {
+                        return Some(Err(Termination::LoadFieldFailed(*field)));
+                    };
+                    debug_assert!(register_var.layout.size() >= size_of::<*const u8>());
+                    unsafe {
+                        register_var.write_typed(container.ptr.byte_add(field_info.offset));
+                    }
+                }
+                NonGenericTypeHandle::Interface(_) => unreachable!(),
             }
         }
         LoadContent::Field { container, field } => {
@@ -230,7 +323,14 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             }
         }
 
-        LoadContent::CaughtException => {}
+        LoadContent::CaughtException => match caught_exception {
+            Some(caught_exception) => {
+                if !call_frame(cpu).write_typed(*register_addr, caught_exception) {
+                    load_register_failed!(*register_addr);
+                }
+            }
+            None => return Some(Err(Termination::LoadCaughtExceptionWithoutExceptions)),
+        },
     }
 
     Some(Ok(()))
