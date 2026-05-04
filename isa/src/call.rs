@@ -7,7 +7,7 @@ use binary_proc_macros::{ReadFromSection, WriteToSection};
 use global_proc_macros::{Transpose, WithType};
 use non_purus_call::NonPurusCallConfiguration;
 
-use crate::{IRegisterAddr, display_args};
+use crate::{IRegisterAddr, RegisterAddr, ShortRegisterAddr, display_args};
 
 #[repr(u8)]
 #[derive(Debug, Clone, WithType, ReadFromSection, WriteToSection, Transpose)]
@@ -180,6 +180,153 @@ where
         __TRegisterAddr: IRegisterAddr,
     {
         self.map(core::convert::identity, core::convert::identity, f)
+    }
+}
+
+impl<TTypeRef, TMethodRef> Instruction_Call<TTypeRef, TMethodRef, RegisterAddr> {
+    pub fn try_into_short(
+        self,
+    ) -> Result<Instruction_Call<TTypeRef, TMethodRef, ShortRegisterAddr>, Self> {
+        match self {
+            Instruction_Call::InstanceCall {
+                val,
+                method,
+                args,
+                ret_at,
+            } => match val.try_into_short().and_then(|val| {
+                args.iter()
+                    .copied()
+                    .map(RegisterAddr::try_into_short)
+                    .try_collect::<Vec<_>>()
+                    .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
+                    .map(|(args, ret_at)| (val, args, ret_at))
+            }) {
+                Some((val, args, ret_at)) => Ok(Instruction_Call::InstanceCall {
+                    val,
+                    method,
+                    args,
+                    ret_at,
+                }),
+                None => Err(Instruction_Call::InstanceCall {
+                    val,
+                    method,
+                    args,
+                    ret_at,
+                }),
+            },
+            Instruction_Call::StaticCall {
+                ty,
+                method,
+                args,
+                ret_at,
+            } => match args
+                .iter()
+                .copied()
+                .map(RegisterAddr::try_into_short)
+                .try_collect::<Vec<_>>()
+                .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
+            {
+                Some((args, ret_at)) => Ok(Instruction_Call::StaticCall {
+                    ty,
+                    method,
+                    args,
+                    ret_at,
+                }),
+                None => Err(Instruction_Call::StaticCall {
+                    ty,
+                    method,
+                    args,
+                    ret_at,
+                }),
+            },
+            Instruction_Call::InterfaceCall {
+                interface,
+                val,
+                method,
+                args,
+                ret_at,
+            } => match val.try_into_short().and_then(|val| {
+                args.iter()
+                    .copied()
+                    .map(RegisterAddr::try_into_short)
+                    .try_collect::<Vec<_>>()
+                    .map(|args| (val, args))
+                    .and_then(|(val, args)| {
+                        ret_at.try_into_short().map(|ret_at| (val, args, ret_at))
+                    })
+            }) {
+                Some((val, args, ret_at)) => Ok(Instruction_Call::InterfaceCall {
+                    interface,
+                    val,
+                    method,
+                    args,
+                    ret_at,
+                }),
+                None => Err(Instruction_Call::InterfaceCall {
+                    interface,
+                    val,
+                    method,
+                    args,
+                    ret_at,
+                }),
+            },
+            Instruction_Call::StaticNonPurusCall {
+                f_pointer,
+                config,
+                args,
+                ret_at,
+            } => match f_pointer.try_into_short().and_then(|f_pointer| {
+                args.iter()
+                    .copied()
+                    .map(RegisterAddr::try_into_short)
+                    .try_collect::<Vec<_>>()
+                    .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
+                    .map(|(args, ret_at)| (f_pointer, args, ret_at))
+            }) {
+                Some((f_pointer, args, ret_at)) => Ok(Instruction_Call::StaticNonPurusCall {
+                    f_pointer,
+                    config,
+                    args,
+                    ret_at,
+                }),
+                None => Err(Instruction_Call::StaticNonPurusCall {
+                    f_pointer,
+                    config,
+                    args,
+                    ret_at,
+                }),
+            },
+            Instruction_Call::DynamicNonPurusCall {
+                f_pointer,
+                config,
+                args,
+                ret_at,
+            } => match f_pointer.try_into_short().and_then(|f_pointer| {
+                config.try_into_short().and_then(|config| {
+                    args.iter()
+                        .copied()
+                        .map(RegisterAddr::try_into_short)
+                        .try_collect::<Vec<_>>()
+                        .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
+                        .map(|(args, ret_at)| (f_pointer, config, args, ret_at))
+                })
+            }) {
+                Some((f_pointer, config, args, ret_at)) => {
+                    Ok(Instruction_Call::DynamicNonPurusCall {
+                        f_pointer,
+                        config,
+                        args,
+                        ret_at,
+                    })
+                }
+                None => Err(Instruction_Call::DynamicNonPurusCall {
+                    f_pointer,
+                    config,
+                    args,
+                    ret_at,
+                }),
+            },
+        }
     }
 }
 

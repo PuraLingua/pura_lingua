@@ -13,6 +13,22 @@ pub struct Instruction_CommonCheck<TRegisterAddr: IRegisterAddr> {
     pub content: ToCheckContent<TRegisterAddr>,
 }
 
+impl Instruction_Check {
+    pub const fn try_into_short(self) -> Result<Instruction_SCheck, Self> {
+        let Instruction_CommonCheck { output, content } = self;
+        let Some(output) = output.try_into_short() else {
+            return Err(Instruction_CommonCheck { output, content });
+        };
+        match content.try_to_short() {
+            Ok(content) => Ok(Instruction_CommonCheck { output, content }),
+            Err(content) => Err(Instruction_CommonCheck {
+                output: output.into_generic(),
+                content,
+            }),
+        }
+    }
+}
+
 pub type Instruction_Check = Instruction_CommonCheck<RegisterAddr>;
 pub type Instruction_SCheck = Instruction_CommonCheck<ShortRegisterAddr>;
 
@@ -31,11 +47,12 @@ pub enum ToCheckContent<TRegisterAddr: IRegisterAddr> {
 }
 
 impl ToCheckContent<RegisterAddr> {
-    pub fn try_to_short(&self) -> Option<ToCheckContent<ShortRegisterAddr>> {
+    pub const fn try_to_short(self) -> Result<ToCheckContent<ShortRegisterAddr>, Self> {
         match self {
-            ToCheckContent::IsAllZero(to_check) => {
-                to_check.try_into_short().map(ToCheckContent::IsAllZero)
-            }
+            ToCheckContent::IsAllZero(to_check) => match to_check.try_into_short() {
+                Some(to_check) => Ok(ToCheckContent::IsAllZero(to_check)),
+                None => Err(self),
+            },
         }
     }
 }

@@ -12,7 +12,7 @@ pub struct CommonReadPointerTo<TRegisterAddr: IRegisterAddr> {
 }
 
 impl CommonReadPointerTo<RegisterAddr> {
-    pub const fn try_into_short(self) -> Option<CommonReadPointerTo<ShortRegisterAddr>> {
+    pub const fn try_into_short(self) -> Result<CommonReadPointerTo<ShortRegisterAddr>, Self> {
         let Self {
             ptr,
             size,
@@ -68,6 +68,7 @@ impl CommonReadPointerTo<RegisterAddr> {
         ptr.try_into_short()
             .and_then(ThenSize(size))
             .and_then(ThenDestination(destination))
+            .ok_or(self)
     }
 }
 
@@ -98,7 +99,7 @@ pub struct CommonWritePointer<TRegisterAddr: IRegisterAddr> {
 }
 
 impl CommonWritePointer<RegisterAddr> {
-    pub const fn try_into_short(self) -> Option<CommonWritePointer<ShortRegisterAddr>> {
+    pub const fn try_into_short(self) -> Result<CommonWritePointer<ShortRegisterAddr>, Self> {
         let Self { source, size, ptr } = self;
         struct ComposeSizeWithSource(/* source */ ShortRegisterAddr);
         impl const FnOnce<(ShortRegisterAddr,)> for ComposeSizeWithSource {
@@ -148,6 +149,7 @@ impl CommonWritePointer<RegisterAddr> {
             .try_into_short()
             .and_then(ThenSize(size))
             .and_then(ThenPtr(ptr))
+            .ok_or(self)
     }
 }
 

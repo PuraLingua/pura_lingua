@@ -6,7 +6,7 @@ use global_proc_macros::{DeriveMap, Transpose, WithType};
 use non_purus_call::NonPurusCallConfiguration;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::IRegisterAddr;
+use crate::{IRegisterAddr, RegisterAddr, ShortRegisterAddr};
 
 #[derive(Debug, Clone, ReadFromSection, WriteToSection)]
 pub struct Instruction_Load<TString, TTypeRef, TFieldRef, TRegisterAddr: IRegisterAddr> {
@@ -179,6 +179,145 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(" {} -> {:#x}", self.content, self.addr))
+    }
+}
+
+impl<TString, TTypeRef, TFieldRef> Instruction_Load<TString, TTypeRef, TFieldRef, RegisterAddr> {
+    pub fn try_into_short(
+        self,
+    ) -> Result<Instruction_Load<TString, TTypeRef, TFieldRef, ShortRegisterAddr>, Self> {
+        let Instruction_Load { addr, content } = self;
+        let Some(addr) = addr.try_into_short() else {
+            return Err(Instruction_Load { addr, content });
+        };
+
+        match content {
+            LoadContent::AddressOfRegister(r) => r
+                .try_into_short()
+                .map(|r| {
+                    Ok(Instruction_Load {
+                        addr,
+                        content: LoadContent::AddressOfRegister(r),
+                    })
+                })
+                .unwrap_or(Err(Instruction_Load {
+                    addr: addr.into_generic(),
+                    content: LoadContent::AddressOfRegister(r),
+                })),
+            LoadContent::True => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::True,
+            }),
+            LoadContent::False => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::False,
+            }),
+
+            LoadContent::U8(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::U8(x),
+            }),
+            LoadContent::U16(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::U16(x),
+            }),
+            LoadContent::U32(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::U32(x),
+            }),
+            LoadContent::U64(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::U64(x),
+            }),
+
+            LoadContent::I8(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::I8(x),
+            }),
+            LoadContent::I16(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::I16(x),
+            }),
+            LoadContent::I32(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::I32(x),
+            }),
+            LoadContent::I64(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::I64(x),
+            }),
+
+            LoadContent::AddressOfThis => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::AddressOfThis,
+            }),
+            LoadContent::This => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::This,
+            }),
+
+            LoadContent::String(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::String(x),
+            }),
+
+            LoadContent::TypeValueSize(ty) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::TypeValueSize(ty),
+            }),
+
+            LoadContent::NonPurusCallConfiguration(conf) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::NonPurusCallConfiguration(conf),
+            }),
+
+            LoadContent::Arg(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::Arg(x),
+            }),
+            LoadContent::ArgRef(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::ArgRef(x),
+            }),
+            LoadContent::ArgValue(x) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::ArgValue(x),
+            }),
+
+            LoadContent::AddressOfStatic { ty, field } => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::AddressOfStatic { ty, field },
+            }),
+            LoadContent::Static { ty, field } => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::Static { ty, field },
+            }),
+            LoadContent::AddressOfField { container, field } => match container.try_into_short() {
+                Some(container) => Ok(Instruction_Load {
+                    addr,
+                    content: LoadContent::AddressOfField { container, field },
+                }),
+                None => Err(Instruction_Load {
+                    addr: addr.into_generic(),
+                    content: LoadContent::AddressOfField { container, field },
+                }),
+            },
+            LoadContent::Field { container, field } => match container.try_into_short() {
+                Some(container) => Ok(Instruction_Load {
+                    addr,
+                    content: LoadContent::Field { container, field },
+                }),
+                None => Err(Instruction_Load {
+                    addr: addr.into_generic(),
+                    content: LoadContent::Field { container, field },
+                }),
+            },
+
+            LoadContent::CaughtException => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::CaughtException,
+            }),
+        }
     }
 }
 

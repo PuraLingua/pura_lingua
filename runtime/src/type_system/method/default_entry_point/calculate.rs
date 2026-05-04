@@ -185,11 +185,6 @@ pub(super) fn eval_untyped<
             get!(target = (TRust)target);
             target.sub_assign(TRust::ONE);
         }
-
-        Instruction_UntypedCalculate::SubByOne { target } => {
-            get!(target = (TRust)target);
-            *target = TRust::ONE - *target;
-        }
     }
 
     Some(Ok(()))

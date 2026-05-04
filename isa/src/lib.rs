@@ -12,6 +12,7 @@
 #![feature(const_try)]
 #![feature(const_convert)]
 #![feature(const_option_ops)]
+#![feature(const_destruct)]
 #![feature(const_result_trait_fn)]
 
 use std::fmt::Display;
@@ -355,421 +356,51 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
         match self {
             Nop => Nop,
 
-            Load(ins) => {
-                let Instruction_Load { addr, content } = ins;
-                let Some(addr) = addr.try_into_short() else {
-                    return Load(Instruction_Load { addr, content });
-                };
-
-                match content {
-                    LoadContent::AddressOfRegister(r) => r
-                        .try_into_short()
-                        .map(|r| {
-                            SLoad(Instruction_Load {
-                                addr,
-                                content: LoadContent::AddressOfRegister(r),
-                            })
-                        })
-                        .unwrap_or(Load(Instruction_Load {
-                            addr: addr.into_generic(),
-                            content: LoadContent::AddressOfRegister(r),
-                        })),
-                    LoadContent::True => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::True,
-                    }),
-                    LoadContent::False => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::False,
-                    }),
-
-                    LoadContent::U8(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::U8(x),
-                    }),
-                    LoadContent::U16(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::U16(x),
-                    }),
-                    LoadContent::U32(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::U32(x),
-                    }),
-                    LoadContent::U64(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::U64(x),
-                    }),
-
-                    LoadContent::I8(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::I8(x),
-                    }),
-                    LoadContent::I16(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::I16(x),
-                    }),
-                    LoadContent::I32(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::I32(x),
-                    }),
-                    LoadContent::I64(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::I64(x),
-                    }),
-
-                    LoadContent::AddressOfThis => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::AddressOfThis,
-                    }),
-                    LoadContent::This => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::This,
-                    }),
-
-                    LoadContent::String(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::String(x),
-                    }),
-
-                    LoadContent::TypeValueSize(ty) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::TypeValueSize(ty),
-                    }),
-
-                    LoadContent::NonPurusCallConfiguration(conf) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::NonPurusCallConfiguration(conf),
-                    }),
-
-                    LoadContent::Arg(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::Arg(x),
-                    }),
-                    LoadContent::ArgRef(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::ArgRef(x),
-                    }),
-                    LoadContent::ArgValue(x) => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::ArgValue(x),
-                    }),
-
-                    LoadContent::AddressOfStatic { ty, field } => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::AddressOfStatic { ty, field },
-                    }),
-                    LoadContent::Static { ty, field } => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::Static { ty, field },
-                    }),
-                    LoadContent::AddressOfField { container, field } => {
-                        match container.try_into_short() {
-                            Some(container) => SLoad(Instruction_Load {
-                                addr,
-                                content: LoadContent::AddressOfField { container, field },
-                            }),
-                            None => Load(Instruction_Load {
-                                addr: addr.into_generic(),
-                                content: LoadContent::AddressOfField { container, field },
-                            }),
-                        }
-                    }
-                    LoadContent::Field { container, field } => match container.try_into_short() {
-                        Some(container) => SLoad(Instruction_Load {
-                            addr,
-                            content: LoadContent::Field { container, field },
-                        }),
-                        None => Load(Instruction_Load {
-                            addr: addr.into_generic(),
-                            content: LoadContent::Field { container, field },
-                        }),
-                    },
-
-                    LoadContent::CaughtException => SLoad(Instruction_Load {
-                        addr,
-                        content: LoadContent::CaughtException,
-                    }),
-                }
-            }
+            Load(ins) => match ins.try_into_short() {
+                Ok(ins) => SLoad(ins),
+                Err(ins) => Load(ins),
+            },
             SLoad(ins) => SLoad(ins),
 
             ReadPointerTo(ins) => match ins.try_into_short() {
-                Some(ins) => SReadPointerTo(ins),
-                None => ReadPointerTo(ins),
+                Ok(ins) => SReadPointerTo(ins),
+                Err(ins) => ReadPointerTo(ins),
             },
             SReadPointerTo(ins) => SReadPointerTo(ins),
 
             WritePointer(ins) => match ins.try_into_short() {
-                Some(ins) => SWritePointer(ins),
-                None => WritePointer(ins),
+                Ok(ins) => SWritePointer(ins),
+                Err(ins) => WritePointer(ins),
             },
             SWritePointer(ins) => SWritePointer(ins),
 
-            Check(ins) => {
-                let Instruction_CommonCheck { output, content } = ins;
-                let Some(output) = output.try_into_short() else {
-                    return Check(Instruction_CommonCheck { output, content });
-                };
-                match content.try_to_short() {
-                    Some(content) => {
-                        Instruction::SCheck(Instruction_CommonCheck { output, content })
-                    }
-                    None => Instruction::Check(Instruction_CommonCheck {
-                        output: output.into_generic(),
-                        content,
-                    }),
-                }
-            }
+            Check(ins) => match ins.try_into_short() {
+                Ok(ins) => SCheck(ins),
+                Err(ins) => Check(ins),
+            },
             SCheck(ins) => SCheck(ins),
 
-            New(ins) => match ins {
-                Instruction_New::NewObject {
-                    ty,
-                    ctor_name,
-                    args,
-                    output,
-                } => match args
-                    .iter()
-                    .copied()
-                    .map(RegisterAddr::try_into_short)
-                    .try_collect::<Vec<_>>()
-                    .and_then(|args| output.try_into_short().map(|output| (args, output)))
-                {
-                    Some((args, output)) => Instruction::SNew(Instruction_New::NewObject {
-                        ty,
-                        ctor_name,
-                        args,
-                        output,
-                    }),
-                    None => Instruction::New(Instruction_New::NewObject {
-                        ty,
-                        ctor_name,
-                        args,
-                        output,
-                    }),
-                },
-                Instruction_New::NewArray {
-                    element_type,
-                    len,
-                    output,
-                } => match output.try_into_short() {
-                    Some(output) => Instruction::SNew(Instruction_New::NewArray {
-                        element_type,
-                        len,
-                        output,
-                    }),
-                    None => Instruction::New(Instruction_New::NewArray {
-                        element_type,
-                        len,
-                        output,
-                    }),
-                },
-                Instruction_New::NewDynamicArray {
-                    element_type,
-                    len_addr,
-                    output,
-                } => match len_addr
-                    .try_into_short()
-                    .and_then(|len_addr| output.try_into_short().map(|output| (len_addr, output)))
-                {
-                    Some((len_addr, output)) => {
-                        Instruction::SNew(Instruction_New::NewDynamicArray {
-                            element_type,
-                            len_addr,
-                            output,
-                        })
-                    }
-                    None => Instruction::New(Instruction_New::NewDynamicArray {
-                        element_type,
-                        len_addr,
-                        output,
-                    }),
-                },
+            New(ins) => match ins.try_into_short() {
+                Ok(ins) => SNew(ins),
+                Err(ins) => New(ins),
             },
             SNew(ins) => SNew(ins),
 
-            Call(ins) => match ins {
-                Instruction_Call::InstanceCall {
-                    val,
-                    method,
-                    args,
-                    ret_at,
-                } => match val.try_into_short().and_then(|val| {
-                    args.iter()
-                        .copied()
-                        .map(RegisterAddr::try_into_short)
-                        .try_collect::<Vec<_>>()
-                        .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
-                        .map(|(args, ret_at)| (val, args, ret_at))
-                }) {
-                    Some((val, args, ret_at)) => {
-                        Instruction::SCall(Instruction_Call::InstanceCall {
-                            val,
-                            method,
-                            args,
-                            ret_at,
-                        })
-                    }
-                    None => Instruction::Call(Instruction_Call::InstanceCall {
-                        val,
-                        method,
-                        args,
-                        ret_at,
-                    }),
-                },
-                Instruction_Call::StaticCall {
-                    ty,
-                    method,
-                    args,
-                    ret_at,
-                } => match args
-                    .iter()
-                    .copied()
-                    .map(RegisterAddr::try_into_short)
-                    .try_collect::<Vec<_>>()
-                    .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
-                {
-                    Some((args, ret_at)) => Instruction::SCall(Instruction_Call::StaticCall {
-                        ty,
-                        method,
-                        args,
-                        ret_at,
-                    }),
-                    None => Instruction::Call(Instruction_Call::StaticCall {
-                        ty,
-                        method,
-                        args,
-                        ret_at,
-                    }),
-                },
-                Instruction_Call::InterfaceCall {
-                    interface,
-                    val,
-                    method,
-                    args,
-                    ret_at,
-                } => match val.try_into_short().and_then(|val| {
-                    args.iter()
-                        .copied()
-                        .map(RegisterAddr::try_into_short)
-                        .try_collect::<Vec<_>>()
-                        .map(|args| (val, args))
-                        .and_then(|(val, args)| {
-                            ret_at.try_into_short().map(|ret_at| (val, args, ret_at))
-                        })
-                }) {
-                    Some((val, args, ret_at)) => {
-                        Instruction::SCall(Instruction_Call::InterfaceCall {
-                            interface,
-                            val,
-                            method,
-                            args,
-                            ret_at,
-                        })
-                    }
-                    None => Instruction::Call(Instruction_Call::InterfaceCall {
-                        interface,
-                        val,
-                        method,
-                        args,
-                        ret_at,
-                    }),
-                },
-                Instruction_Call::StaticNonPurusCall {
-                    f_pointer,
-                    config,
-                    args,
-                    ret_at,
-                } => match f_pointer.try_into_short().and_then(|f_pointer| {
-                    args.iter()
-                        .copied()
-                        .map(RegisterAddr::try_into_short)
-                        .try_collect::<Vec<_>>()
-                        .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
-                        .map(|(args, ret_at)| (f_pointer, args, ret_at))
-                }) {
-                    Some((f_pointer, args, ret_at)) => {
-                        Instruction::SCall(Instruction_Call::StaticNonPurusCall {
-                            f_pointer,
-                            config,
-                            args,
-                            ret_at,
-                        })
-                    }
-                    None => Instruction::Call(Instruction_Call::StaticNonPurusCall {
-                        f_pointer,
-                        config,
-                        args,
-                        ret_at,
-                    }),
-                },
-                Instruction_Call::DynamicNonPurusCall {
-                    f_pointer,
-                    config,
-                    args,
-                    ret_at,
-                } => match f_pointer.try_into_short().and_then(|f_pointer| {
-                    config.try_into_short().and_then(|config| {
-                        args.iter()
-                            .copied()
-                            .map(RegisterAddr::try_into_short)
-                            .try_collect::<Vec<_>>()
-                            .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
-                            .map(|(args, ret_at)| (f_pointer, config, args, ret_at))
-                    })
-                }) {
-                    Some((f_pointer, config, args, ret_at)) => {
-                        Instruction::SCall(Instruction_Call::DynamicNonPurusCall {
-                            f_pointer,
-                            config,
-                            args,
-                            ret_at,
-                        })
-                    }
-                    None => Instruction::Call(Instruction_Call::DynamicNonPurusCall {
-                        f_pointer,
-                        config,
-                        args,
-                        ret_at,
-                    }),
-                },
+            Call(ins) => match ins.try_into_short() {
+                Ok(ins) => SCall(ins),
+                Err(ins) => Call(ins),
             },
             SCall(ins) => SCall(ins),
 
-            Set(ins) => match ins {
-                Instruction_Set::Common {
-                    val,
-                    container,
-                    field,
-                } => match val
-                    .try_into_short()
-                    .and_then(|val| container.try_into_short().map(|container| (val, container)))
-                {
-                    Some((val, container)) => Instruction::SSet(Instruction_Set::Common {
-                        val,
-                        container,
-                        field,
-                    }),
-                    None => Instruction::Set(Instruction_Set::Common {
-                        val,
-                        container,
-                        field,
-                    }),
-                },
-                Instruction_Set::This { val, field } => match val.try_into_short() {
-                    Some(val) => Instruction::SSet(Instruction_Set::This { val, field }),
-                    None => Instruction::Set(Instruction_Set::This { val, field }),
-                },
-                Instruction_Set::Static { val, ty, field } => match val.try_into_short() {
-                    Some(val) => Instruction::SSet(Instruction_Set::Static { val, ty, field }),
-                    None => Instruction::Set(Instruction_Set::Static { val, ty, field }),
-                },
+            Set(ins) => match ins.try_into_short() {
+                Ok(ins) => SSet(ins),
+                Err(ins) => Set(ins),
             },
             SSet(ins) => SSet(ins),
 
             Calculate(ins) => match ins.try_into_short() {
-                Some(ins) => SCalculate(ins),
-                None => Calculate(ins),
+                Ok(ins) => SCalculate(ins),
+                Err(ins) => Calculate(ins),
             },
             SCalculate(ins) => SCalculate(ins),
 
@@ -805,30 +436,36 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                             target,
                             condition: JumpCondition::If(cond),
                         })),
-                    JumpCondition::IfCheckSucceeds(to_check) => to_check
-                        .try_to_short()
-                        .map(|to_check| {
-                            Instruction::SJump(Instruction_Jump {
+                    JumpCondition::IfCheckSucceeds(to_check) => {
+                        to_check.try_to_short().map_or_else(
+                            |to_check| {
+                                Instruction::Jump(Instruction_Jump {
+                                    target,
+                                    condition: JumpCondition::IfCheckSucceeds(to_check),
+                                })
+                            },
+                            |to_check| {
+                                Instruction::SJump(Instruction_Jump {
+                                    target,
+                                    condition: JumpCondition::IfCheckSucceeds(to_check),
+                                })
+                            },
+                        )
+                    }
+                    JumpCondition::IfCheckFails(to_check) => to_check.try_to_short().map_or_else(
+                        |to_check| {
+                            Instruction::Jump(Instruction_Jump {
                                 target,
-                                condition: JumpCondition::IfCheckSucceeds(to_check),
+                                condition: JumpCondition::IfCheckFails(to_check),
                             })
-                        })
-                        .unwrap_or(Instruction::Jump(Instruction_Jump {
-                            target,
-                            condition: JumpCondition::IfCheckSucceeds(to_check),
-                        })),
-                    JumpCondition::IfCheckFails(to_check) => to_check
-                        .try_to_short()
-                        .map(|to_check| {
+                        },
+                        |to_check| {
                             Instruction::SJump(Instruction_Jump {
                                 target,
                                 condition: JumpCondition::IfCheckFails(to_check),
                             })
-                        })
-                        .unwrap_or(Instruction::Jump(Instruction_Jump {
-                            target,
-                            condition: JumpCondition::IfCheckFails(to_check),
-                        })),
+                        },
+                    ),
                 }
             }
             SJump(ins) => SJump(ins),

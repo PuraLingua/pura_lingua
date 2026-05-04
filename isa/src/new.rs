@@ -5,7 +5,7 @@ use binary_proc_macros::{ReadFromSection, WriteToSection};
 use global_proc_macros::{Transpose, WithType};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::{IRegisterAddr, display_args};
+use crate::{IRegisterAddr, RegisterAddr, ShortRegisterAddr, display_args};
 
 #[repr(u8)]
 #[derive(Debug, Clone, WithType, ReadFromSection, WriteToSection, Transpose)]
@@ -135,6 +135,75 @@ where
         __TRegisterAddr: IRegisterAddr,
     {
         self.map(core::convert::identity, core::convert::identity, f)
+    }
+}
+
+impl<TTypeRef, TMethodRef> Instruction_New<TTypeRef, TMethodRef, RegisterAddr> {
+    pub fn try_into_short(
+        self,
+    ) -> Result<Instruction_New<TTypeRef, TMethodRef, ShortRegisterAddr>, Self> {
+        match self {
+            Instruction_New::NewObject {
+                ty,
+                ctor_name,
+                args,
+                output,
+            } => match args
+                .iter()
+                .copied()
+                .map(RegisterAddr::try_into_short)
+                .try_collect::<Vec<_>>()
+                .and_then(|args| output.try_into_short().map(|output| (args, output)))
+            {
+                Some((args, output)) => Ok(Instruction_New::NewObject {
+                    ty,
+                    ctor_name,
+                    args,
+                    output,
+                }),
+                None => Err(Instruction_New::NewObject {
+                    ty,
+                    ctor_name,
+                    args,
+                    output,
+                }),
+            },
+            Instruction_New::NewArray {
+                element_type,
+                len,
+                output,
+            } => match output.try_into_short() {
+                Some(output) => Ok(Instruction_New::NewArray {
+                    element_type,
+                    len,
+                    output,
+                }),
+                None => Err(Instruction_New::NewArray {
+                    element_type,
+                    len,
+                    output,
+                }),
+            },
+            Instruction_New::NewDynamicArray {
+                element_type,
+                len_addr,
+                output,
+            } => match len_addr
+                .try_into_short()
+                .and_then(|len_addr| output.try_into_short().map(|output| (len_addr, output)))
+            {
+                Some((len_addr, output)) => Ok(Instruction_New::NewDynamicArray {
+                    element_type,
+                    len_addr,
+                    output,
+                }),
+                None => Err(Instruction_New::NewDynamicArray {
+                    element_type,
+                    len_addr,
+                    output,
+                }),
+            },
+        }
     }
 }
 

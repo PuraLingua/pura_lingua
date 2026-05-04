@@ -58,17 +58,41 @@ impl<TRegisterAddr: IRegisterAddr> Instruction_Calculate<TRegisterAddr> {
 }
 
 impl Instruction_Calculate<RegisterAddr> {
-    pub fn try_into_short(self) -> Option<Instruction_Calculate<ShortRegisterAddr>> {
+    pub fn try_into_short(self) -> Result<Instruction_Calculate<ShortRegisterAddr>, Self> {
         match self {
-            Instruction_Calculate::U8(ins) => ins.try_into_short().map(Instruction_Calculate::U8),
-            Instruction_Calculate::U16(ins) => ins.try_into_short().map(Instruction_Calculate::U16),
-            Instruction_Calculate::U32(ins) => ins.try_into_short().map(Instruction_Calculate::U32),
-            Instruction_Calculate::U64(ins) => ins.try_into_short().map(Instruction_Calculate::U64),
+            Instruction_Calculate::U8(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::U8)
+                .map_err(Self::U8),
+            Instruction_Calculate::U16(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::U16)
+                .map_err(Self::U16),
+            Instruction_Calculate::U32(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::U32)
+                .map_err(Self::U32),
+            Instruction_Calculate::U64(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::U64)
+                .map_err(Self::U64),
 
-            Instruction_Calculate::I8(ins) => ins.try_into_short().map(Instruction_Calculate::I8),
-            Instruction_Calculate::I16(ins) => ins.try_into_short().map(Instruction_Calculate::I16),
-            Instruction_Calculate::I32(ins) => ins.try_into_short().map(Instruction_Calculate::I32),
-            Instruction_Calculate::I64(ins) => ins.try_into_short().map(Instruction_Calculate::I64),
+            Instruction_Calculate::I8(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::I8)
+                .map_err(Self::I8),
+            Instruction_Calculate::I16(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::I16)
+                .map_err(Self::I16),
+            Instruction_Calculate::I32(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::I32)
+                .map_err(Self::I32),
+            Instruction_Calculate::I64(ins) => ins
+                .try_into_short()
+                .map(Instruction_Calculate::I64)
+                .map_err(Self::I64),
         }
     }
 }
@@ -163,14 +187,12 @@ where
     SubOne {
         target: TRegisterAddr,
     },
-
-    SubByOne {
-        target: TRegisterAddr,
-    },
 }
 
 impl<TRust: Copy> Instruction_UntypedCalculate<RegisterAddr, TRust> {
-    pub fn try_into_short(self) -> Option<Instruction_UntypedCalculate<ShortRegisterAddr, TRust>> {
+    pub fn try_into_short(
+        self,
+    ) -> Result<Instruction_UntypedCalculate<ShortRegisterAddr, TRust>, Self> {
         use Instruction_UntypedCalculate::*;
 
         match self {
@@ -181,7 +203,8 @@ impl<TRust: Copy> Instruction_UntypedCalculate<RegisterAddr, TRust> {
                     target
                         .try_into_short()
                         .map(|target| Add { lhs, rhs, target })
-                }),
+                })
+                .ok_or(self),
             Sub { lhs, rhs, target } => lhs
                 .try_into_short()
                 .and_then(|lhs| rhs.try_into_short().map(|rhs| (lhs, rhs)))
@@ -189,7 +212,8 @@ impl<TRust: Copy> Instruction_UntypedCalculate<RegisterAddr, TRust> {
                     target
                         .try_into_short()
                         .map(|target| Sub { lhs, rhs, target })
-                }),
+                })
+                .ok_or(self),
             Mul { lhs, rhs, target } => lhs
                 .try_into_short()
                 .and_then(|lhs| rhs.try_into_short().map(|rhs| (lhs, rhs)))
@@ -197,7 +221,8 @@ impl<TRust: Copy> Instruction_UntypedCalculate<RegisterAddr, TRust> {
                     target
                         .try_into_short()
                         .map(|target| Mul { lhs, rhs, target })
-                }),
+                })
+                .ok_or(self),
             Div { lhs, rhs, target } => lhs
                 .try_into_short()
                 .and_then(|lhs| rhs.try_into_short().map(|rhs| (lhs, rhs)))
@@ -205,7 +230,8 @@ impl<TRust: Copy> Instruction_UntypedCalculate<RegisterAddr, TRust> {
                     target
                         .try_into_short()
                         .map(|target| Div { lhs, rhs, target })
-                }),
+                })
+                .ok_or(self),
             Rem { lhs, rhs, target } => lhs
                 .try_into_short()
                 .and_then(|lhs| rhs.try_into_short().map(|rhs| (lhs, rhs)))
@@ -213,38 +239,51 @@ impl<TRust: Copy> Instruction_UntypedCalculate<RegisterAddr, TRust> {
                     target
                         .try_into_short()
                         .map(|target| Rem { lhs, rhs, target })
-                }),
+                })
+                .ok_or(self),
 
             ConstAddTo { target, data } => target
                 .try_into_short()
-                .map(|target| ConstAddTo { target, data }),
+                .map(|target| ConstAddTo { target, data })
+                .ok_or(self),
             ConstSubTo { target, data } => target
                 .try_into_short()
-                .map(|target| ConstSubTo { target, data }),
+                .map(|target| ConstSubTo { target, data })
+                .ok_or(self),
             ConstMulTo { target, data } => target
                 .try_into_short()
-                .map(|target| ConstMulTo { target, data }),
+                .map(|target| ConstMulTo { target, data })
+                .ok_or(self),
             ConstDivTo { target, data } => target
                 .try_into_short()
-                .map(|target| ConstDivTo { target, data }),
+                .map(|target| ConstDivTo { target, data })
+                .ok_or(self),
             ConstRemTo { target, data } => target
                 .try_into_short()
-                .map(|target| ConstRemTo { target, data }),
+                .map(|target| ConstRemTo { target, data })
+                .ok_or(self),
 
             SubByConst { target, data } => target
                 .try_into_short()
-                .map(|target| ConstSubTo { target, data }),
+                .map(|target| ConstSubTo { target, data })
+                .ok_or(self),
             DivByConst { target, data } => target
                 .try_into_short()
-                .map(|target| ConstDivTo { target, data }),
+                .map(|target| ConstDivTo { target, data })
+                .ok_or(self),
             RemByConst { target, data } => target
                 .try_into_short()
-                .map(|target| ConstRemTo { target, data }),
+                .map(|target| ConstRemTo { target, data })
+                .ok_or(self),
 
-            AddOne { target } => target.try_into_short().map(|target| AddOne { target }),
-            SubOne { target } => target.try_into_short().map(|target| SubOne { target }),
-
-            SubByOne { target } => target.try_into_short().map(|target| SubOne { target }),
+            AddOne { target } => target
+                .try_into_short()
+                .map(|target| AddOne { target })
+                .ok_or(self),
+            SubOne { target } => target
+                .try_into_short()
+                .map(|target| SubOne { target })
+                .ok_or(self),
         }
     }
 }
@@ -301,10 +340,6 @@ impl<TRegisterAddr: IRegisterAddr, TRust: Display + std::fmt::LowerHex + Copy> D
             }
             Instruction_UntypedCalculate::SubOne { target } => {
                 write!(f, " {target} - const1 -> {target:#x}")
-            }
-
-            Instruction_UntypedCalculate::SubByOne { target } => {
-                write!(f, " const1 - {target} -> {target:#x}")
             }
         }
     }
