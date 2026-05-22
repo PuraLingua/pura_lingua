@@ -42,13 +42,13 @@ fn simple_dynamic_lib_test() {
 
     let assembly_manager = vm.assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(
-        "Test".to_owned(),
+        widestring::utf16str!("Test").to_owned(),
         false,
         |assembly| {
             vec![
                 Class::new(
                     assembly,
-                    "Test::Test".to_owned(),
+                    widestring::utf16str!("Test::Test").to_owned(),
                     global::attr!(
                         class Public {}
                     ),
@@ -64,11 +64,11 @@ fn simple_dynamic_lib_test() {
                             // Statics
                             Method::new(
                                 mt,
-                                ".sctor".to_owned(),
+                                widestring::utf16str!(".sctor").to_owned(),
                                 global::attr!(
                                     method Public {Static}
-                                    g_core_type!(System_String),
-                                    g_core_type!(System_DynamicLibrary),
+                                    g_core_type!(System_String).into(),
+                                    g_core_type!(System_DynamicLibrary).into(),
                                 ),
                                 GenericCountRequirement::default(),
                                 vec![],
@@ -83,7 +83,7 @@ fn simple_dynamic_lib_test() {
                                         content: LoadContent::String(DLL_PATH.to_owned()),
                                     }),
                                     Instruction::New(Instruction_New::NewObject {
-                                        ty: g_core_type!(System_DynamicLibrary),
+                                        ty: g_core_type!(System_DynamicLibrary).into(),
                                         ctor_name:
                                             stdlib_header::System::DynamicLibrary::MethodId::Constructor_String
                                                 .into(),
@@ -102,7 +102,7 @@ fn simple_dynamic_lib_test() {
                         ]
                     }),
                     vec![Field::new(
-                        "LIB".to_owned(),
+                        widestring::utf16str!("LIB").to_owned(),
                         global::attr!(field Public {Static}),
                         assembly_manager
                             .get_core_type(CoreTypeId::System_DynamicLibrary)
@@ -121,13 +121,15 @@ fn simple_dynamic_lib_test() {
 
     let assem = global_vm()
         .assembly_manager()
-        .get_assembly_by_name("Test")
+        .get_assembly_by_name(widestring::utf16str!("Test"))
         .unwrap()
         .unwrap();
 
     let class = assem.get_class(0).unwrap().unwrap();
     let mt = unsafe { class.as_ref().method_table_ref() };
-    let fn_to_invoke = mt.find_first_method_by_name("ToInvoke").unwrap();
+    let fn_to_invoke = mt
+        .find_first_method_by_name(widestring::utf16str!("ToInvoke"))
+        .unwrap();
     cfg_select! {
         unix => {
             let result = unsafe {
@@ -179,36 +181,36 @@ fn gen_simple_dynamic_lib_to_invoke(
 
     Method::new(
         mt,
-        "ToInvoke".to_owned(),
+        widestring::utf16str!("ToInvoke").to_owned(),
         global::attr!(
             method Public {Static}
-            /* 0 */ g_core_type!(System_USize), // Pointer to function
+            /* 0 */ g_core_type!(System_USize).into(), // Pointer to function
 
-            /* 1 */ g_core_type!(System_Pointer),
-            /* 2 */ g_core_type!(System_String),
-            /* 3 */ g_core_type!(System_String),
-            /* 4 */ g_core_type!(System_UInt32),
+            /* 1 */ g_core_type!(System_Pointer).into(),
+            /* 2 */ g_core_type!(System_String).into(),
+            /* 3 */ g_core_type!(System_String).into(),
+            /* 4 */ g_core_type!(System_UInt32).into(),
 
-            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
-            /* 6 */ g_core_type!(System_UInt8), // Call convention
-            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
-            /* 8 */ g_core_type!(System_UInt8), // Encoding
-            /* 9 */ g_core_type!(System_UInt8), // Object strategy
-            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
-            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
-            /* 12 */ g_core_type!(System_USize), // Index for setting
-            /* 13 */ g_core_type!(System_USize), // For 10
-            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
-            /* 15 */ g_core_type!(System_Void),
+            /* 5 */ g_core_type!(System_NonPurusCallConfiguration).into(),
+            /* 6 */ g_core_type!(System_UInt8).into(), // Call convention
+            /* 7 */ g_core_type!(System_NonPurusCallType).into(), // Return type
+            /* 8 */ g_core_type!(System_UInt8).into(), // Encoding
+            /* 9 */ g_core_type!(System_UInt8).into(), // Object strategy
+            /* 10 */ g_core_type!(System_Object).into(), // Array(ByRefArguments)
+            /* 11 */ g_core_type!(System_Object).into(), // Array(Arguments)
+            /* 12 */ g_core_type!(System_USize).into(), // Index for setting
+            /* 13 */ g_core_type!(System_USize).into(), // For 10
+            /* 14 */ g_core_type!(System_NonPurusCallType).into(), // For 11
+            /* 15 */ g_core_type!(System_Void).into(),
 
-            /* 16 */ g_core_type!(System_Int32), // RET
+            /* 16 */ g_core_type!(System_Int32).into(), // RET
 
-            /* 17 */ g_core_type!(System_DynamicLibrary), // Library
-            /* 18 */ g_core_type!(System_String), // MethodName
+            /* 17 */ g_core_type!(System_DynamicLibrary).into(), // Library
+            /* 18 */ g_core_type!(System_String).into(), // MethodName
         ),
         GenericCountRequirement::default(),
         vec![],
-        g_core_type!(System_Int32),
+        g_core_type!(System_Int32).into(),
         CallConvention::PlatformDefault,
         None,
         vec![

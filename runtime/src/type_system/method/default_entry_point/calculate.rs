@@ -24,7 +24,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     ins: &Instruction_Calculate<TRegisterAddr>,
@@ -92,7 +92,7 @@ pub(super) fn eval_untyped<
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     ins: &Instruction_UntypedCalculate<TRegisterAddr, TRust>,
 ) -> Option<Result<(), Termination>> {

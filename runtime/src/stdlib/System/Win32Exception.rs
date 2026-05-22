@@ -50,7 +50,7 @@ pub fn format_hresult(mut code: i32) -> Vec<u16> {
             hHeap: windows::Win32::Foundation::HANDLE,
             dwflags : HEAP_FLAGS,
             lpMem : *const core::ffi::c_void
-        ) -> windows_result::BOOL
+        ) -> windows::core::BOOL
     );
 
     struct HeapString(*mut u16);
@@ -139,7 +139,7 @@ pub fn Constructor_I32(
             .write_typed_field(FieldId::Code as _, Default::default(), code,)
     );
 
-    let message = ManagedReference::new_string_from_wide(cpu, format_hresult(code));
+    let message = ManagedReference::new_string_from_wide(cpu, format_hresult(code).into());
 
     super::Exception::Constructor_String(cpu, method, this, message);
 }

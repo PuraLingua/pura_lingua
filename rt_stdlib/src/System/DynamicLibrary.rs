@@ -2,7 +2,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 proc_macros::define_core_class! {
     #[Public {}] assembly
-    System_DynamicLibrary "System::DynamicLibrary" Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_DynamicLibrary Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields of super::Object::FieldId:
     #[Private {}] Handle "_handle" => CoreTypeId::System_Pointer.into();
 

@@ -16,12 +16,12 @@ use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _},
     test_utils::{LEAK_DETECTOR, g_core_type, try_invoke_instructions},
     type_system::{
-        assembly::Assembly,
+        assembly::{Assembly, TypeContainer},
         class::Class,
         generics::GenericCountRequirement,
         method::{ExceptionTable, Method},
         method_table::MethodTable,
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::MaybeUnloadedTypeHandle,
     },
     virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
 };
@@ -35,69 +35,64 @@ fn test_call_stack() {
     global_vm()
         .assembly_manager()
         .add_assembly(Assembly::new_for_adding(
-            "Test".to_owned(),
+            widestring::utf16str!("Test").to_owned(),
             false,
             |assembly| {
-                vec![NonGenericTypeHandle::Class(
-                    Class::new(
-                        assembly,
-                        "Test::Test".to_owned(),
-                        global::attr!(
-                            class Public {}
-                        ),
-                        GenericCountRequirement::default(),
-                        Some(
-                            global_vm()
-                                .assembly_manager()
-                                .get_core_type(CoreTypeId::System_Object)
-                                .unwrap_class(),
-                        ),
-                        vec![],
-                        |class| {
-                            MethodTable::new(class, |mt| {
-                                vec![
-                                    Method::new(
-                                        mt,
-                                        "F".to_owned(),
-                                        global::attr!(
-                                            method Public {}
-                                            g_core_type!(System_UInt64),
-                                            g_core_type!(System_UInt8),
-                                            g_core_type!(System_UInt32),
-                                            g_core_type!(System_UInt16),
-                                        ),
-                                        GenericCountRequirement::default(),
-                                        vec![],
-                                        MaybeUnloadedTypeHandle::from(
-                                            CoreTypeId::System_Void.global_type_handle(),
-                                        ),
-                                        CallConvention::PlatformDefault,
-                                        None,
-                                        vec![],
-                                        ExceptionTable::gen_new(),
+                vec![TypeContainer::from(Class::new(
+                    assembly,
+                    widestring::utf16str!("Test::Test").to_owned(),
+                    global::attr!(
+                        class Public {}
+                    ),
+                    GenericCountRequirement::default(),
+                    Some(
+                        global_vm()
+                            .assembly_manager()
+                            .get_core_type(CoreTypeId::System_Object)
+                            .unwrap_class(),
+                    ),
+                    vec![],
+                    |class| {
+                        MethodTable::new(class, |mt| {
+                            vec![
+                                Method::new(
+                                    mt,
+                                    widestring::utf16str!("F").to_owned(),
+                                    global::attr!(
+                                        method Public {}
+                                        g_core_type!(System_UInt64).into(),
+                                        g_core_type!(System_UInt8).into(),
+                                        g_core_type!(System_UInt32).into(),
+                                        g_core_type!(System_UInt16).into(),
                                     ),
-                                    // Statics
-                                    Method::default_sctor(
-                                        Some(mt),
-                                        global::attr!(method Public {}),
-                                    ),
-                                ]
-                            })
-                            .as_non_null_ptr()
-                        },
-                        vec![],
-                        None,
-                        vec![],
-                        None,
-                    )
-                    .as_non_null_ptr(),
-                )]
+                                    GenericCountRequirement::default(),
+                                    vec![],
+                                    MaybeUnloadedTypeHandle::from(
+                                        CoreTypeId::System_Void.global_type_handle(),
+                                    )
+                                    .into(),
+                                    CallConvention::PlatformDefault,
+                                    None,
+                                    vec![],
+                                    ExceptionTable::gen_new(),
+                                ),
+                                // Statics
+                                Method::default_sctor(Some(mt), global::attr!(method Public {})),
+                            ]
+                        })
+                        .as_non_null_ptr()
+                    },
+                    vec![],
+                    None,
+                    vec![],
+                    None,
+                ))]
             },
         ));
 
     let test_assembly = global_vm()
         .assembly_manager()
-        .get_assembly_by_name("Test")
+        .get_assembly_by_name(widestring::utf16str!("Test"))
         .unwrap()
         .unwrap();
 
@@ -110,7 +105,7 @@ fn test_call_stack() {
         test_class
             .as_ref()
             .method_table_ref()
-            .find_first_method_by_name("F")
+            .find_first_method_by_name(widestring::utf16str!("F"))
             .unwrap()
     };
     unsafe { assert_eq!(method.as_ref().attr().local_variable_types().len(), 4) };
@@ -263,25 +258,25 @@ fn dynamic_non_purus_call() -> global::Result<()> {
 
     let (result_ptr, result_layout) = try_invoke_instructions(
         vec![
-            /* 0 */ g_core_type!(System_USize), // Pointer to function
-            /* 1 */ g_core_type!(System_UInt64), // a
-            /* 2 */ g_core_type!(System_UInt32), // b
-            /* 3 */ g_core_type!(System_UInt8), // c
-            /* 4 */ g_core_type!(System_String), // d
-            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
-            /* 6 */ g_core_type!(System_UInt8), // Call convention
-            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
-            /* 8 */ g_core_type!(System_UInt8), // Encoding
-            /* 9 */ g_core_type!(System_UInt8), // Object strategy
-            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
-            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
-            /* 12 */ g_core_type!(System_USize), // Index for setting
-            /* 13 */ g_core_type!(System_USize), // For 10
-            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
-            /* 15 */ g_core_type!(System_Void),
-            /* 16 */ g_core_type!(System_UInt64), // RET
+            /* 0 */ g_core_type!(System_USize).into(), // Pointer to function
+            /* 1 */ g_core_type!(System_UInt64).into(), // a
+            /* 2 */ g_core_type!(System_UInt32).into(), // b
+            /* 3 */ g_core_type!(System_UInt8).into(), // c
+            /* 4 */ g_core_type!(System_String).into(), // d
+            /* 5 */ g_core_type!(System_NonPurusCallConfiguration).into(),
+            /* 6 */ g_core_type!(System_UInt8).into(), // Call convention
+            /* 7 */ g_core_type!(System_NonPurusCallType).into(), // Return type
+            /* 8 */ g_core_type!(System_UInt8).into(), // Encoding
+            /* 9 */ g_core_type!(System_UInt8).into(), // Object strategy
+            /* 10 */ g_core_type!(System_Object).into(), // Array(ByRefArguments)
+            /* 11 */ g_core_type!(System_Object).into(), // Array(Arguments)
+            /* 12 */ g_core_type!(System_USize).into(), // Index for setting
+            /* 13 */ g_core_type!(System_USize).into(), // For 10
+            /* 14 */ g_core_type!(System_NonPurusCallType).into(), // For 11
+            /* 15 */ g_core_type!(System_Void).into(),
+            /* 16 */ g_core_type!(System_UInt64).into(), // RET
         ],
-        g_core_type!(System_UInt64),
+        g_core_type!(System_UInt64).into(),
         vec![
             // Load function pointer
             Instruction::Load(Instruction_Load {
@@ -619,25 +614,25 @@ fn dynamic_message_box() -> global::Result<()> {
 
     let (result_ptr, result_layout) = try_invoke_instructions(
         vec![
-            /* 0 */ g_core_type!(System_USize), // Pointer to function
-            /* 1 */ g_core_type!(System_Pointer),
-            /* 2 */ g_core_type!(System_String),
-            /* 3 */ g_core_type!(System_String),
-            /* 4 */ g_core_type!(System_UInt32),
-            /* 5 */ g_core_type!(System_NonPurusCallConfiguration),
-            /* 6 */ g_core_type!(System_UInt8), // Call convention
-            /* 7 */ g_core_type!(System_NonPurusCallType), // Return type
-            /* 8 */ g_core_type!(System_UInt8), // Encoding
-            /* 9 */ g_core_type!(System_UInt8), // Object strategy
-            /* 10 */ g_core_type!(System_Object), // Array(ByRefArguments)
-            /* 11 */ g_core_type!(System_Object), // Array(Arguments)
-            /* 12 */ g_core_type!(System_USize), // Index for setting
-            /* 13 */ g_core_type!(System_USize), // For 10
-            /* 14 */ g_core_type!(System_NonPurusCallType), // For 11
-            /* 15 */ g_core_type!(System_Void),
-            /* 16 */ g_core_type!(System_Int32), // RET
+            /* 0 */ g_core_type!(System_USize).into(), // Pointer to function
+            /* 1 */ g_core_type!(System_Pointer).into(),
+            /* 2 */ g_core_type!(System_String).into(),
+            /* 3 */ g_core_type!(System_String).into(),
+            /* 4 */ g_core_type!(System_UInt32).into(),
+            /* 5 */ g_core_type!(System_NonPurusCallConfiguration).into(),
+            /* 6 */ g_core_type!(System_UInt8).into(), // Call convention
+            /* 7 */ g_core_type!(System_NonPurusCallType).into(), // Return type
+            /* 8 */ g_core_type!(System_UInt8).into(), // Encoding
+            /* 9 */ g_core_type!(System_UInt8).into(), // Object strategy
+            /* 10 */ g_core_type!(System_Object).into(), // Array(ByRefArguments)
+            /* 11 */ g_core_type!(System_Object).into(), // Array(Arguments)
+            /* 12 */ g_core_type!(System_USize).into(), // Index for setting
+            /* 13 */ g_core_type!(System_USize).into(), // For 10
+            /* 14 */ g_core_type!(System_NonPurusCallType).into(), // For 11
+            /* 15 */ g_core_type!(System_Void).into(),
+            /* 16 */ g_core_type!(System_Int32).into(), // RET
         ],
-        g_core_type!(System_Int32),
+        g_core_type!(System_Int32).into(),
         vec![
             // Load function pointer
             Instruction::Load(Instruction_Load {

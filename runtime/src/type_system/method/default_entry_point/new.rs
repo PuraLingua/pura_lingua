@@ -4,13 +4,14 @@ use global::instruction::{IRegisterAddr, Instruction_New};
 
 use crate::{
     type_system::{
+        cached_type_reference::CachedTypeReference,
         class::Class,
         get_traits::{GetAssemblyRef, GetTypeVars},
         method::{
             Method, MethodRef,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
-        type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle},
+        type_handle::{MethodGenericResolver, NonGenericTypeHandle},
     },
     value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
@@ -21,10 +22,10 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
-    ins: &Instruction_New<MaybeUnloadedTypeHandle, MethodRef, TRegisterAddr>,
+    ins: &Instruction_New<CachedTypeReference, MethodRef, TRegisterAddr>,
 ) -> Option<Result<(), Termination>> {
     match ins {
         Instruction_New::NewObject {
@@ -46,7 +47,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 .collect::<Vec<_>>();
 
             let Some(class) = ty
-                .load_with_generic_resolver(
+                .get_with_generic_resolver(
                     method
                         .require_method_table_ref()
                         .ty_ref()
@@ -60,7 +61,9 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                     _ => None,
                 })
             else {
-                return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    ty.to_maybe_unloaded_handle(),
+                )));
             };
 
             match cpu.new_object(class, ctor_name, &args) {
@@ -80,13 +83,15 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
             output,
         } => {
             let Some(element_th) = element_type
-                .load_with_generic_resolver(
+                .get_with_generic_resolver(
                     cpu.vm_ref().assembly_manager(),
                     MethodGenericResolver::new(method),
                 )
                 .and_then(|th| th.get_non_generic_with_method(method))
             else {
-                return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    element_type.to_maybe_unloaded_handle(),
+                )));
             };
             let arr = match element_th {
                 NonGenericTypeHandle::Class(ty) => unsafe {
@@ -112,13 +117,15 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
                 load_register_failed!(*len_addr);
             };
             let Some(element_th) = element_type
-                .load_with_generic_resolver(
+                .get_with_generic_resolver(
                     cpu.vm_ref().assembly_manager(),
                     MethodGenericResolver::new(method),
                 )
                 .and_then(|th| th.get_non_generic_with_method(method))
             else {
-                return Some(Err(Termination::LoadTypeHandleFailed(element_type.clone())));
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    element_type.to_maybe_unloaded_handle(),
+                )));
             };
             let arr = match element_th {
                 NonGenericTypeHandle::Class(ty) => unsafe {

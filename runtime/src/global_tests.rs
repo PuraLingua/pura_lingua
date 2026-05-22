@@ -149,14 +149,14 @@ fn gtest_test_fn() -> global::Result<()> {
 
     let assembly = vm
         .assembly_manager()
-        .get_assembly_by_name("Test")
+        .get_assembly_by_name(widestring::utf16str!("Test"))
         .unwrap()
         .unwrap();
 
     let test_class = assembly.get_class(0).unwrap().unwrap();
     let test_fn = unsafe { test_class.as_ref() }
         .method_table_ref()
-        .find_first_method_by_name("TestFn")
+        .find_first_method_by_name(widestring::utf16str!("TestFn"))
         .unwrap();
 
     let result =
@@ -186,14 +186,14 @@ fn gtest_test_msgbox() -> global::Result<()> {
 
     let assembly = vm
         .assembly_manager()
-        .get_assembly_by_name("MsgboxTest")
+        .get_assembly_by_name(widestring::utf16str!("MsgboxTest"))
         .unwrap()
         .unwrap();
 
     let test_class = assembly.get_class(0).unwrap().unwrap();
     let test_fn = unsafe { test_class.as_ref() }
         .method_table_ref()
-        .find_first_method_by_name("TestFn")
+        .find_first_method_by_name(widestring::utf16str!("TestFn"))
         .unwrap();
 
     let result = unsafe { test_fn.as_ref() }
@@ -230,7 +230,7 @@ fn gtest_simple_console() -> global::Result<()> {
 
     let assembly = vm
         .assembly_manager()
-        .get_assembly_by_name("SimpleIR::SimpleConsole")
+        .get_assembly_by_name(widestring::utf16str!("SimpleIR::SimpleConsole"))
         .unwrap()
         .unwrap();
 
@@ -241,7 +241,7 @@ fn gtest_simple_console() -> global::Result<()> {
         console_class
             .as_ref()
             .method_table_ref()
-            .find_first_method_by_name("WriteStdout")
+            .find_first_method_by_name(widestring::utf16str!("WriteStdout"))
             .unwrap()
     };
 
@@ -260,13 +260,13 @@ fn gtest_simple_console() -> global::Result<()> {
 fn calculating() {
     let (res_ptr, res_layout) = try_invoke_instructions(
         vec![
-            g_core_type!(System_UInt64),
-            g_core_type!(System_UInt64),
-            g_core_type!(System_UInt64),
-            g_core_type!(System_UInt64),
-            g_core_type!(System_UInt64),
+            g_core_type!(System_UInt64).into(),
+            g_core_type!(System_UInt64).into(),
+            g_core_type!(System_UInt64).into(),
+            g_core_type!(System_UInt64).into(),
+            g_core_type!(System_UInt64).into(),
         ],
-        g_core_type!(System_UInt64),
+        g_core_type!(System_UInt64).into(),
         vec![
             Instruction::Load(Instruction_Load {
                 addr: RegisterAddr::new(0),

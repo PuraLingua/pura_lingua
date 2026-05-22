@@ -1,11 +1,12 @@
 use std::{alloc::Layout, ffi::c_void};
 
-use global::{attrs::ParameterAttr, derive_ctor::ctor};
+use global::attrs::ParameterAttr;
 use stdlib_header::CoreTypeId;
 
 use crate::{
     stdlib::CoreTypeIdConstExt,
     type_system::{
+        cached_type_reference::CachedTypeReference,
         get_traits::{GetAssemblyRef, GetTypeVars},
         type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle},
     },
@@ -13,18 +14,26 @@ use crate::{
 
 use super::Method;
 
-#[derive(ctor, Clone)]
-#[ctor(pub const new)]
+#[derive(Clone)]
 pub struct Parameter {
-    pub(crate) ty: MaybeUnloadedTypeHandle,
+    pub(crate) ty: CachedTypeReference,
     pub(crate) attr: ParameterAttr,
 }
 
 impl Parameter {
-    pub const fn with_core_type(ty: CoreTypeId) -> Self {
+    pub fn new(ty: MaybeUnloadedTypeHandle, attr: ParameterAttr) -> Self {
+        Self {
+            ty: CachedTypeReference::new(ty),
+            attr,
+        }
+    }
+}
+
+impl Parameter {
+    pub fn with_core_type(ty: CoreTypeId) -> Self {
         Self::new(ty.static_type_ref().into(), global::attr!(parameter {}))
     }
-    pub const fn with_core_type_attr(ty: CoreTypeId, attr: ParameterAttr) -> Self {
+    pub fn with_core_type_attr(ty: CoreTypeId, attr: ParameterAttr) -> Self {
         Self::new(ty.static_type_ref().into(), attr)
     }
 }
@@ -34,27 +43,22 @@ impl Parameter {
         &self,
         method: &Method<T>,
     ) -> NonGenericTypeHandle {
-        match &self.ty {
-            MaybeUnloadedTypeHandle::Loaded(ty) => ty.get_non_generic_with_method(method).unwrap(),
-            MaybeUnloadedTypeHandle::Unloaded(_) => {
-                let ty = unsafe {
-                    self.ty
-                        .load_with_generic_resolver(
-                            method
-                                .mt
-                                .unwrap()
-                                .as_ref()
-                                .ty_ref()
-                                .__get_assembly_ref()
-                                .manager_ref(),
-                            MethodGenericResolver::new(method),
-                        )
+        self.ty
+            .get_with_generic_resolver(
+                unsafe {
+                    method
+                        .mt
                         .unwrap()
-                };
-
-                ty.get_non_generic_with_method(method).unwrap()
-            }
-        }
+                        .as_ref()
+                        .ty_ref()
+                        .__get_assembly_ref()
+                        .manager_ref()
+                },
+                MethodGenericResolver::new(method),
+            )
+            .unwrap()
+            .get_non_generic_with_method(method)
+            .unwrap()
     }
     pub fn get_layout<T: GetTypeVars + GetAssemblyRef>(&self, method: &Method<T>) -> Layout {
         if self.attr.is_by_ref() {

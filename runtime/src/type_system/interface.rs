@@ -20,6 +20,7 @@ use crate::{
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
+    utils::clone_utf16str,
     value::managed_reference::ManagedReference,
 };
 
@@ -29,7 +30,7 @@ pub struct Interface {
     assembly: NonNull<Assembly>,
     generic: Option<NonNull<Interface>>,
 
-    name: Box<str>,
+    name: Box<widestring::Utf16Str>,
     attr: TypeAttr,
 
     generic_count_requirement: GenericCountRequirement,
@@ -61,7 +62,7 @@ impl Interface {
             assembly: self.assembly,
             generic: Some(NonNull::from_ref(self)),
 
-            name: self.name.clone(),
+            name: clone_utf16str(&self.name),
             attr: self.attr,
 
             generic_count_requirement: self.generic_count_requirement,
@@ -95,7 +96,7 @@ impl Interface {
     pub fn new<F: FnOnce(NonNull<Self>) -> NonNull<MethodTable<Self>>>(
         assembly: NonNull<Assembly>,
 
-        name: String,
+        name: widestring::Utf16String,
         attr: TypeAttr,
 
         generic_count_requirement: GenericCountRequirement,
@@ -110,7 +111,7 @@ impl Interface {
             assembly,
             generic: None,
 
-            name: name.into_boxed_str(),
+            name: name.into_boxed_utfstr(),
             attr,
 
             generic_count_requirement,

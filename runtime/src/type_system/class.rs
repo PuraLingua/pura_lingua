@@ -1,6 +1,4 @@
 use std::alloc::{Allocator, Layout};
-use std::assert_matches;
-use std::cell::Cell;
 use std::mem::{ManuallyDrop, offset_of};
 use std::ops::RangeBounds;
 use std::ptr::NonNull;
@@ -11,7 +9,7 @@ use global::attrs::TypeAttr;
 use global::getset::{Getters, MutGetters};
 
 use crate::memory::{GetFieldOffsetOptions, OwnedPtr};
-use crate::type_system::assembly_manager::AssemblyManager;
+use crate::type_system::assembly_manager::{AssemblyManager, AtomicTypeLoadState};
 use crate::type_system::generics::GenericCountRequirement;
 use crate::type_system::interface::InterfaceImplementation;
 use crate::type_system::type_handle::{
@@ -21,6 +19,7 @@ use crate::type_system::{
     assembly::Assembly, field::Field, generics::GenericBounds, method_table::MethodTable,
     type_handle::MaybeUnloadedTypeHandle,
 };
+use crate::utils::clone_utf16str;
 use crate::value::managed_reference::{FieldAccessor, ManagedReference};
 
 use super::assembly_manager::TypeLoadState;
@@ -95,17 +94,17 @@ impl ClassParent {
 pub struct Class {
     assembly: NonNull<Assembly>,
     generic: Option<NonNull<Class>>,
-    pub(crate) load_state: TypeLoadState,
+    pub(crate) load_state: AtomicTypeLoadState,
     main: Option<u32>,
 
-    name: Box<str>,
+    name: Box<widestring::Utf16Str>,
     attr: TypeAttr,
     generic_count_requirement: GenericCountRequirement,
 
     #[getset(skip)]
     #[debug(
         "{}",
-        m_parent.as_ref().map(|x| if self.load_state == TypeLoadState::Finished {
+        m_parent.as_ref().map(|x| if self.load_state.is_finished() {
                 format!("{:#?}", unsafe { &x.loaded })
             } else {
                 format!("{:#?}", unsafe { &x.unloaded })
@@ -129,6 +128,7 @@ pub struct Class {
 
 impl Class {
     pub const fn parent(&self) -> Option<NonNull<Self>> {
+        #[inline(always)]
         const fn map(x: &ClassParent) -> NonNull<Class> {
             match unsafe { &*x.loaded } {
                 LoadedClassParent::Simple(class) => *class,
@@ -141,7 +141,7 @@ impl Class {
 
 impl Class {
     pub fn instantiate(&self, type_vars: &[NonGenericTypeHandle]) -> NonNull<Self> {
-        assert_matches!(self.load_state, TypeLoadState::Finished);
+        assert!(self.load_state.is_finished());
         assert!(
             self.generic_count_requirement
                 .contains(&(type_vars.len() as u32)),
@@ -163,10 +163,10 @@ impl Class {
         let instantiated = Box::new(Self {
             assembly: self.assembly,
             generic: Some(NonNull::from_ref(self)),
-            load_state: TypeLoadState::Finished,
+            load_state: AtomicTypeLoadState::new(TypeLoadState::Finished),
             main: self.main,
 
-            name: self.name.clone(),
+            name: clone_utf16str(&self.name),
             attr: self.attr,
             generic_count_requirement: self.generic_count_requirement,
 
@@ -181,18 +181,7 @@ impl Class {
             }),
 
             method_table: MethodTable::dup(self.method_table),
-            fields: self
-                .fields
-                .iter()
-                .map(|x| Field {
-                    name: x.name.clone(),
-                    attr: x.attr,
-                    ty: x.ty.clone(),
-                    cached_layout: Cell::new(None),
-                    cached_offset: Cell::new(None),
-                    cached_static_offset: Cell::new(None),
-                })
-                .collect(),
+            fields: self.fields.iter().cloned().collect(),
             sctor: self.sctor,
 
             generic_instances: Vec::new(),
@@ -224,7 +213,7 @@ impl Class {
     pub fn new<F: FnOnce(NonNull<Self>) -> NonNull<MethodTable<Self>>>(
         assembly: NonNull<Assembly>,
 
-        name: String,
+        name: widestring::Utf16String,
         attr: TypeAttr,
         generic_count_requirement: GenericCountRequirement,
 
@@ -247,10 +236,10 @@ impl Class {
         let this = Box::new(Self {
             assembly,
             generic: None,
-            load_state: TypeLoadState::Finished,
+            load_state: AtomicTypeLoadState::new(TypeLoadState::Finished),
             main: None,
 
-            name: name.into_boxed_str(),
+            name: name.into_boxed_utfstr(),
             attr,
             generic_count_requirement,
 
@@ -302,7 +291,7 @@ impl Class {
 
         main: Option<u32>,
 
-        name: String,
+        name: widestring::Utf16String,
         attr: TypeAttr,
         generic_count_requirement: GenericCountRequirement,
 
@@ -331,10 +320,10 @@ impl Class {
         let this = Box::new(Self {
             assembly,
             generic: None,
-            load_state,
+            load_state: AtomicTypeLoadState::new(load_state),
             main,
 
-            name: name.into_boxed_str(),
+            name: name.into_boxed_utfstr(),
             attr,
             generic_count_requirement,
 
@@ -467,19 +456,16 @@ impl Drop for Class {
             }
         }
 
-        match self.load_state {
-            TypeLoadState::Loading => {
-                if let Some(parent) = self.m_parent.take() {
-                    unsafe {
-                        drop(Box::from_non_null(parent.unloaded));
-                    }
+        if !self.load_state.is_finished() {
+            if let Some(parent) = self.m_parent.take() {
+                unsafe {
+                    drop(Box::from_non_null(parent.unloaded));
                 }
             }
-            TypeLoadState::Finished => {
-                if let Some(mut parent) = self.m_parent.take() {
-                    unsafe {
-                        ManuallyDrop::drop(&mut parent.loaded);
-                    }
+        } else {
+            if let Some(mut parent) = self.m_parent.take() {
+                unsafe {
+                    ManuallyDrop::drop(&mut parent.loaded);
                 }
             }
         }

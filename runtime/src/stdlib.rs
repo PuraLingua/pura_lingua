@@ -4,7 +4,7 @@ use std::{alloc::Layout, ptr::NonNull};
 
 use crate::{
     type_system::{
-        assembly::Assembly,
+        assembly::{Assembly, TypeContainer},
         assembly_manager::{AssemblyManager, AssemblyRef},
         class::Class,
         r#struct::Struct,
@@ -40,7 +40,7 @@ pub const trait CoreTypeIdConstExt: Sized {
     fn static_type_ref(self) -> TypeRef;
     fn mem_layout(self) -> Option<Layout>;
     fn val_layout(self) -> Option<Layout>;
-    fn get_loader(self) -> fn(&Assembly) -> NonGenericTypeHandle;
+    fn get_loader(self) -> fn(&Assembly) -> TypeContainer;
 }
 use global::non_purus_call_configuration::NonPurusCallType;
 pub use stdlib_header::CoreTypeId;
@@ -62,170 +62,201 @@ impl const CoreTypeIdConstExt for CoreTypeId {
             {
             }
         };
+        use CoreTypeId::*;
+
         match self {
-            CoreTypeId::System_Object => Some(Layout::new::<()>()),
-            CoreTypeId::System_ValueType => Some(Layout::new::<()>()),
+            System_Object => Some(Layout::new::<()>()),
+            System_ValueType => Some(Layout::new::<()>()),
 
-            CoreTypeId::System_Void => Some(Layout::new::<()>()),
+            System_Void => Some(Layout::new::<()>()),
 
-            CoreTypeId::System_Nullable_1 => None,
+            System_Nullable_1 => None,
 
-            Self::System_Boolean => Some(Layout::new::<u8>()),
+            System_Boolean => Some(Layout::new::<u8>()),
 
-            CoreTypeId::System_UInt8 => Some(Layout::new::<u8>()),
-            CoreTypeId::System_UInt16 => Some(Layout::new::<u16>()),
-            CoreTypeId::System_UInt32 => Some(Layout::new::<u32>()),
-            CoreTypeId::System_UInt64 => Some(Layout::new::<u64>()),
-            CoreTypeId::System_USize => Some(Layout::new::<usize>()),
+            System_UInt8 => Some(Layout::new::<u8>()),
+            System_UInt16 => Some(Layout::new::<u16>()),
+            System_UInt32 => Some(Layout::new::<u32>()),
+            System_UInt64 => Some(Layout::new::<u64>()),
+            System_USize => Some(Layout::new::<usize>()),
 
-            CoreTypeId::System_Int8 => Some(Layout::new::<i8>()),
-            CoreTypeId::System_Int16 => Some(Layout::new::<i16>()),
-            CoreTypeId::System_Int32 => Some(Layout::new::<i32>()),
-            CoreTypeId::System_Int64 => Some(Layout::new::<i64>()),
-            CoreTypeId::System_ISize => Some(Layout::new::<isize>()),
+            System_Int8 => Some(Layout::new::<i8>()),
+            System_Int16 => Some(Layout::new::<i16>()),
+            System_Int32 => Some(Layout::new::<i32>()),
+            System_Int64 => Some(Layout::new::<i64>()),
+            System_ISize => Some(Layout::new::<isize>()),
 
-            CoreTypeId::System_Char => Some(Layout::new::<u16>()),
+            System_Char => Some(Layout::new::<u16>()),
 
-            Self::System_Pointer => Some(Layout::new::<*const u8>()),
-            Self::System_Reference_1 => Some(Layout::new::<*const u8>()),
+            System_Pointer => Some(Layout::new::<*const u8>()),
+            System_Reference_1 => Some(Layout::new::<*const u8>()),
 
-            Self::System_NonPurusCallConfiguration => None,
-            Self::System_NonPurusCallType => None,
+            System_NonPurusCallConfiguration => None,
+            System_NonPurusCallType => None,
 
-            Self::System_DynamicLibrary => None,
+            System_DynamicLibrary => None,
 
-            Self::System_IDispose => None,
+            System_IDispose => None,
 
-            Self::System_Tuple => None,
+            System_Tuple => None,
 
-            CoreTypeId::System_Array_1 => Some(Layout::new::<usize>()),
-            Self::System_Span_1 => None,
+            System_Array_1 => Some(Layout::new::<usize>()),
+            System_Span_1 => None,
 
-            CoreTypeId::System_String => Some(Layout::new::<u16>()),
-            Self::System_LargeString => Some(Layout::new::<usize>()),
+            System_String => Some(Layout::new::<u16>()),
+            System_LargeString => Some(Layout::new::<usize>()),
 
-            Self::System_RuntimeBasic => None,
+            System_RuntimeBasic => None,
 
-            CoreTypeId::System_Exception => None,
-            CoreTypeId::System_AllocException => None,
-            CoreTypeId::System_InvalidEnumException => None,
-            Self::System_Win32Exception => None,
-            Self::System_ErrnoException => None,
-            Self::System_DlErrorException => None,
+            System_Exception
+            | System_NullReferenceException
+            | System_IndexOutOfRangeException
+            | System_AllocException
+            | System_InvalidEnumException
+            | System_Win32Exception
+            | System_ErrnoException
+            | System_DlErrorException => None,
+
+            System_Reflection_AssemblyInfo
+            | System_Reflection_TypeInfo
+            | System_Reflection_FieldInfo
+            | System_Reflection_MethodInfo
+            | System_Reflection_ParameterInfo => None,
         }
     }
 
     fn val_layout(self) -> Option<Layout> {
-        match self {
-            CoreTypeId::System_Object => Some(Layout::new::<ManagedReference<Class>>()),
-            CoreTypeId::System_ValueType => Some(Layout::new::<()>()),
+        use CoreTypeId::*;
 
-            CoreTypeId::System_Void => Some(Layout::new::<()>()),
+        match self {
+            System_Object => Some(Layout::new::<ManagedReference<Class>>()),
+            System_ValueType => Some(Layout::new::<()>()),
+
+            System_Void => Some(Layout::new::<()>()),
 
             // Even it's a struct, it has the same layout as an object
-            CoreTypeId::System_Nullable_1 => Some(Layout::new::<ManagedReference<Class>>()),
+            System_Nullable_1 => Some(Layout::new::<ManagedReference<Class>>()),
 
-            Self::System_Boolean => Some(Layout::new::<u8>()),
+            System_Boolean => Some(Layout::new::<u8>()),
 
-            CoreTypeId::System_UInt8 => Some(Layout::new::<u8>()),
-            CoreTypeId::System_UInt16 => Some(Layout::new::<u16>()),
-            CoreTypeId::System_UInt32 => Some(Layout::new::<u32>()),
-            CoreTypeId::System_UInt64 => Some(Layout::new::<u64>()),
-            CoreTypeId::System_USize => Some(Layout::new::<usize>()),
+            System_UInt8 => Some(Layout::new::<u8>()),
+            System_UInt16 => Some(Layout::new::<u16>()),
+            System_UInt32 => Some(Layout::new::<u32>()),
+            System_UInt64 => Some(Layout::new::<u64>()),
+            System_USize => Some(Layout::new::<usize>()),
 
-            CoreTypeId::System_Int8 => Some(Layout::new::<i8>()),
-            CoreTypeId::System_Int16 => Some(Layout::new::<i16>()),
-            CoreTypeId::System_Int32 => Some(Layout::new::<i32>()),
-            CoreTypeId::System_Int64 => Some(Layout::new::<i64>()),
-            CoreTypeId::System_ISize => Some(Layout::new::<isize>()),
+            System_Int8 => Some(Layout::new::<i8>()),
+            System_Int16 => Some(Layout::new::<i16>()),
+            System_Int32 => Some(Layout::new::<i32>()),
+            System_Int64 => Some(Layout::new::<i64>()),
+            System_ISize => Some(Layout::new::<isize>()),
 
-            CoreTypeId::System_Char => Some(Layout::new::<u16>()),
+            System_Char => Some(Layout::new::<u16>()),
 
-            Self::System_Pointer => Some(Layout::new::<*const u8>()),
-            Self::System_Reference_1 => Some(Layout::new::<*const u8>()),
+            System_Pointer => Some(Layout::new::<*const u8>()),
+            System_Reference_1 => Some(Layout::new::<*const u8>()),
 
-            Self::System_NonPurusCallConfiguration => {
-                Some(Layout::new::<ManagedReference<Class>>())
-            }
-            Self::System_NonPurusCallType => Some(Layout::new::<ManagedReference<Class>>()),
+            System_NonPurusCallConfiguration => Some(Layout::new::<ManagedReference<Class>>()),
+            System_NonPurusCallType => Some(Layout::new::<ManagedReference<Class>>()),
 
-            Self::System_DynamicLibrary => Some(Layout::new::<ManagedReference<Class>>()),
+            System_DynamicLibrary => Some(Layout::new::<ManagedReference<Class>>()),
 
-            Self::System_IDispose => None,
+            System_IDispose => None,
 
-            CoreTypeId::System_Tuple => None,
+            System_Tuple => None,
 
-            CoreTypeId::System_Array_1 => Some(Layout::new::<ManagedReference<Class>>()),
-            CoreTypeId::System_Span_1 => None,
+            System_Array_1 => Some(Layout::new::<ManagedReference<Class>>()),
+            System_Span_1 => None,
 
-            CoreTypeId::System_String => Some(Layout::new::<ManagedReference<Class>>()),
-            CoreTypeId::System_LargeString => Some(Layout::new::<ManagedReference<Class>>()),
+            System_String => Some(Layout::new::<ManagedReference<Class>>()),
+            System_LargeString => Some(Layout::new::<ManagedReference<Class>>()),
 
-            CoreTypeId::System_RuntimeBasic => Some(Layout::new::<ManagedReference<Class>>()),
+            System_RuntimeBasic => Some(Layout::new::<ManagedReference<Class>>()),
 
-            CoreTypeId::System_Exception
-            | CoreTypeId::System_AllocException
-            | CoreTypeId::System_InvalidEnumException
-            | CoreTypeId::System_Win32Exception
-            | CoreTypeId::System_ErrnoException
-            | CoreTypeId::System_DlErrorException => Some(Layout::new::<ManagedReference<Class>>()),
+            System_Exception
+            | System_NullReferenceException
+            | System_IndexOutOfRangeException
+            | System_AllocException
+            | System_InvalidEnumException
+            | System_Win32Exception
+            | System_ErrnoException
+            | System_DlErrorException => Some(Layout::new::<ManagedReference<Class>>()),
+
+            System_Reflection_AssemblyInfo
+            | System_Reflection_TypeInfo
+            | System_Reflection_FieldInfo
+            | System_Reflection_MethodInfo
+            | System_Reflection_ParameterInfo => Some(Layout::new::<ManagedReference<Class>>()),
         }
     }
 
-    fn get_loader(self) -> fn(&Assembly) -> NonGenericTypeHandle {
-        macro of($name:ident) {
+    fn get_loader(self) -> fn(&Assembly) -> TypeContainer {
+        use CoreTypeId::*;
+
+        macro of_System($name:ident) {
             System::$name::load
         }
+        macro of_System_Reflection($name:ident) {
+            System::Reflection::$name::load
+        }
         match self {
-            Self::System_Object => of!(Object),
-            Self::System_ValueType => of!(ValueType),
+            System_Object => of_System!(Object),
+            System_ValueType => of_System!(ValueType),
 
-            Self::System_Void => of!(Void),
+            System_Void => of_System!(Void),
 
-            Self::System_Nullable_1 => of!(Nullable_1),
+            System_Nullable_1 => of_System!(Nullable_1),
 
-            Self::System_Boolean => of!(Boolean),
+            System_Boolean => of_System!(Boolean),
 
-            Self::System_UInt8 => System::_Integers::System_UInt8,
-            Self::System_UInt16 => System::_Integers::System_UInt16,
-            Self::System_UInt32 => System::_Integers::System_UInt32,
-            Self::System_UInt64 => System::_Integers::System_UInt64,
-            Self::System_USize => System::_Integers::System_USize,
+            System_UInt8 => System::_Integers::System_UInt8,
+            System_UInt16 => System::_Integers::System_UInt16,
+            System_UInt32 => System::_Integers::System_UInt32,
+            System_UInt64 => System::_Integers::System_UInt64,
+            System_USize => System::_Integers::System_USize,
 
-            Self::System_Int8 => System::_Integers::System_Int8,
-            Self::System_Int16 => System::_Integers::System_Int16,
-            Self::System_Int32 => System::_Integers::System_Int32,
-            Self::System_Int64 => System::_Integers::System_Int64,
-            Self::System_ISize => System::_Integers::System_ISize,
+            System_Int8 => System::_Integers::System_Int8,
+            System_Int16 => System::_Integers::System_Int16,
+            System_Int32 => System::_Integers::System_Int32,
+            System_Int64 => System::_Integers::System_Int64,
+            System_ISize => System::_Integers::System_ISize,
 
-            Self::System_Char => of!(Char),
+            System_Char => of_System!(Char),
 
-            Self::System_Pointer => of!(Pointer),
-            Self::System_Reference_1 => of!(Reference_1),
+            System_Pointer => of_System!(Pointer),
+            System_Reference_1 => of_System!(Reference_1),
 
-            Self::System_NonPurusCallConfiguration => of!(NonPurusCallConfiguration),
-            Self::System_NonPurusCallType => of!(NonPurusCallType),
+            System_NonPurusCallConfiguration => of_System!(NonPurusCallConfiguration),
+            System_NonPurusCallType => of_System!(NonPurusCallType),
 
-            Self::System_DynamicLibrary => of!(DynamicLibrary),
+            System_DynamicLibrary => of_System!(DynamicLibrary),
 
-            Self::System_IDispose => of!(IDispose),
+            System_IDispose => of_System!(IDispose),
 
-            Self::System_Tuple => of!(Tuple),
+            System_Tuple => of_System!(Tuple),
 
-            Self::System_Array_1 => of!(Array_1),
-            Self::System_Span_1 => of!(Span_1),
+            System_Array_1 => of_System!(Array_1),
+            System_Span_1 => of_System!(Span_1),
 
-            Self::System_String => of!(String),
-            Self::System_LargeString => of!(LargeString),
+            System_String => of_System!(String),
+            System_LargeString => of_System!(LargeString),
 
-            Self::System_RuntimeBasic => of!(RuntimeBasic),
+            System_RuntimeBasic => of_System!(RuntimeBasic),
 
-            Self::System_Exception => of!(Exception),
-            Self::System_AllocException => of!(AllocException),
-            Self::System_InvalidEnumException => of!(InvalidEnumException),
-            Self::System_Win32Exception => of!(Win32Exception),
-            Self::System_ErrnoException => of!(ErrnoException),
-            Self::System_DlErrorException => of!(DlErrorException),
+            System_Exception => of_System!(Exception),
+            System_NullReferenceException => of_System!(NullReferenceException),
+            System_IndexOutOfRangeException => of_System!(IndexOutOfRangeException),
+            System_AllocException => of_System!(AllocException),
+            System_InvalidEnumException => of_System!(InvalidEnumException),
+            System_Win32Exception => of_System!(Win32Exception),
+            System_ErrnoException => of_System!(ErrnoException),
+            System_DlErrorException => of_System!(DlErrorException),
+
+            System_Reflection_AssemblyInfo => of_System_Reflection!(AssemblyInfo),
+            System_Reflection_TypeInfo => of_System_Reflection!(TypeInfo),
+            System_Reflection_FieldInfo => of_System_Reflection!(FieldInfo),
+            System_Reflection_MethodInfo => of_System_Reflection!(MethodInfo),
+            System_Reflection_ParameterInfo => of_System_Reflection!(ParameterInfo),
         }
     }
 }
@@ -239,117 +270,137 @@ impl CoreTypeIdExt for CoreTypeId {
     }
 
     fn val_libffi_type(self) -> Option<libffi::middle::Type> {
+        use CoreTypeId::*;
         use libffi::middle::Type;
+
         match self {
-            Self::System_Object => Some(Type::pointer()),
-            Self::System_ValueType => Some(Type::void()),
+            System_Object => Some(Type::pointer()),
+            System_ValueType => Some(Type::void()),
 
-            Self::System_Void => Some(Type::void()),
+            System_Void => Some(Type::void()),
 
-            Self::System_Nullable_1 => Some(Type::pointer()),
+            System_Nullable_1 => Some(Type::pointer()),
 
-            Self::System_Boolean => Some(Type::u8()),
+            System_Boolean => Some(Type::u8()),
 
-            Self::System_UInt8 => Some(Type::u8()),
-            Self::System_UInt16 => Some(Type::u16()),
-            Self::System_UInt32 => Some(Type::u32()),
-            Self::System_UInt64 => Some(Type::u64()),
-            Self::System_USize => Some(Type::usize()),
+            System_UInt8 => Some(Type::u8()),
+            System_UInt16 => Some(Type::u16()),
+            System_UInt32 => Some(Type::u32()),
+            System_UInt64 => Some(Type::u64()),
+            System_USize => Some(Type::usize()),
 
-            Self::System_Int8 => Some(Type::i8()),
-            Self::System_Int16 => Some(Type::i16()),
-            Self::System_Int32 => Some(Type::i32()),
-            Self::System_Int64 => Some(Type::i64()),
-            Self::System_ISize => Some(Type::isize()),
+            System_Int8 => Some(Type::i8()),
+            System_Int16 => Some(Type::i16()),
+            System_Int32 => Some(Type::i32()),
+            System_Int64 => Some(Type::i64()),
+            System_ISize => Some(Type::isize()),
 
-            Self::System_Char => Some(Type::u16()),
+            System_Char => Some(Type::u16()),
 
-            Self::System_Pointer => Some(Type::pointer()),
-            Self::System_Reference_1 => Some(Type::pointer()),
+            System_Pointer => Some(Type::pointer()),
+            System_Reference_1 => Some(Type::pointer()),
 
-            Self::System_NonPurusCallConfiguration => Some(Type::pointer()),
-            Self::System_NonPurusCallType => Some(Type::pointer()),
+            System_NonPurusCallConfiguration => Some(Type::pointer()),
+            System_NonPurusCallType => Some(Type::pointer()),
 
-            Self::System_DynamicLibrary => Some(Type::pointer()),
+            System_DynamicLibrary => Some(Type::pointer()),
 
-            Self::System_IDispose => None,
+            System_IDispose => None,
 
-            Self::System_Tuple => None,
+            System_Tuple => None,
 
-            Self::System_Array_1 => Some(Type::pointer()),
-            Self::System_Span_1 => Some(Type::pointer()),
+            System_Array_1 => Some(Type::pointer()),
+            System_Span_1 => Some(Type::pointer()),
 
-            Self::System_String => Some(Type::pointer()),
-            Self::System_LargeString => Some(Type::pointer()),
+            System_String => Some(Type::pointer()),
+            System_LargeString => Some(Type::pointer()),
 
-            Self::System_RuntimeBasic => Some(Type::pointer()),
+            System_RuntimeBasic => Some(Type::pointer()),
 
-            Self::System_Exception
-            | Self::System_AllocException
-            | Self::System_InvalidEnumException
-            | Self::System_Win32Exception
-            | Self::System_ErrnoException
-            | Self::System_DlErrorException => Some(Type::pointer()),
+            System_Exception
+            | System_NullReferenceException
+            | System_IndexOutOfRangeException
+            | System_AllocException
+            | System_InvalidEnumException
+            | System_Win32Exception
+            | System_ErrnoException
+            | System_DlErrorException => Some(Type::pointer()),
+
+            System_Reflection_AssemblyInfo
+            | System_Reflection_TypeInfo
+            | System_Reflection_FieldInfo
+            | System_Reflection_MethodInfo
+            | System_Reflection_ParameterInfo => Some(Type::pointer()),
         }
     }
     fn non_purus_call_type(self) -> Option<NonPurusCallType> {
+        use CoreTypeId::*;
+
         match self {
-            Self::System_Object => Some(NonPurusCallType::Object),
-            Self::System_ValueType => None,
+            System_Object => Some(NonPurusCallType::Object),
+            System_ValueType => None,
 
-            Self::System_Void => Some(NonPurusCallType::Void),
+            System_Void => Some(NonPurusCallType::Void),
 
-            Self::System_Nullable_1 => Some(NonPurusCallType::Object),
+            System_Nullable_1 => Some(NonPurusCallType::Object),
 
-            Self::System_Boolean => Some(NonPurusCallType::U8),
+            System_Boolean => Some(NonPurusCallType::U8),
 
-            Self::System_UInt8 => Some(NonPurusCallType::U8),
-            Self::System_UInt16 => Some(NonPurusCallType::U16),
-            Self::System_UInt32 => Some(NonPurusCallType::U32),
-            Self::System_UInt64 => Some(NonPurusCallType::U64),
-            Self::System_USize => Some(NonPurusCallType::USize),
+            System_UInt8 => Some(NonPurusCallType::U8),
+            System_UInt16 => Some(NonPurusCallType::U16),
+            System_UInt32 => Some(NonPurusCallType::U32),
+            System_UInt64 => Some(NonPurusCallType::U64),
+            System_USize => Some(NonPurusCallType::USize),
 
-            Self::System_Int8 => Some(NonPurusCallType::I8),
-            Self::System_Int16 => Some(NonPurusCallType::I16),
-            Self::System_Int32 => Some(NonPurusCallType::I32),
-            Self::System_Int64 => Some(NonPurusCallType::I64),
-            Self::System_ISize => Some(NonPurusCallType::ISize),
+            System_Int8 => Some(NonPurusCallType::I8),
+            System_Int16 => Some(NonPurusCallType::I16),
+            System_Int32 => Some(NonPurusCallType::I32),
+            System_Int64 => Some(NonPurusCallType::I64),
+            System_ISize => Some(NonPurusCallType::ISize),
 
-            Self::System_Char => Some(NonPurusCallType::U16),
+            System_Char => Some(NonPurusCallType::U16),
 
-            Self::System_Pointer => Some(NonPurusCallType::Pointer),
-            Self::System_Reference_1 => Some(NonPurusCallType::Pointer),
+            System_Pointer => Some(NonPurusCallType::Pointer),
+            System_Reference_1 => Some(NonPurusCallType::Pointer),
 
-            Self::System_NonPurusCallConfiguration => Some(NonPurusCallType::Object),
-            Self::System_NonPurusCallType => Some(NonPurusCallType::Object),
+            System_NonPurusCallConfiguration => Some(NonPurusCallType::Object),
+            System_NonPurusCallType => Some(NonPurusCallType::Object),
 
-            Self::System_DynamicLibrary => Some(NonPurusCallType::Object),
+            System_DynamicLibrary => Some(NonPurusCallType::Object),
 
-            Self::System_IDispose => None,
+            System_IDispose => None,
 
-            Self::System_Tuple => None,
+            System_Tuple => None,
 
-            Self::System_Array_1 => Some(NonPurusCallType::Object),
-            Self::System_Span_1 => None,
+            System_Array_1 => Some(NonPurusCallType::Object),
+            System_Span_1 => None,
 
-            Self::System_String => Some(NonPurusCallType::String),
-            Self::System_LargeString => Some(NonPurusCallType::Object),
+            System_String => Some(NonPurusCallType::String),
+            System_LargeString => Some(NonPurusCallType::Object),
 
-            Self::System_RuntimeBasic => Some(NonPurusCallType::Object),
+            System_RuntimeBasic => Some(NonPurusCallType::Object),
 
-            Self::System_Exception
-            | Self::System_AllocException
-            | Self::System_InvalidEnumException
-            | Self::System_Win32Exception
-            | Self::System_ErrnoException
-            | Self::System_DlErrorException => Some(NonPurusCallType::Object),
+            System_Exception
+            | System_NullReferenceException
+            | System_IndexOutOfRangeException
+            | System_AllocException
+            | System_InvalidEnumException
+            | System_Win32Exception
+            | System_ErrnoException
+            | System_DlErrorException => Some(NonPurusCallType::Object),
+
+            System_Reflection_AssemblyInfo
+            | System_Reflection_TypeInfo
+            | System_Reflection_FieldInfo
+            | System_Reflection_MethodInfo
+            | System_Reflection_ParameterInfo => Some(NonPurusCallType::Object),
         }
     }
 }
 
 pub fn load_stdlib(manager: &AssemblyManager) {
     let id = manager.add_assembly(Assembly::new_for_adding(
-        stdlib_header::CORE_ASSEMBLY_NAME.to_owned(),
+        stdlib_header::CORE_ASSEMBLY_NAME_W.to_owned(),
         true,
         |assembly| {
             let assembly = unsafe { assembly.as_ref() };

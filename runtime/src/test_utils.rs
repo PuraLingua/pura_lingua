@@ -1,20 +1,17 @@
 use std::{alloc::Layout, ptr::NonNull, sync::MappedRwLockReadGuard};
 
 use enumflags2::make_bitflags;
-use global::{
-    attrs::{CallConvention, MethodAttr, MethodImplementationFlags, Visibility},
-    instruction::Instruction,
-};
+use global::attrs::{CallConvention, MethodAttr, MethodImplementationFlags, Visibility};
 use mem_leak_detector::LeakDetector;
 
 use crate::{
     type_system::{
-        assembly::Assembly,
+        assembly::{Assembly, TypeContainer},
+        cached_type_reference::CachedTypeReference,
         class::Class,
         generics::GenericCountRequirement,
-        method::{ExceptionTable, Method, MethodRef},
+        method::{ExceptionTable, Method, RuntimeInstruction},
         method_table::MethodTable,
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
     virtual_machine::{CpuID, global_vm},
 };
@@ -37,8 +34,8 @@ pub macro g_core_class($i:ident) {
 #[global_allocator]
 pub static LEAK_DETECTOR: LeakDetector<std::alloc::System> = LeakDetector::system();
 
-pub fn new_global_assembly<F: FnOnce(NonNull<Assembly>) -> Vec<NonGenericTypeHandle>>(
-    name: impl Into<String>,
+pub fn new_global_assembly<F: FnOnce(NonNull<Assembly>) -> Vec<TypeContainer>>(
+    name: impl Into<widestring::Utf16String>,
     f: F,
 ) -> MappedRwLockReadGuard<'static, Assembly> {
     let id = global_vm()
@@ -52,15 +49,15 @@ pub fn new_global_assembly<F: FnOnce(NonNull<Assembly>) -> Vec<NonGenericTypeHan
 }
 
 pub fn try_invoke_instructions(
-    locals: Vec<MaybeUnloadedTypeHandle>,
-    return_type: MaybeUnloadedTypeHandle,
-    instructions: Vec<Instruction<String, MaybeUnloadedTypeHandle, MethodRef, u32>>,
+    locals: Vec<CachedTypeReference>,
+    return_type: CachedTypeReference,
+    instructions: Vec<RuntimeInstruction>,
 ) -> (NonNull<u8>, Layout) {
     let assembly = new_global_assembly("Test::TryInvoke", |assembly| {
         vec![
             Class::new(
                 assembly,
-                "Test::TryInvoke::Test".to_owned(),
+                widestring::utf16str!("Test::TryInvoke::Test").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
@@ -69,7 +66,7 @@ pub fn try_invoke_instructions(
                     vec![
                         Method::new(
                             mt,
-                            "__Test".to_owned(),
+                            widestring::utf16str!("__Test").to_owned(),
                             MethodAttr::new(
                                 Visibility::Public,
                                 make_bitflags!(MethodImplementationFlags::{Static}),
@@ -98,7 +95,9 @@ pub fn try_invoke_instructions(
 
     let class = assembly.get_class(0).unwrap().unwrap();
     let mt_ref = unsafe { class.as_ref().method_table_ref() };
-    let method = mt_ref.find_first_method_by_name("__Test").unwrap();
+    let method = mt_ref
+        .find_first_method_by_name(widestring::utf16str!("__Test"))
+        .unwrap();
 
     let mut cpu = CpuID::new_write_global();
 

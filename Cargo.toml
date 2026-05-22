@@ -61,6 +61,7 @@ bitfields = { git = "https://github.com/ExPuritate/bitfields-rs.git", features =
 ] }
 line-ending = { git = "https://github.com/ExPuritate/rust-line-ending.git" }
 
+widestring = { version = "1.2.1", features = ["debugger_visualizer"] }
 serde = { version = "1.0.219", features = ["std", "derive"] }
 konst = { version = "0.4", features = [
 	"alloc",

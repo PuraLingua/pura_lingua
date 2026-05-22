@@ -2,8 +2,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 proc_macros::define_core_class! {
     #[Public {}] assembly
-    System_Win32Exception "System::Win32Exception"
-    Some((CoreTypeId::System_Exception.into(), vec![])) =>
+    System_Win32Exception Some((CoreTypeId::System_Exception.into(), vec![])) =>
     #fields of super::Exception::FieldId:
     #[Public {}] Code "_Code" => CoreTypeId::System_Int32.into();
 

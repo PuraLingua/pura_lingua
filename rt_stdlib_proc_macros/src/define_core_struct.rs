@@ -9,7 +9,6 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
     let stdlib_header_crate = PredefinedCrateName::RuntimeStdlib.as_ident(Span::call_site());
 
     let id = &ast.id;
-    let name = &ast.name;
     let generic_count = ast
         .generic_count
         .as_ref()
@@ -268,7 +267,7 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
                 id: #stdlib_header_crate::CoreTypeId::#id,
                 kind: #stdlib_header_crate::CoreTypeKind::Struct,
                 attr: #global_crate::attr!(struct #attr),
-                name: #name.to_owned(),
+                name: ::std::borrow::Cow::Borrowed(#stdlib_header_crate::CoreTypeId::#id.name()),
                 generic_count: #generic_count,
                 parent: None,
                 parent_generics: Vec::new(),
@@ -278,7 +277,7 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
                     .filter(|x| !matches!(x, #method_id_enum_ident::__END))
                     .map(|x| #stdlib_header_crate::MethodInfo {
                         id: x as u32,
-                        name: x.get_name().to_owned(),
+                        name: ::std::borrow::Cow::Borrowed(x.get_name()),
                         generic_count: x.get_generic_count(),
                         attr: x.get_attr(),
                         args: x.get_parameters(),
@@ -289,7 +288,7 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
                     .into_iter()
                     .map(|x| #stdlib_header_crate::MethodInfo {
                         id: x as u32,
-                        name: x.get_name().to_owned(),
+                        name: ::std::borrow::Cow::Borrowed(x.get_name()),
                         generic_count: x.get_generic_count(),
                         attr: x.get_attr(),
                         args: x.get_parameters(),
@@ -301,7 +300,7 @@ pub fn _impl(ast: DefineCoreStructAst) -> syn::Result<TokenStream> {
                     .filter(|x| !matches!(x, #field_id_enum_ident::__END))
                     .map(|x| #stdlib_header_crate::FieldInfo {
                         id: x as u32,
-                        name: x.get_name().to_owned(),
+                        name: ::std::borrow::Cow::Borrowed(x.get_name()),
                         attr: x.get_attr(),
                         ty: x.get_ty(),
                     })

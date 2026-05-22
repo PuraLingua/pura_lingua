@@ -33,6 +33,44 @@ impl ExceptionManager {
 pub struct ThrowHelper(CPU);
 
 impl ThrowHelper {
+    pub fn null_reference(&mut self) -> bool {
+        let exception = match self.0.new_object(
+            self.0
+                .vm_ref()
+                .assembly_manager()
+                .get_core_type(CoreTypeId::System_NullReferenceException)
+                .unwrap_class(),
+            &stdlib_header::MethodId!(NullReferenceException::Constructor).into(),
+            &[],
+        ) {
+            None => return false,
+            Some(exception) => exception,
+        };
+        self.0.throw_exception(exception);
+
+        true
+    }
+    pub fn index_out_of_range(&mut self, index: usize, length: usize) -> bool {
+        let exception = match self.0.new_object(
+            self.0
+                .vm_ref()
+                .assembly_manager()
+                .get_core_type(CoreTypeId::System_IndexOutOfRangeException)
+                .unwrap_class(),
+            &stdlib_header::MethodId!(IndexOutOfRangeException::Constructor).into(),
+            &[
+                (&raw const index).cast_mut().cast(),
+                (&raw const length).cast_mut().cast(),
+            ],
+        ) {
+            None => return false,
+            Some(exception) => exception,
+        };
+
+        self.0.throw_exception(exception);
+
+        true
+    }
     pub fn alloc(&mut self) -> bool {
         let exception = match self.0.new_object(
             self.0

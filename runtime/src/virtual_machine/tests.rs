@@ -9,7 +9,7 @@ use global::{
 use crate::{
     test_utils::{g_core_class, g_core_type},
     type_system::{
-        assembly::Assembly,
+        assembly::{Assembly, TypeContainer},
         assembly_manager::AssemblyRef,
         field::Field,
         generics::GenericCountRequirement,
@@ -28,74 +28,71 @@ fn test_static() {
     global_vm()
         .assembly_manager()
         .add_assembly(Assembly::new_for_adding(
-            "Test".to_owned(),
+            widestring::utf16str!("Test").to_owned(),
             false,
             |assembly| {
-                vec![NonGenericTypeHandle::Class(
-                    Class::new(
-                        assembly,
-                        "Test::Test".to_owned(),
-                        global::attr!(
-                            class Public {}
-                        ),
-                        GenericCountRequirement::default(),
-                        Some(g_core_class!(System_Object)),
-                        vec![],
-                        |class| {
-                            MethodTable::new(class, |mt| {
-                                // Statics
-                                vec![Method::new(
-                                    mt,
-                                    ".sctor".to_owned(),
-                                    global::attr!(
-                                        method Public {Static}
-                                        g_core_type!(System_UInt64),
-                                        g_core_type!(System_UInt8),
-                                        g_core_type!(System_UInt32),
-                                        g_core_type!(System_UInt16),
-                                    ),
-                                    GenericCountRequirement::default(),
-                                    vec![],
-                                    g_core_type!(System_Void),
-                                    CallConvention::PlatformDefault,
-                                    None,
-                                    vec![
-                                        Instruction::Load(Instruction_Load {
-                                            addr: RegisterAddr::new(0),
-                                            content: LoadContent::U64(10),
-                                        }),
-                                        Instruction::Set(Instruction_Set::Static {
-                                            val: RegisterAddr::new(0),
-                                            ty: TypeRef::Index {
-                                                assembly: AssemblyRef::Name(string_name!("Test")),
-                                                ind: 0,
-                                            }
-                                            .into(),
-                                            field: 0,
-                                        }),
-                                    ],
-                                    ExceptionTable::gen_new(),
-                                )]
-                            })
-                            .as_non_null_ptr()
-                        },
-                        vec![Field::new(
-                            "A".to_owned(),
-                            global::attr!(field Public {Static}),
-                            g_core_type!(System_UInt64),
-                        )],
-                        None,
-                        vec![],
-                        None,
-                    )
-                    .as_non_null_ptr(),
-                )]
+                vec![TypeContainer::from(Class::new(
+                    assembly,
+                    widestring::utf16str!("Test::Test").to_owned(),
+                    global::attr!(
+                        class Public {}
+                    ),
+                    GenericCountRequirement::default(),
+                    Some(g_core_class!(System_Object)),
+                    vec![],
+                    |class| {
+                        MethodTable::new(class, |mt| {
+                            // Statics
+                            vec![Method::new(
+                                mt,
+                                widestring::utf16str!(".sctor").to_owned(),
+                                global::attr!(
+                                    method Public {Static}
+                                    g_core_type!(System_UInt64).into(),
+                                    g_core_type!(System_UInt8).into(),
+                                    g_core_type!(System_UInt32).into(),
+                                    g_core_type!(System_UInt16).into(),
+                                ),
+                                GenericCountRequirement::default(),
+                                vec![],
+                                g_core_type!(System_Void).into(),
+                                CallConvention::PlatformDefault,
+                                None,
+                                vec![
+                                    Instruction::Load(Instruction_Load {
+                                        addr: RegisterAddr::new(0),
+                                        content: LoadContent::U64(10),
+                                    }),
+                                    Instruction::Set(Instruction_Set::Static {
+                                        val: RegisterAddr::new(0),
+                                        ty: TypeRef::Index {
+                                            assembly: AssemblyRef::Name(string_name!("Test")),
+                                            ind: 0,
+                                        }
+                                        .into(),
+                                        field: 0,
+                                    }),
+                                ],
+                                ExceptionTable::gen_new(),
+                            )]
+                        })
+                        .as_non_null_ptr()
+                    },
+                    vec![Field::new(
+                        widestring::utf16str!("A").to_owned(),
+                        global::attr!(field Public {Static}),
+                        g_core_type!(System_UInt64),
+                    )],
+                    None,
+                    vec![],
+                    None,
+                ))]
             },
         ));
 
     let test_assembly = global_vm()
         .assembly_manager()
-        .get_assembly_by_name("Test")
+        .get_assembly_by_name(widestring::utf16str!("Test"))
         .unwrap()
         .unwrap();
 

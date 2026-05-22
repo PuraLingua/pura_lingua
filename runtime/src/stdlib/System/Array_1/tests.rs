@@ -67,13 +67,13 @@ fn array_get_set() -> global::Result<()> {
     let assembly_id = global_vm()
         .assembly_manager()
         .add_assembly(Assembly::new_for_adding(
-            "Test".to_owned(),
+            widestring::utf16str!("Test").to_owned(),
             false,
             |assembly| {
                 vec![
                     Class::new(
                         assembly,
-                        "Test::Test".to_owned(),
+                        widestring::utf16str!("Test::Test").to_owned(),
                         global::attr!(
                             class Public {}
                         ),
@@ -90,7 +90,7 @@ fn array_get_set() -> global::Result<()> {
                                 vec![
                                     Method::new(
                                         mt,
-                                        "TestSet".to_owned(),
+                                        widestring::utf16str!("TestSet").to_owned(),
                                         global::attr!(
                                             method Public {Static}
                                             /* 0 */ MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
@@ -98,11 +98,11 @@ fn array_get_set() -> global::Result<()> {
                                                     g_core_type!(System_Array_1),
                                                 )),
                                                 types: vec![g_core_type!(System_String)],
-                                            }),
-                                            /* 1 */ g_core_type!(System_String),
-                                            /* 2 */ g_core_type!(System_String),
-                                            /* 3 */	g_core_type!(System_USize),
-                                            /* 4 */ g_core_type!(System_Void),
+                                            }).into(),
+                                            /* 1 */ g_core_type!(System_String).into(),
+                                            /* 2 */ g_core_type!(System_String).into(),
+                                            /* 3 */	g_core_type!(System_USize).into(),
+                                            /* 4 */ g_core_type!(System_Void).into(),
                                         ),
                                         GenericCountRequirement::default(),
                                         vec![],
@@ -111,7 +111,7 @@ fn array_get_set() -> global::Result<()> {
                                                 g_core_type!(System_Array_1),
                                             )),
                                             types: vec![g_core_type!(System_String)],
-                                        }),
+                                        }).into(),
                                         CallConvention::PlatformDefault,
                                         None,
                                         vec![
@@ -186,7 +186,7 @@ fn array_get_set() -> global::Result<()> {
         test_class
             .as_ref()
             .method_table_ref()
-            .find_first_method_by_name("TestSet")
+            .find_first_method_by_name(widestring::utf16str!("TestSet"))
             .unwrap()
     };
     let arr = unsafe {

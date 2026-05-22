@@ -2,7 +2,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 proc_macros::define_core_class! {
     #[Public {}] assembly
-    System_String "System::String" Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_String Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields:
 
     #methods of super::Object::MethodId:

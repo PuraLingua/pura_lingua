@@ -33,7 +33,7 @@ fn test_call() {
     let mut cpu = CpuID::new_write_global();
     let assembly_manager = global_vm().assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(
-        "Test".to_owned(),
+        widestring::utf16str!("Test").to_owned(),
         false,
         |assembly| vec![],
     ));
@@ -89,7 +89,7 @@ fn test_normal_f() {
 
     let assembly = global_vm()
         .assembly_manager()
-        .get_assembly_by_name("TestNormalF")
+        .get_assembly_by_name(widestring::utf16str!("TestNormalF"))
         .unwrap()
         .unwrap();
 
@@ -135,7 +135,7 @@ fn test_interface_call() {
         vec![
             Interface::new(
                 assembly,
-                "Test::ITest".to_owned(),
+                widestring::utf16str!("Test::ITest").to_owned(),
                 global::attr!(
                     interface Public {}
                 ),
@@ -144,13 +144,13 @@ fn test_interface_call() {
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![Method::new(
                         mt,
-                        "FTest".to_owned(),
+                        widestring::utf16str!("FTest").to_owned(),
                         global::attr!(
                             method Public {}
                         ),
                         GenericCountRequirement::default(),
                         vec![],
-                        g_core_type!(System_String),
+                        g_core_type!(System_String).into(),
                         Default::default(),
                         None,
                         vec![],
@@ -162,7 +162,7 @@ fn test_interface_call() {
             .into(),
             Class::new(
                 assembly,
-                "Test::Test1".to_owned(),
+                widestring::utf16str!("Test::Test1").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
@@ -171,13 +171,13 @@ fn test_interface_call() {
                     vec![
                         Method::new(
                             mt,
-                            ".ctor".to_owned(),
+                            widestring::utf16str!(".ctor").to_owned(),
                             global::attr!(
                                 method Public {}
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void),
+                            g_core_type!(System_Void).into(),
                             Default::default(),
                             None,
                             vec![],
@@ -185,13 +185,13 @@ fn test_interface_call() {
                         ),
                         Method::new(
                             mt,
-                            "AAA".to_owned(),
+                            widestring::utf16str!("AAA").to_owned(),
                             global::attr!(
                                 method Public {}
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void),
+                            g_core_type!(System_Void).into(),
                             Default::default(),
                             None,
                             vec![],
@@ -199,14 +199,14 @@ fn test_interface_call() {
                         ),
                         Method::new(
                             mt,
-                            "FTest".to_owned(),
+                            widestring::utf16str!("FTest").to_owned(),
                             global::attr!(
                                 method Public {}
-                                g_core_type!(System_String)
+                                g_core_type!(System_String).into()
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_String),
+                            g_core_type!(System_String).into(),
                             Default::default(),
                             None,
                             vec![
@@ -238,7 +238,7 @@ fn test_interface_call() {
             .into(),
             Class::new(
                 assembly,
-                "Test::Test2".to_owned(),
+                widestring::utf16str!("Test::Test2").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
@@ -247,13 +247,13 @@ fn test_interface_call() {
                     vec![
                         Method::new(
                             mt,
-                            ".ctor".to_owned(),
+                            widestring::utf16str!(".ctor").to_owned(),
                             global::attr!(
                                 method Public {}
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void),
+                            g_core_type!(System_Void).into(),
                             Default::default(),
                             None,
                             vec![],
@@ -261,14 +261,14 @@ fn test_interface_call() {
                         ),
                         Method::new(
                             mt,
-                            "FTest".to_owned(),
+                            widestring::utf16str!("FTest").to_owned(),
                             global::attr!(
                                 method Public {}
-                                g_core_type!(System_String)
+                                g_core_type!(System_String).into()
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_String),
+                            g_core_type!(System_String).into(),
                             Default::default(),
                             None,
                             vec![
@@ -300,7 +300,7 @@ fn test_interface_call() {
             .into(),
             Class::new(
                 assembly,
-                "Test::Main".to_owned(),
+                widestring::utf16str!("Test::Main").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
@@ -309,23 +309,23 @@ fn test_interface_call() {
                     vec![
                         Method::new(
                             mt,
-                            "Main".to_owned(),
+                            widestring::utf16str!("Main").to_owned(),
                             global::attr!(
                                 method Public {Static}
                                 MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                     assembly: AssemblyRef::Name(string_name!("Test")),
                                     ind: 0,
-                                }),
+                                }).into(),
                                 MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                     assembly: AssemblyRef::Name(string_name!("Test")),
                                     ind: 0,
-                                }),
-                                g_core_type!(System_String),
-                                g_core_type!(System_Void),
+                                }).into(),
+                                g_core_type!(System_String).into(),
+                                g_core_type!(System_Void).into(),
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void),
+                            g_core_type!(System_Void).into(),
                             Default::default(),
                             None,
                             vec![
@@ -333,7 +333,8 @@ fn test_interface_call() {
                                     ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 1,
-                                    }),
+                                    })
+                                    .into(),
                                     ctor_name: stdlib_header::System::Object::MethodId::__END
                                         .into(),
                                     args: vec![],
@@ -343,7 +344,8 @@ fn test_interface_call() {
                                     ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 2,
-                                    }),
+                                    })
+                                    .into(),
                                     ctor_name: stdlib_header::System::Object::MethodId::__END
                                         .into(),
                                     args: vec![],
@@ -353,7 +355,8 @@ fn test_interface_call() {
                                     interface: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 0,
-                                    }),
+                                    })
+                                    .into(),
                                     val: ShortRegisterAddr::new(0),
                                     method: MethodRef::Index(0),
                                     args: vec![],
@@ -363,7 +366,8 @@ fn test_interface_call() {
                                     ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 3,
-                                    }),
+                                    })
+                                    .into(),
                                     method: MethodRef::Index(
                                         stdlib_header::System::Object::MethodId::__END as u32 + 1,
                                     ),
@@ -374,7 +378,8 @@ fn test_interface_call() {
                                     interface: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 0,
-                                    }),
+                                    })
+                                    .into(),
                                     val: ShortRegisterAddr::new(1),
                                     method: MethodRef::Index(0),
                                     args: vec![],
@@ -384,7 +389,8 @@ fn test_interface_call() {
                                     ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 3,
-                                    }),
+                                    })
+                                    .into(),
                                     method: MethodRef::Index(
                                         stdlib_header::System::Object::MethodId::__END as u32 + 1,
                                     ),
@@ -396,14 +402,14 @@ fn test_interface_call() {
                         ),
                         Method::native(
                             Some(mt),
-                            "Println".to_owned(),
+                            widestring::utf16str!("Println").to_owned(),
                             global::attr!(method Public {Static}),
                             GenericCountRequirement::default(),
                             vec![Parameter::new(
                                 g_core_type!(System_String),
                                 global::attr!(parameter {}),
                             )],
-                            g_core_type!(System_Void),
+                            g_core_type!(System_Void).into(),
                             Default::default(),
                             None,
                             Println as _,
@@ -458,7 +464,7 @@ fn test_interface_from_binary() {
 
     let assembly = global_vm()
         .assembly_manager()
-        .get_assembly_by_name("TestInterface")
+        .get_assembly_by_name(widestring::utf16str!("TestInterface"))
         .unwrap()
         .unwrap();
 
@@ -493,7 +499,7 @@ fn test_extra_args() {
         vec![
             Class::new(
                 assembly,
-                "Test::Main".to_owned(),
+                widestring::utf16str!("Test::Main").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
                 Some(g_core_class!(System_Object)),
@@ -502,17 +508,17 @@ fn test_extra_args() {
                     vec![
                         Method::new(
                             mt,
-                            "Main".to_owned(),
+                            widestring::utf16str!("Main").to_owned(),
                             global::attr!(
                                 method Public {Static}
-                                g_core_type!(System_String),
-                                g_core_type!(System_String),
-                                g_core_type!(System_String),
-                                g_core_type!(System_Void),
+                                g_core_type!(System_String).into(),
+                                g_core_type!(System_String).into(),
+                                g_core_type!(System_String).into(),
+                                g_core_type!(System_Void).into(),
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void),
+                            g_core_type!(System_Void).into(),
                             Default::default(),
                             None,
                             vec![
@@ -533,7 +539,8 @@ fn test_extra_args() {
                                     ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 0,
-                                    }),
+                                    })
+                                    .into(),
                                     method: MethodRef::Index(
                                         stdlib_header::System::Object::MethodId::__END as u32 + 1,
                                     ),
@@ -545,7 +552,8 @@ fn test_extra_args() {
                                     ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 0,
-                                    }),
+                                    })
+                                    .into(),
                                     method: MethodRef::Index(
                                         stdlib_header::System::Object::MethodId::__END as u32 + 1,
                                     ),
@@ -560,7 +568,8 @@ fn test_extra_args() {
                                     ty: MaybeUnloadedTypeHandle::Unloaded(TypeRef::Index {
                                         assembly: AssemblyRef::Name(string_name!("Test")),
                                         ind: 0,
-                                    }),
+                                    })
+                                    .into(),
                                     method: MethodRef::Index(
                                         stdlib_header::System::Object::MethodId::__END as u32 + 1,
                                     ),
@@ -576,14 +585,14 @@ fn test_extra_args() {
                         ),
                         Method::native(
                             Some(mt),
-                            "Println".to_owned(),
+                            widestring::utf16str!("Println").to_owned(),
                             global::attr!(method Public {Static AllowExtraArgs}),
                             GenericCountRequirement::default(),
                             vec![Parameter::new(
                                 g_core_type!(System_String),
                                 global::attr!(parameter {}),
                             )],
-                            g_core_type!(System_Void),
+                            g_core_type!(System_Void).into(),
                             Default::default(),
                             None,
                             Println as _,

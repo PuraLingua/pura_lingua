@@ -23,7 +23,7 @@ _define_struct!(
     StaticConstructor => default_sctor!(mt TStaticMethodId);
     Read => Method::new(
         mt,
-        method_info.name,
+        widestring::Utf16String::from_str(&method_info.name),
         map_method_attr(method_info.attr),
         GenericCountRequirement::default(),
         map_parameters(method_info.args),
@@ -52,7 +52,7 @@ _define_struct!(
     );
     Write => Method::new(
         mt,
-        method_info.name,
+        widestring::Utf16String::from_str(&method_info.name),
         map_method_attr(method_info.attr),
         GenericCountRequirement::default(),
         map_parameters(method_info.args),

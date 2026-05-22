@@ -2,8 +2,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 proc_macros::define_core_class! {
     #[Public {}] assembly
-    System_NonPurusCallConfiguration "System::NonPurusCallConfiguration"
-    Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_NonPurusCallConfiguration Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields:
     #[Public {}]
     CallConvention "CallConvention" => CoreTypeRef::Core(CoreTypeId::System_UInt8);

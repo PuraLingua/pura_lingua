@@ -11,7 +11,7 @@ use crate::{
         method::{ExceptionTable, Method, Parameter},
         method_table::MethodTable,
         r#struct::Struct,
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::MaybeUnloadedTypeHandle,
     },
     value::managed_reference::ManagedReference,
     virtual_machine::cpu::CPU,
@@ -34,7 +34,7 @@ $assembly:ident, $mt:ident, $method_info:ident, $RustT:ident $(,)?:
 @ToString => $ToString:expr;
 ) {
     $(
-        pub fn $Name(assembly: &Assembly) -> NonGenericTypeHandle {
+        pub fn $Name(assembly: &Assembly) -> $crate::type_system::assembly::TypeContainer {
             fn __get_int_static_methods(
                 #[allow(unused)]
                 $assembly: &Assembly,
@@ -87,7 +87,7 @@ assembly, mt, method_info, RustT:
 @ToString =>
     Method::native(
         Some(mt),
-        "ToString".to_owned(),
+        widestring::utf16str!("ToString").to_owned(),
         global::attr!(
             method Public {Static}
         ),
@@ -96,7 +96,7 @@ assembly, mt, method_info, RustT:
             MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_UInt8.static_type_ref()),
             global::attr!(parameter { ByRef }),
         )],
-        MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_String.static_type_ref()),
+        MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_String.static_type_ref()).into(),
         global::attrs::CallConvention::PlatformDefault,
         None,
         ToString::<RustT> as _,

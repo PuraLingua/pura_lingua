@@ -4,7 +4,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 define_core_class! {
     #[Public {}] assembly
-    System_Exception "System::Exception" Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_Exception Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields of super::Object::FieldId:
     #[Public {}] Message "_message" => CoreTypeId::System_String.into();
     #[Public {}] Inner "_innerException" => CoreTypeRef::WithGeneric(

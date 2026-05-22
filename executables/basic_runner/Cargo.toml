@@ -4,6 +4,7 @@ edition = "2024"
 version.workspace = true
 
 [dependencies]
+widestring = { workspace = true }
 clap = { version = "4.5.60", features = ["derive", "unicode", "wrap_help"] }
 pura_lingua = { path = "../..", features = ["runtime", "binary"] }
 

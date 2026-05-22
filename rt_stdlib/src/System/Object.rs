@@ -2,7 +2,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 proc_macros::define_core_class! {
     #[Public {}] assembly
-    System_Object "System::Object" =>
+    System_Object =>
     #fields:
 
     #methods:

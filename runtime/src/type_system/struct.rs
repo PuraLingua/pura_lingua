@@ -1,6 +1,5 @@
 use std::{
     alloc::{Allocator, Layout},
-    cell::Cell,
     mem::offset_of,
     ops::RangeBounds,
     ptr::NonNull,
@@ -24,6 +23,7 @@ use crate::{
         method_table::MethodTable,
         type_handle::NonGenericTypeHandle,
     },
+    utils::clone_utf16str,
 };
 
 use super::method::Method;
@@ -34,7 +34,7 @@ pub struct Struct {
     assembly: NonNull<Assembly>,
     generic: Option<NonNull<Struct>>,
 
-    name: Box<str>,
+    name: Box<widestring::Utf16Str>,
     attr: TypeAttr,
     generic_count_requirement: GenericCountRequirement,
 
@@ -53,7 +53,7 @@ impl Struct {
     pub fn new<F: FnOnce(NonNull<Self>) -> NonNull<MethodTable<Self>>>(
         assembly: NonNull<Assembly>,
 
-        name: String,
+        name: widestring::Utf16String,
         attr: TypeAttr,
         generic_count_requirement: GenericCountRequirement,
 
@@ -67,7 +67,7 @@ impl Struct {
             assembly,
             generic: None,
 
-            name: name.into_boxed_str(),
+            name: name.into_boxed_utfstr(),
             attr,
             generic_count_requirement,
 
@@ -120,7 +120,7 @@ impl Struct {
         {
             let mut this = Self::new(
                 self.assembly,
-                self.name.clone().into_string(),
+                self.name.to_owned(),
                 self.attr,
                 self.generic_count_requirement,
                 |x| {
@@ -135,7 +135,7 @@ impl Struct {
                     .enumerate()
                     .map(|(index, ty)| {
                         Field::new(
-                            index.to_string(),
+                            widestring::Utf16String::from_str(&index.to_string()),
                             global::attr!(field Public {}),
                             (*ty).into(),
                         )
@@ -160,23 +160,12 @@ impl Struct {
             assembly: self.assembly,
             generic: Some(NonNull::from_ref(self)),
 
-            name: self.name.clone(),
+            name: clone_utf16str(&self.name),
             attr: self.attr,
             generic_count_requirement: self.generic_count_requirement,
 
             method_table: MethodTable::dup(self.method_table),
-            fields: self
-                .fields
-                .iter()
-                .map(|x| Field {
-                    name: x.name.clone(),
-                    attr: x.attr,
-                    ty: x.ty.clone(),
-                    cached_layout: Cell::new(None),
-                    cached_offset: Cell::new(None),
-                    cached_static_offset: Cell::new(None),
-                })
-                .collect(),
+            fields: self.fields.iter().cloned().collect(),
             sctor: self.sctor,
 
             generic_instances: Vec::new(),

@@ -84,23 +84,23 @@ impl<T> MethodTable<T> {
         name: &TName,
     ) -> Option<MappedRwLockReadGuard<'_, NonNull<Method<T>>>>
     where
-        str: PartialEq<TName>,
+        widestring::Utf16Str: PartialEq<TName>,
     {
         RwLockReadGuard::filter_map(self.methods.read().unwrap(), |x| {
             x.iter()
-                .find(|m| unsafe { m.as_ref().name().as_str().eq(name) })
+                .find(|m| unsafe { (&**m.as_ref().name()).eq(name) })
         })
         .ok()
     }
 
     pub fn find_last_method_by_name_ret_id<TName: ?Sized>(&self, name: &TName) -> Option<u32>
     where
-        str: PartialEq<TName>,
+        widestring::Utf16Str: PartialEq<TName>,
     {
         let x = self.methods.read().unwrap();
         x.iter()
             /* cSpell:disable-next-line */
-            .rposition(|m| unsafe { m.as_ref().name().as_str().eq(name) })
+            .rposition(|m| unsafe { (&**m.as_ref().name()).eq(name) })
             .map(|x| x as u32)
     }
 
@@ -212,7 +212,7 @@ where
         let id = if let Some(g) = self.ty_ref().__get_generic() {
             return unsafe { g.as_ref().__get_method_table_ref().get_core_type_id() };
         } else {
-            types.iter().position(|x| match x {
+            types.iter().position(|x| match x.as_handle() {
                 super::type_handle::NonGenericTypeHandle::Class(ty) => unsafe {
                     std::ptr::addr_eq(self, ty.as_ref().method_table_ref())
                 },
@@ -394,7 +394,6 @@ where
             })
             .unwrap_or_else(Layout::new::<()>);
         let mut offset = 0;
-        // Little hack for casting immutable to mutable
         let fields = self.ty_ref().__get_fields();
 
         if offset_options.prefer_cached
@@ -500,7 +499,6 @@ where
             .unwrap_or_else(Layout::new::<()>);
         let mut offset = 0;
 
-        // Little hack for casting immutable to mutable
         let fields = self.ty_ref().__get_fields();
         let mut result = Vec::new();
 

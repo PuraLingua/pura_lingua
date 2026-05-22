@@ -1,6 +1,6 @@
-use std::{alloc::Layout, mem::offset_of, ptr::NonNull};
+use std::{alloc::Layout, borrow::Cow, mem::offset_of, ptr::NonNull};
 
-use widestring::U16CStr;
+use widestring::{U16CStr, Utf16Str};
 
 use crate::{
     stdlib::CoreTypeId,
@@ -18,7 +18,12 @@ impl ManagedReference<Class> {
     }
 
     #[track_caller]
-    pub fn new_string_from_wide(cpu: &mut CPU, mut bytes: Vec<u16>) -> Self {
+    pub fn new_string_w(cpu: &mut CPU, s: &Utf16Str) -> Self {
+        Self::new_string_from_wide(cpu, Cow::Borrowed(s.as_slice()))
+    }
+
+    #[track_caller]
+    pub fn new_string_from_wide(cpu: &mut CPU, mut bytes: Cow<'_, [u16]>) -> Self {
         let mt = unsafe {
             *(cpu
                 .vm_ref()
@@ -41,8 +46,8 @@ impl ManagedReference<Class> {
         }
 
         match bytes.last() {
-            None => bytes.push(NUL),
-            Some(&c) if c != NUL => bytes.push(NUL),
+            None => bytes.to_mut().push(NUL),
+            Some(&c) if c != NUL => bytes.to_mut().push(NUL),
             Some(_) => (),
         }
 

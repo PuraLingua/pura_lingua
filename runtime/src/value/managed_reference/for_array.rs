@@ -214,6 +214,14 @@ impl ArrayAccessor {
         }
     }
 
+    /// # Safety
+    ///   * The pointer(`self`) must be non-null.
+    ///   * The type must exist.
+    ///
+    ///   (i.e. [`Self::can_get_element_type_handle`] returns true)
+    pub unsafe fn element_layout_unchecked(&self) -> Layout {
+        unsafe { self.element_type_handle_unchecked().val_layout() }
+    }
     pub fn element_layout(&self) -> Option<Layout> {
         self.element_type_handle().map(|th| th.val_layout())
     }
@@ -316,8 +324,21 @@ impl ArrayAccessor {
             ))
         }
     }
+    pub unsafe fn as_raw_slice_unchecked(&self) -> &[u8] {
+        let len = unsafe { self.len_unchecked() };
+        unsafe {
+            std::slice::from_raw_parts(
+                self.0
+                    .data_ptr()
+                    .byte_add(size_of::<usize>())
+                    .cast::<u8>()
+                    .cast_const(),
+                len * self.element_layout_unchecked().size(),
+            )
+        }
+    }
 
-    pub fn as_raw_slice_mut(&self) -> Option<&mut [u8]> {
+    pub fn as_raw_slice_mut(&mut self) -> Option<&mut [u8]> {
         let len = self.len()?;
         unsafe {
             Some(std::slice::from_raw_parts_mut(
@@ -330,6 +351,15 @@ impl ArrayAccessor {
             ))
         }
     }
+    pub unsafe fn as_raw_slice_mut_unchecked(&mut self) -> &mut [u8] {
+        let len = unsafe { self.len_unchecked() };
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                self.0.data_ptr().byte_add(size_of::<usize>()).cast::<u8>(),
+                len * self.element_layout_unchecked().size(),
+            )
+        }
+    }
 
     pub fn as_raw_slices(&self) -> Option<std::slice::Chunks<'_, u8>> {
         let slice = self.as_raw_slice()?;
@@ -338,9 +368,47 @@ impl ArrayAccessor {
     }
 
     pub fn as_raw_slices_mut(&mut self) -> Option<std::slice::ChunksMut<'_, u8>> {
+        let element_layout = self.element_layout()?;
         let slice = self.as_raw_slice_mut()?;
 
-        Some(slice.chunks_mut(self.element_layout()?.size()))
+        Some(slice.chunks_mut(element_layout.size()))
+    }
+
+    pub fn get(&self, index: usize) -> Option<&[u8]> {
+        if (self.len()? >= index) || (!self.can_get_element_type_handle()) {
+            None
+        } else {
+            Some(unsafe { self.get_unchecked(index) })
+        }
+    }
+    pub unsafe fn get_unchecked(&self, index: usize) -> &[u8] {
+        let element_layout = unsafe { self.element_layout_unchecked() };
+        let raw = unsafe { self.as_raw_slice_unchecked() };
+        debug_assert!(raw.as_ptr().is_aligned_to(element_layout.align()));
+        unsafe {
+            std::slice::from_raw_parts(
+                raw.as_ptr().byte_add(element_layout.size() * index),
+                element_layout.size(),
+            )
+        }
+    }
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut [u8]> {
+        if (self.len()? >= index) || (!self.can_get_element_type_handle()) {
+            None
+        } else {
+            Some(unsafe { self.get_mut_unchecked(index) })
+        }
+    }
+    pub unsafe fn get_mut_unchecked(&mut self, index: usize) -> &mut [u8] {
+        let element_layout = unsafe { self.element_layout_unchecked() };
+        let raw = unsafe { self.as_raw_slice_mut_unchecked() };
+        debug_assert!(raw.as_ptr().is_aligned_to(element_layout.align()));
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                raw.as_mut_ptr().byte_add(element_layout.size() * index),
+                element_layout.size(),
+            )
+        }
     }
 }
 

@@ -69,7 +69,7 @@ pub const trait GetNonGenericTypeHandleKind {
 }
 
 pub trait GetName {
-    fn __get_name(&self) -> &str;
+    fn __get_name(&self) -> &widestring::Utf16Str;
 }
 
 macro get_assembly_ref_default_impl($($T:ty)*) {$(
@@ -230,13 +230,13 @@ impl const GetGeneric for Interface {
 }
 
 impl GetName for Class {
-    fn __get_name(&self) -> &str {
+    fn __get_name(&self) -> &widestring::Utf16Str {
         self.name()
     }
 }
 
 impl GetName for Struct {
-    fn __get_name(&self) -> &str {
+    fn __get_name(&self) -> &widestring::Utf16Str {
         self.name()
     }
 }

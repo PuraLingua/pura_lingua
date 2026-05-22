@@ -4,7 +4,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 define_core_class! {
     #[Public {}] assembly
-    System_RuntimeBasic "System::RuntimeBasic" Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_RuntimeBasic Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields of super::Object::FieldId:
     #[Public {}] NewLine "NewLine" => CoreTypeId::System_String.into();
 

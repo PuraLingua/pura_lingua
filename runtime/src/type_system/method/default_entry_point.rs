@@ -1,9 +1,4 @@
-use std::{
-    alloc::{Allocator as _, Layout},
-    ffi::c_void,
-    ptr::NonNull,
-    range::Range,
-};
+use std::{ffi::c_void, ptr::NonNull, range::Range};
 
 use global::{
     instruction::{IRegisterAddr, Instruction, RegisterAddr},
@@ -72,7 +67,7 @@ fn eval_throw<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterA
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     exception_addr: &TRegisterAddr,
@@ -91,7 +86,7 @@ fn eval_return_val<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     register_addr: &TRegisterAddr,
@@ -100,7 +95,7 @@ fn eval_return_val<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
         load_register_failed!(*register_addr);
     };
     unsafe {
-        res_var.copy_all_to(result_ptr.as_non_null_ptr());
+        res_var.copy_all_to(result_ptr.cast());
     }
     return Some(Err(Termination::Returned));
 }
@@ -112,7 +107,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
-        result_ptr: NonNull<[u8]>,
+        result_ptr: NonNull<c_void>,
         pc: &mut usize,
         caught_exception: Option<ManagedReference<Class>>,
     ) -> Result<(), Termination>;
@@ -124,7 +119,7 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
         cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
-        result_ptr: NonNull<[u8]>,
+        result_ptr: NonNull<c_void>,
         pc: &mut usize,
         caught_exception: Option<ManagedReference<Class>>,
     ) -> Option<Result<(), Termination>> {
@@ -273,7 +268,7 @@ impl<T: GetAssemblyRef + GetTypeVars> Spec for T {
         cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
-        result_ptr: NonNull<[u8]>,
+        result_ptr: NonNull<c_void>,
         pc: &mut usize,
         caught_exception: Option<ManagedReference<Class>>,
     ) -> Result<(), Termination> {
@@ -292,12 +287,8 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
     cpu: &mut CPU,
     this: Option<NonNull<()>>,
     args: &[*mut c_void],
-) -> (NonNull<u8>, Layout) {
-    let mut result_layout = method.get_return_type().val_layout();
-    if result_layout.size() < size_of::<usize>() {
-        result_layout = Layout::new::<usize>();
-    }
-    let result_ptr = std::alloc::Global.allocate(result_layout).unwrap();
+    return_buffer: NonNull<c_void>,
+) {
     let mut pc = 0;
     let mut caught_exception = vec![];
 
@@ -433,7 +424,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                     }
                 }
             } else {
-                return (result_ptr.cast(), result_layout);
+                return;
             }
         }
         if let Err(t) = T::spec_match_code(
@@ -441,7 +432,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
             cpu,
             this,
             args,
-            result_ptr,
+            return_buffer,
             &mut pc,
             caught_exception.last().copied(),
         ) {
@@ -455,7 +446,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                 Termination::NullReference(location) => {
                     t_println!("NULL PTR at {location}");
                 }
-                Termination::AllInstructionExecuted => unsafe {
+                Termination::AllInstructionExecuted => {
                     #[cfg(debug_assertions)]
                     {
                         if !method
@@ -464,12 +455,8 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                         {
                             panic!("Not-return-void method returns nothing");
                         }
-
-                        result_ptr
-                            .as_non_null_ptr()
-                            .write_bytes(0, result_ptr.len());
                     }
-                },
+                }
                 Termination::LoadTypeHandleFailed(th) => {
                     t_println!("Cannot load TypeHandle {}", th);
                 }
@@ -498,7 +485,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                 Termination::Terminated => {}
                 Termination::Returned => {}
             }
-            break (result_ptr.cast(), result_layout);
+            break;
         }
         pc += 1;
     }

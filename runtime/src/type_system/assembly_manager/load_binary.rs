@@ -1,11 +1,12 @@
-use std::{pin::Pin, ptr::NonNull};
+use std::{pin::Pin, ptr::NonNull, sync::atomic::AtomicU8};
 
 use either::Either;
 use global::StringName;
 
 use crate::type_system::{
-    assembly::Assembly,
+    assembly::{Assembly, TypeContainer},
     assembly_manager::AssemblyRef,
+    cached_type_reference::CachedTypeReference,
     class::{Class, ClassParent, LoadedClassParent},
     field::Field,
     generics::{GenericBounds, GenericCountRequirement},
@@ -20,6 +21,112 @@ use crate::type_system::{
 
 use super::AssemblyManager;
 
+#[derive(Debug)]
+pub struct AtomicTypeLoadState(AtomicU8);
+
+mod atomic_type_load_state {
+    use std::{mem::transmute, sync::atomic::Ordering};
+
+    use super::TypeLoadState;
+
+    #[inline(always)]
+    const fn safe_transmute(x: u8) -> TypeLoadState {
+        unsafe { transmute(x) }
+    }
+
+    impl super::AtomicTypeLoadState {
+        #[inline(always)]
+        pub fn load(&self, order: Ordering) -> TypeLoadState {
+            unsafe { transmute(self.0.load(order)) }
+        }
+        #[inline(always)]
+        pub fn store(&self, val: TypeLoadState, order: Ordering) {
+            self.0.store(val as u8, order);
+        }
+        #[inline(always)]
+        pub fn swap(&self, val: TypeLoadState, order: Ordering) -> TypeLoadState {
+            unsafe { transmute(self.0.swap(val as u8, order)) }
+        }
+        #[inline(always)]
+        pub fn compare_exchange(
+            &self,
+            current: TypeLoadState,
+            new: TypeLoadState,
+            success: Ordering,
+            failure: Ordering,
+        ) -> Result<TypeLoadState, TypeLoadState> {
+            self.0
+                .compare_exchange(current as u8, new as u8, success, failure)
+                .map(safe_transmute)
+                .map_err(safe_transmute)
+        }
+
+        #[inline(always)]
+        pub fn compare_exchange_weak(
+            &self,
+            current: TypeLoadState,
+            new: TypeLoadState,
+            success: Ordering,
+            failure: Ordering,
+        ) -> Result<TypeLoadState, TypeLoadState> {
+            self.0
+                .compare_exchange_weak(current as u8, new as u8, success, failure)
+                .map(safe_transmute)
+                .map_err(safe_transmute)
+        }
+
+        #[inline(always)]
+        pub fn try_update<F>(
+            &self,
+            set_order: Ordering,
+            fetch_order: Ordering,
+            mut f: impl FnMut(TypeLoadState) -> Option<TypeLoadState>,
+        ) -> Result<TypeLoadState, TypeLoadState> {
+            #[inline(always)]
+            const fn map(x: TypeLoadState) -> u8 {
+                x as u8
+            }
+            self.0
+                .try_update(set_order, fetch_order, move |x| {
+                    f(unsafe { transmute(x) }).map(map)
+                })
+                .map(safe_transmute)
+                .map_err(safe_transmute)
+        }
+
+        #[inline(always)]
+        pub fn update(
+            &self,
+            set_order: Ordering,
+            fetch_order: Ordering,
+            mut f: impl FnMut(TypeLoadState) -> TypeLoadState,
+        ) -> TypeLoadState {
+            unsafe {
+                transmute(
+                    self.0
+                        .update(set_order, fetch_order, move |x| f(transmute(x)) as u8),
+                )
+            }
+        }
+
+        #[inline(always)]
+        pub const fn as_ptr(&self) -> *mut TypeLoadState {
+            self.0.as_ptr().cast()
+        }
+    }
+}
+
+impl AtomicTypeLoadState {
+    #[inline(always)]
+    pub const fn new(v: TypeLoadState) -> Self {
+        Self(AtomicU8::new(v as u8))
+    }
+    pub fn is_finished(&self) -> bool {
+        self.load(std::sync::atomic::Ordering::Acquire) == TypeLoadState::Finished
+    }
+}
+
+#[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TypeLoadState {
     Loading,
@@ -42,11 +149,12 @@ impl AssemblyManager {
             let types = assembly.types.read().unwrap();
             for (t_id, ty) in types.iter().enumerate() {
                 match ty {
-                    &NonGenericTypeHandle::Class(mut class) => {
-                        if unsafe { class.as_ref() }.load_state == TypeLoadState::Finished {
+                    TypeContainer::Class(class) => {
+                        if class.load_state.is_finished() {
                             continue;
                         }
-                        let Some(parent) = (unsafe { &mut class.as_mut().m_parent }) else {
+                        let Some(parent) = (unsafe { NonNull::from_ref(&class.m_parent).as_mut() })
+                        else {
                             continue;
                         };
                         let parent_type_ref = unsafe { Box::from_non_null(parent.unloaded) };
@@ -92,8 +200,8 @@ impl AssemblyManager {
                             }
                         };
 
-                        unsafe {
-                            class.as_mut().method_table = MethodTable::new(class, |mt| {
+                        (*unsafe { NonNull::from_ref(&class.method_table).as_mut() }) =
+                            MethodTable::new(NonNull::from_ref(&**class), |mt| {
                                 self.load_binary_methods(
                                     &assembly,
                                     loaded_id,
@@ -105,17 +213,16 @@ impl AssemblyManager {
                                 .unwrap()
                             })
                             .as_non_null_ptr();
-                            class.as_mut().rediscover_sctor(
-                                b_assembly.type_defs[t_id].unwrap_class_ref().sctor,
-                            );
-                        }
+                        unsafe { NonNull::from_ref(class).as_mut() }
+                            .rediscover_sctor(b_assembly.type_defs[t_id].unwrap_class_ref().sctor);
 
-                        unsafe {
-                            class.as_mut().load_state = TypeLoadState::Finished;
-                        }
+                        class.load_state.store(
+                            TypeLoadState::Finished,
+                            std::sync::atomic::Ordering::Release,
+                        );
                     }
-                    NonGenericTypeHandle::Struct(_) => {}
-                    NonGenericTypeHandle::Interface(_) => {}
+                    TypeContainer::Struct(_) => {}
+                    TypeContainer::Interface(_) => {}
                 }
             }
         }
@@ -128,7 +235,11 @@ impl AssemblyManager {
         binary: &binary::assembly::Assembly,
     ) -> binary::binary_core::BinaryResult<usize> {
         let name = binary.get_string(binary.extra_header.name)?;
-        let id = self.add_assembly(Box::new(Assembly::new(self, name.to_owned(), false)));
+        let id = self.add_assembly(Box::new(Assembly::new(
+            self,
+            widestring::Utf16String::from_str(name),
+            false,
+        )));
         let assembly = self.get_assembly(id).unwrap().unwrap();
         for (type_id, type_def) in binary.type_defs.iter().enumerate() {
             match type_def {
@@ -166,7 +277,7 @@ impl AssemblyManager {
         let result = Class::new_for_binary(
             NonNull::from_ref(assembly),
             class_def.main,
-            name.to_owned(),
+            widestring::Utf16String::from_str(name),
             class_def.attr,
             class_def.generic_count_requirement.into(),
             class_def
@@ -251,7 +362,7 @@ impl AssemblyManager {
             )?,
         );
 
-        assert_eq!(assembly.add_type(result.as_non_null_ptr()), class_id);
+        assert_eq!(assembly.add_type(result), class_id);
         Ok(())
     }
 
@@ -266,7 +377,7 @@ impl AssemblyManager {
         let name = b_assembly.get_string(struct_def.name)?;
         let result = Struct::new(
             NonNull::from_ref(assembly),
-            name.to_owned(),
+            widestring::Utf16String::from_str(name),
             struct_def.attr,
             struct_def.generic_count_requirement.into(),
             |rt_struct| {
@@ -300,7 +411,7 @@ impl AssemblyManager {
             )?,
         );
 
-        assert_eq!(assembly.add_type(result.as_non_null_ptr()), struct_id);
+        assert_eq!(assembly.add_type(result), struct_id);
         Ok(())
     }
 
@@ -315,7 +426,7 @@ impl AssemblyManager {
         let name = b_assembly.get_string(interface_def.name)?;
         let result = Interface::new(
             NonNull::from_ref(assembly),
-            name.to_owned(),
+            widestring::Utf16String::from_str(name),
             interface_def.attr,
             GenericCountRequirement::default(),
             interface_def
@@ -354,7 +465,7 @@ impl AssemblyManager {
             )?,
         );
 
-        assert_eq!(assembly.add_type(result.as_non_null_ptr()), interface_id);
+        assert_eq!(assembly.add_type(result), interface_id);
         Ok(())
     }
 
@@ -367,7 +478,7 @@ impl AssemblyManager {
         field: &binary::ty::Field,
     ) -> binary::prelude::BinaryResult<Field> {
         Ok(Field::new(
-            b_assembly.get_string(field.name)?.to_owned(),
+            widestring::Utf16String::from_str(b_assembly.get_string(field.name)?),
             field.attr,
             MaybeUnloadedTypeHandle::from_token_for_type(
                 assembly,
@@ -405,7 +516,7 @@ impl AssemblyManager {
         mt: NonNull<MethodTable<T>>,
         method: &binary::ty::Method,
     ) -> binary::prelude::BinaryResult<Pin<Box<Method<T>>>> {
-        let name = b_assembly.get_string(method.name)?.to_owned();
+        let name = widestring::Utf16String::from_str(b_assembly.get_string(method.name)?);
         let attr = method
             .attr
             .clone()
@@ -417,6 +528,7 @@ impl AssemblyManager {
                     &tt,
                     t_id,
                 )
+                .map(CachedTypeReference::from)
             })
             .transpose()?;
         Ok(Method::try_new(
@@ -444,7 +556,8 @@ impl AssemblyManager {
                 b_assembly,
                 &method.return_type,
                 t_id,
-            )?,
+            )?
+            .into(),
             method.call_convention,
             self.load_binary_generic_bounds(
                 assembly,
@@ -468,6 +581,7 @@ impl AssemblyManager {
                                     &tt,
                                     t_id,
                                 )
+                                .map(CachedTypeReference::new)
                             },
                             |tt| {
                                 MethodRef::from_token_for_type(

@@ -7,10 +7,12 @@ pub mod DynamicLibrary;
 pub mod ErrnoException;
 pub mod Exception;
 pub mod IDispose;
+pub mod IndexOutOfRangeException;
 pub mod InvalidEnumException;
 pub mod LargeString;
 pub mod NonPurusCallConfiguration;
 pub mod NonPurusCallType;
+pub mod NullReferenceException;
 pub mod Nullable_1;
 pub mod Object;
 pub mod Pointer;
@@ -22,6 +24,8 @@ pub mod Tuple;
 pub mod ValueType;
 pub mod Void;
 pub mod Win32Exception;
+
+pub mod Reflection;
 
 mod Integers;
 pub use Integers::*;

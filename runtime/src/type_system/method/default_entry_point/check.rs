@@ -20,7 +20,7 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
     ins: &Instruction_CommonCheck<TRegisterAddr>,
@@ -47,7 +47,7 @@ pub(super) fn eval_to_check<
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     to_check: &ToCheckContent<TRegisterAddr>,
 ) -> Option<Result<bool, Termination>> {

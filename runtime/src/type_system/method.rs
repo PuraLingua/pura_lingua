@@ -10,10 +10,12 @@ use libffi::low::CodePtr;
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::{
+        cached_type_reference::CachedTypeReference,
         generics::{GenericBounds, GenericCountRequirement},
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver},
     },
+    utils::clone_utf16str,
     virtual_machine::cpu::CPU,
 };
 
@@ -29,7 +31,7 @@ mod parameter;
 pub use exception_table::{ExceptionTable, ExceptionTableEntry};
 pub use parameter::Parameter;
 
-pub type RuntimeInstruction = Instruction<String, MaybeUnloadedTypeHandle, MethodRef, u32>;
+pub type RuntimeInstruction = Instruction<String, CachedTypeReference, MethodRef, u32>;
 
 #[derive(Getters)]
 #[getset(get = "pub")]
@@ -38,11 +40,11 @@ pub struct Method<T> {
     pub(crate) mt: Option<NonNull<MethodTable<T>>>,
     generic: Option<NonNull<Self>>,
 
-    name: Box<str>,
-    attr: MethodAttr<MaybeUnloadedTypeHandle>,
+    name: Box<widestring::Utf16Str>,
+    attr: MethodAttr<CachedTypeReference>,
     generic_count_requirement: GenericCountRequirement,
     args: Vec<Parameter>,
-    return_type: MaybeUnloadedTypeHandle,
+    return_type: CachedTypeReference,
     #[getset(skip)]
     call_convention: CallConvention,
 
@@ -76,11 +78,11 @@ where
     pub fn new<FExceptionTable: FnOnce(&Self) -> ExceptionTable<T>>(
         mt: NonNull<MethodTable<T>>,
 
-        name: String,
-        attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        name: widestring::Utf16String,
+        attr: MethodAttr<CachedTypeReference>,
         generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
-        return_type: MaybeUnloadedTypeHandle,
+        return_type: CachedTypeReference,
         call_convention: CallConvention,
 
         generic_bounds: Option<Vec<GenericBounds>>,
@@ -93,7 +95,7 @@ where
             mt: Some(mt),
             generic: None,
 
-            name: name.into_boxed_str(),
+            name: name.into_boxed_utfstr(),
             attr,
             generic_count_requirement,
             args,
@@ -118,11 +120,11 @@ where
     pub fn try_new<E, FExceptionTable: FnOnce(&Self) -> Result<ExceptionTable<T>, E>>(
         mt: NonNull<MethodTable<T>>,
 
-        name: String,
-        attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        name: widestring::Utf16String,
+        attr: MethodAttr<CachedTypeReference>,
         generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
-        return_type: MaybeUnloadedTypeHandle,
+        return_type: CachedTypeReference,
         call_convention: CallConvention,
 
         generic_bounds: Option<Vec<GenericBounds>>,
@@ -135,7 +137,7 @@ where
             mt: Some(mt),
             generic: None,
 
-            name: name.into_boxed_str(),
+            name: name.into_boxed_utfstr(),
             attr,
             generic_count_requirement,
             args,
@@ -160,14 +162,25 @@ where
 
 #[allow(clippy::too_many_arguments)]
 impl<T> Method<T> {
+    /// Sign of entry_point:
+    /// `
+    /// [extern "system"]
+    /// fn(
+    ///     &CPU,
+    ///     &Method,
+    ///     [this,]
+    ///     <args>
+    ///     [, pointer_to_extra_args: NonNull<void>, extra_arg_len: usize]
+    ///     [, return_buffer: *mut void]
+    /// ) [-> return_type (void if use return buffer)]`
     pub fn native<FExceptionTable: FnOnce(&Self) -> ExceptionTable<T>>(
         mt: Option<NonNull<MethodTable<T>>>,
 
-        name: String,
-        attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        name: widestring::Utf16String,
+        attr: MethodAttr<CachedTypeReference>,
         generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
-        return_type: MaybeUnloadedTypeHandle,
+        return_type: CachedTypeReference,
         call_convention: CallConvention,
 
         generic_bounds: Option<Vec<GenericBounds>>,
@@ -180,7 +193,7 @@ impl<T> Method<T> {
             mt,
             generic: None,
 
-            name: name.into_boxed_str(),
+            name: name.into_boxed_utfstr(),
             attr,
             generic_count_requirement,
             args,
@@ -204,7 +217,7 @@ impl<T> Method<T> {
     /// Creates a static method called `.sctor`
     pub fn default_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
-        attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        attr: MethodAttr<CachedTypeReference>,
     ) -> Pin<Box<Self>> {
         extern "system" fn sctor<T>(_: &mut CPU, _: &Method<T>) {
             #[cfg(feature = "print_invoke_and_call")]
@@ -215,14 +228,14 @@ impl<T> Method<T> {
     /// Creates a static method called `.sctor`
     pub fn create_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
-        mut attr: MethodAttr<MaybeUnloadedTypeHandle>,
+        mut attr: MethodAttr<CachedTypeReference>,
         rust_fn: extern "system" fn(&mut CPU, &Method<T>),
     ) -> Pin<Box<Self>> {
         attr.impl_flags_mut()
             .insert(MethodImplementationFlags::Static);
         Self::native(
             mt,
-            ".sctor".to_owned(),
+            widestring::utf16str!(".sctor").to_owned(),
             attr,
             GenericCountRequirement::default(),
             vec![],
@@ -255,7 +268,7 @@ impl<T> Method<T> {
             mt: self.mt,
             generic: Some(NonNull::from_ref(self)),
 
-            name: self.name.clone(),
+            name: clone_utf16str(&self.name),
             attr: self.attr.clone(),
             generic_count_requirement: self.generic_count_requirement,
 
@@ -301,32 +314,17 @@ impl<T> Method<T> {
 
 impl<T: GetTypeVars + GetAssemblyRef> Method<T> {
     pub fn get_return_type(&self) -> NonGenericTypeHandle {
-        match &self.return_type {
-            MaybeUnloadedTypeHandle::Loaded(ty) => ty.get_non_generic_with_method(self).unwrap(),
-            MaybeUnloadedTypeHandle::Unloaded(_) => {
-                let ty = self
-                    .return_type
-                    .load_with_generic_resolver(
-                        unsafe {
-                            self.mt
-                                .unwrap()
-                                .as_ref()
-                                .ty_ref()
-                                .__get_assembly_ref()
-                                .manager_ref()
-                        },
-                        MethodGenericResolver::new(self),
-                    )
-                    .unwrap();
-                // Hacking
-                unsafe {
-                    NonNull::from_ref(self).as_mut().return_type =
-                        MaybeUnloadedTypeHandle::Loaded(ty);
-                }
-
-                ty.get_non_generic_with_method(self).unwrap()
-            }
-        }
+        self.return_type
+            .get_with_generic_resolver(
+                self.require_method_table_ref()
+                    .ty_ref()
+                    .__get_assembly_ref()
+                    .manager_ref(),
+                MethodGenericResolver::new(self),
+            )
+            .unwrap()
+            .get_non_generic_with_generic_resolver(MethodGenericResolver::new(self))
+            .unwrap()
     }
     fn libffi_return_type(&self) -> libffi::middle::Type {
         if self

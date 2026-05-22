@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::{ffi::c_void, ptr::NonNull};
 
 use global::{
     attrs::CallConvention,
@@ -85,8 +85,12 @@ pub extern "system" fn ToString(
         NonGenericTypeHandle::Struct(ty) => {
             for ele in elements {
                 let ele_p = ele.as_ptr();
-                let mt = unsafe { ty.as_ref().method_table_ref() };
-                let method = mt.find_first_method_by_name("ToString()").unwrap();
+                let mt: &crate::type_system::method_table::MethodTable<
+                    crate::type_system::r#struct::Struct,
+                > = unsafe { ty.as_ref().method_table_ref() };
+                let method = mt
+                    .find_first_method_by_name(widestring::utf16str!("ToString()"))
+                    .unwrap();
 
                 let mut res = unsafe {
                     method.as_ref().typed_res_call::<ManagedReference<Class>>(
@@ -112,7 +116,7 @@ pub extern "system" fn ToString(
     ManagedReference::new_string(cpu, &s)
 }
 
-pub extern "system" fn GetPointerOfIndex(
+pub extern "system" fn GetReference(
     _: &CPU,
     _: &Method<Class>,
     this: &ManagedReference<Class>,
@@ -122,6 +126,32 @@ pub extern "system" fn GetPointerOfIndex(
         .and_then(ArrayAccessor::as_raw_slices)
         .and_then(|mut x| x.nth(index))
         .map(|x| unsafe { NonNull::new_unchecked(x.as_ptr().cast_mut()) })
+}
+
+pub extern "system" fn get_Index(
+    cpu: &mut CPU,
+    _: &Method<Class>,
+    this: &ManagedReference<Class>,
+    index: usize,
+    return_buffer: NonNull<c_void>,
+) {
+    let this_arr = this.access::<ArrayAccessor>().unwrap();
+    let Some(length) = this_arr.len() else {
+        debug_assert!(cpu.throw_helper_mut().null_reference());
+        return;
+    };
+    let element = match this_arr.as_raw_slices().unwrap().nth(index) {
+        Some(element) => element,
+        None => {
+            debug_assert!(cpu.throw_helper_mut().index_out_of_range(index, length));
+            return;
+        }
+    };
+    unsafe {
+        return_buffer
+            .cast::<u8>()
+            .copy_from(NonNull::from_ref(element).as_non_null_ptr(), length);
+    }
 }
 
 macro define_registers($($name:ident)*) {$(
@@ -134,61 +164,8 @@ _define_class!(
 #methods(TMethodId):
     Destructor => common_new_method!(mt TMethodId Destructor Destructor);
     ToString => common_new_method!(mt TMethodId ToString ToString);
-    GetPointerOfIndex => common_new_method!(mt TMethodId GetPointerOfIndex GetPointerOfIndex);
-    get_Index => {
-        define_registers!(
-            this_addr
-            arg_Index
-            ptr2result
-            t_size
-            result
-        );
-        Method::new(
-            mt,
-            TMethodId::get_Index.get_name().to_owned(),
-            super::map_method_attr(TMethodId::get_Index.get_attr()),
-            GenericCountRequirement::default(),
-            TMethodId::get_Index.get_parameters()
-                .into_iter()
-                .map(super::map_parameter)
-                .collect(),
-            TMethodId::get_Index.get_return_type().into(),
-            CallConvention::PlatformDefault,
-            None,
-            {
-                use global::instruction::Instruction;
-                vec![
-                    Instruction::SLoad(Instruction_Load {
-                        addr: this_addr,
-                        content: LoadContent::This,
-                    }),
-                    Instruction::SLoad(Instruction_Load {
-                        addr: arg_Index,
-                        content: LoadContent::Arg(0),
-                    }),
-                    Instruction::SCall(global::instruction::Instruction_Call::InstanceCall {
-                        val: this_addr,
-                        method: TMethodId::GetPointerOfIndex.into(),
-                        args: vec![arg_Index],
-                        ret_at: ptr2result,
-                    }),
-                    Instruction::SLoad(Instruction_Load {
-                        addr: t_size,
-                        content: LoadContent::TypeValueSize(TypeHandle::TypeGeneric(0).into()),
-                    }),
-                    Instruction::SReadPointerTo(CommonReadPointerTo {
-                        ptr: ptr2result,
-                        size: t_size,
-                        destination: result,
-                    }),
-                    Instruction::SReturnVal {
-                        register_addr: result,
-                    },
-                ]
-            },
-            ExceptionTable::gen_new(),
-        )
-    };
+    GetReference => common_new_method!(mt TMethodId GetReference GetReference);
+    get_Index => common_new_method!(mt TMethodId get_Index get_Index);
     set_Index => {
         define_registers!(
             this_addr
@@ -199,7 +176,7 @@ _define_class!(
         );
         Method::new(
             mt,
-            TMethodId::set_Index.get_name().to_owned(),
+            widestring::Utf16String::from_str(TMethodId::set_Index.get_name()),
             super::map_method_attr(TMethodId::set_Index.get_attr()),
             GenericCountRequirement::default(),
             TMethodId::set_Index.get_parameters()
@@ -223,7 +200,7 @@ _define_class!(
 
                     Instruction::SCall(Instruction_Call::InstanceCall {
                         val: this_addr,
-                        method: TMethodId::GetPointerOfIndex.into(),
+                        method: TMethodId::GetReference.into(),
                         args: vec![arg_Index],
                         ret_at: pointer2target,
                     }),

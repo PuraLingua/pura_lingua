@@ -80,6 +80,9 @@ fn main() -> pura_lingua::global::Result<()> {
     vm.assembly_manager().load_binaries(&binary_refs)?;
 
     let (main_assembly, main_class, main_method) = cli.main;
+    let main_assembly = widestring::Utf16String::from_str(&main_assembly);
+    let main_class = widestring::Utf16String::from_str(&main_class);
+    let main_method = widestring::Utf16String::from_str(&main_method);
     let assembly = vm
         .assembly_manager()
         .get_assembly_by_name(&main_assembly)

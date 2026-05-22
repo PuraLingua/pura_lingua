@@ -3,13 +3,13 @@ use std::{alloc::Layout, ptr::NonNull};
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::{
-        assembly::Assembly,
+        assembly::{Assembly, TypeContainer},
         class::Class,
         field::Field,
         generics::GenericCountRequirement,
         method::Method,
         method_table::MethodTable,
-        type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
+        type_handle::MaybeUnloadedTypeHandle,
     },
     virtual_machine::{EnsureGlobalVirtualMachineInitialized, global_vm},
 };
@@ -20,59 +20,56 @@ fn test_layout() {
     let vm = global_vm();
     let assembly_manager = vm.assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(
-        "Test".to_owned(),
+        widestring::utf16str!("Test").to_owned(),
         false,
         |assem| {
-            vec![NonGenericTypeHandle::Class(
-                Class::new(
-                    assem,
-                    "Test::Test".to_owned(),
-                    global::attr!(
-                        class Public {}
+            vec![TypeContainer::from(Class::new(
+                assem,
+                widestring::utf16str!("Test::Test").to_owned(),
+                global::attr!(
+                    class Public {}
+                ),
+                GenericCountRequirement::default(),
+                None,
+                Vec::new(),
+                |class| {
+                    MethodTable::new(class, |mt| {
+                        vec![Method::default_sctor(
+                            Some(mt),
+                            global::attr!(method Public {Static}),
+                        )]
+                    })
+                    .as_non_null_ptr()
+                },
+                vec![
+                    Field::new(
+                        widestring::utf16str!("a").to_owned(),
+                        global::attr!(
+                            field Public {}
+                        ),
+                        MaybeUnloadedTypeHandle::Unloaded(
+                            CoreTypeId::System_UInt8.static_type_ref(),
+                        ),
                     ),
-                    GenericCountRequirement::default(),
-                    None,
-                    Vec::new(),
-                    |class| {
-                        MethodTable::new(class, |mt| {
-                            vec![Method::default_sctor(
-                                Some(mt),
-                                global::attr!(method Public {Static}),
-                            )]
-                        })
-                        .as_non_null_ptr()
-                    },
-                    vec![
-                        Field::new(
-                            "a".to_owned(),
-                            global::attr!(
-                                field Public {}
-                            ),
-                            MaybeUnloadedTypeHandle::Unloaded(
-                                CoreTypeId::System_UInt8.static_type_ref(),
-                            ),
+                    Field::new(
+                        widestring::utf16str!("b").to_owned(),
+                        global::attr!(
+                            field Public {}
                         ),
-                        Field::new(
-                            "b".to_owned(),
-                            global::attr!(
-                                field Public {}
-                            ),
-                            MaybeUnloadedTypeHandle::Unloaded(
-                                CoreTypeId::System_UInt64.static_type_ref(),
-                            ),
+                        MaybeUnloadedTypeHandle::Unloaded(
+                            CoreTypeId::System_UInt64.static_type_ref(),
                         ),
-                    ],
-                    None,
-                    vec![],
-                    None,
-                )
-                .as_non_null_ptr(),
-            )]
+                    ),
+                ],
+                None,
+                vec![],
+                None,
+            ))]
         },
     ));
 
     let assem = assembly_manager
-        .get_assembly_by_name("Test")
+        .get_assembly_by_name(widestring::utf16str!("Test"))
         .unwrap()
         .unwrap();
 

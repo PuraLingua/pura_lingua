@@ -1,5 +1,6 @@
 pub mod assembly;
 pub mod assembly_manager;
+pub mod cached_type_reference;
 pub mod class;
 pub mod field;
 pub mod generics;
@@ -7,6 +8,7 @@ pub mod get_traits;
 pub mod interface;
 pub mod method;
 pub mod method_table;
+pub mod reflection_info_container;
 pub mod r#struct;
 pub mod type_handle;
 pub mod type_ref;

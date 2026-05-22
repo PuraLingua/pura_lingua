@@ -1,7 +1,6 @@
 /* cSpell:disable */
 #![feature(box_vec_non_null)]
 #![feature(mapped_lock_guards)]
-#![feature(str_as_str)]
 #![feature(allocator_api)]
 #![feature(layout_for_ptr)]
 #![feature(const_trait_impl)]
@@ -72,6 +71,7 @@ pub mod virtual_machine;
 
 pub(crate) mod c_ffi;
 pub(crate) mod libffi_utils;
+pub(crate) mod utils;
 
 #[cfg(test)]
 mod global_tests;

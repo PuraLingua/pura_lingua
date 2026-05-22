@@ -8,6 +8,8 @@
 #![allow(internal_features)]
 #![deny(unreachable_pub)]
 
+use std::borrow::Cow;
+
 use global::{AllVariants, AllVariantsName, num_enum::TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
@@ -68,20 +70,38 @@ pub enum CoreTypeId {
 
     System_Tuple,
 
+    /* #region Array */
     System_Array_1,
     System_Span_1,
+    /* #endregion */
 
+    /* #region String */
     System_String,
     System_LargeString,
+    /* #endregion */
 
+    /* #region RuntimeBasic */
     System_RuntimeBasic,
+    /* #endregion */
 
+    /* #region Exception */
     System_Exception,
+    System_NullReferenceException,
+    System_IndexOutOfRangeException,
     System_AllocException,
     System_InvalidEnumException,
     System_Win32Exception,
     System_ErrnoException,
     System_DlErrorException,
+    /* #endregion */
+
+    /* #region System::Reflection */
+    System_Reflection_AssemblyInfo,
+    System_Reflection_TypeInfo,
+    System_Reflection_FieldInfo,
+    System_Reflection_MethodInfo,
+    System_Reflection_ParameterInfo,
+    /* #endregion */
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,7 +140,7 @@ pub struct CoreTypeInfo {
     pub id: CoreTypeId,
     pub kind: crate::CoreTypeKind,
     pub attr: global::attrs::TypeAttr,
-    pub name: String,
+    pub name: Cow<'static, str>,
     pub generic_count: Option<crate::GenericCount>,
     pub parent: Option<crate::CoreTypeRef>,
     pub parent_generics: Vec<CoreTypeRef>,
@@ -157,7 +177,7 @@ impl InterfaceImplementation {
 #[serde(deny_unknown_fields)]
 pub struct MethodInfo {
     pub id: u32,
-    pub name: String,
+    pub name: Cow<'static, str>,
     pub generic_count: Option<crate::GenericCount>,
     pub attr: global::attrs::MethodAttr<crate::CoreTypeRef>,
     pub args: Vec<(global::attrs::ParameterAttr, crate::CoreTypeRef)>,
@@ -179,7 +199,7 @@ impl MethodInfo {
 #[serde(deny_unknown_fields)]
 pub struct FieldInfo {
     pub id: u32,
-    pub name: String,
+    pub name: Cow<'static, str>,
     pub attr: global::attrs::FieldAttr,
     pub ty: crate::CoreTypeRef,
 }
@@ -190,10 +210,12 @@ impl CoreTypeId {
         unsafe { Self::ALL_VARIANTS_NAME.get_unchecked(self as u32 as usize) }
     }
     pub const fn name(&self) -> &'static str {
+        use CoreTypeId::*;
+
         match self {
-            Self::System_Object => "System::Object",
-            Self::System_ValueType => "System::ValueType",
-            Self::System_Void => "System::Void",
+            System_Object => "System::Object",
+            System_ValueType => "System::ValueType",
+            System_Void => "System::Void",
 
             Self::System_Nullable_1 => "System::Nullable`1",
 
@@ -234,11 +256,19 @@ impl CoreTypeId {
             Self::System_RuntimeBasic => "System::RuntimeBasic",
 
             Self::System_Exception => "System::Exception",
+            Self::System_NullReferenceException => "System::NullReferenceException",
+            Self::System_IndexOutOfRangeException => "System::IndexOutOfRangeException",
             Self::System_AllocException => "System::AllocException",
             Self::System_InvalidEnumException => "System::InvalidEnumException",
             Self::System_Win32Exception => "System::Win32Exception",
             Self::System_ErrnoException => "System::ErrnoException",
             Self::System_DlErrorException => "System::DlErrorException",
+
+            System_Reflection_AssemblyInfo => "System::Reflection::AssemblyInfo",
+            System_Reflection_TypeInfo => "System::Reflection::TypeInfo",
+            System_Reflection_FieldInfo => "System::Reflection::FieldInfo",
+            System_Reflection_MethodInfo => "System::Reflection::MethodInfo",
+            System_Reflection_ParameterInfo => "System::Reflection::ParameterInfo",
         }
     }
 }
@@ -302,11 +332,19 @@ impl CoreTypeId {
             System_RuntimeBasic in of!(RuntimeBasic),
 
             System_Exception in of!(Exception),
+            System_NullReferenceException in of!(NullReferenceException),
+            System_IndexOutOfRangeException in of!(IndexOutOfRangeException),
             System_AllocException in of!(AllocException),
             System_InvalidEnumException in of!(InvalidEnumException),
             System_Win32Exception in of!(Win32Exception),
             System_ErrnoException in of!(ErrnoException),
             System_DlErrorException in of!(DlErrorException),
+
+            System_Reflection_AssemblyInfo in System::Reflection::AssemblyInfo::load,
+            System_Reflection_TypeInfo in System::Reflection::TypeInfo::load,
+            System_Reflection_FieldInfo in System::Reflection::FieldInfo::load,
+            System_Reflection_MethodInfo in System::Reflection::MethodInfo::load,
+            System_Reflection_ParameterInfo in System::Reflection::ParameterInfo::load,
         )
     }
 }
@@ -320,6 +358,7 @@ pub fn get_all_core_type_info() -> Vec<CoreTypeInfo> {
 }
 
 pub const CORE_ASSEMBLY_NAME: &str = "!";
+pub const CORE_ASSEMBLY_NAME_W: &widestring::Utf16Str = widestring::utf16str!(CORE_ASSEMBLY_NAME);
 
 pub macro MethodId($Name:ident :: $id:ident) {
     $crate::System::$Name::MethodId::$id

@@ -2,7 +2,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 proc_macros::define_core_class! {
     #[Public {}] assembly
-    System_NonPurusCallType "System::NonPurusCallType" Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_NonPurusCallType Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields of super::Object::FieldId:
     #[Public {}]
     Discriminant "Discriminant" => CoreTypeId::System_UInt8.into();

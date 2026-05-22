@@ -4,7 +4,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 define_core_class! {
     #[Public {}] assembly
-    System_LargeString "System::LargeString" Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_LargeString Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields:
 
     #methods of super::Object::MethodId:

@@ -105,7 +105,6 @@ pub struct DefineCoreClassAst {
     pub assembly_name: Ident,
     pub id: Ident,
     pub generic_count: Option<GenericCount>,
-    pub name: LitStr,
     pub parent: Option<Expr>,
     pub implemented_interfaces: Vec<Expr>,
     pub generic_bounds: Option<Expr>,
@@ -128,7 +127,6 @@ impl Parse for DefineCoreClassAst {
         } else {
             None
         };
-        let name = input.parse()?;
 
         let parent = if (!input.peek(Token![=>])) && (!input.peek(Token![impl])) {
             Some(input.parse()?)
@@ -207,7 +205,6 @@ impl Parse for DefineCoreClassAst {
             assembly_name,
             id,
             generic_count,
-            name,
             parent,
             implemented_interfaces,
             generic_bounds,

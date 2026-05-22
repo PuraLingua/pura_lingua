@@ -64,7 +64,7 @@ impl CallStack {
         }
     }
 
-    pub fn capture(&self) -> impl Iterator<Item = &str> {
+    pub fn capture(&self) -> impl Iterator<Item = &widestring::Utf16Str> {
         #[inline]
         fn filter(frame: &&CallStackFrame) -> bool {
             !frame.should_hide_when_capturing()
@@ -119,7 +119,7 @@ pub enum CallStackFrame {
 }
 
 impl CallStackFrame {
-    pub const fn name(&self) -> &str {
+    pub const fn name(&self) -> &widestring::Utf16Str {
         match self {
             Self::Native(native_call_stack_frame) => unsafe {
                 native_call_stack_frame.method.as_ref().name()
@@ -394,7 +394,7 @@ impl CommonCallStackFrame {
 
         for ty in types {
             let ty = ty
-                .load_with_generic_resolver(
+                .get_with_generic_resolver(
                     ty_ref.__get_assembly_ref().manager_ref(),
                     MethodGenericResolver::new(method),
                 )
@@ -580,7 +580,7 @@ mod getset_cpu {
             self.current_call_frame_mut()
                 .and_then(|x| x.unwrap_common_mut().ok())
         }
-        pub fn capture<'a>(&'a self) -> Vec<String> {
+        pub fn capture<'a>(&'a self) -> Vec<widestring::Utf16String> {
             self.call_stack.capture().map(ToOwned::to_owned).collect()
         }
         pub fn capture_with_options(&self, options: BitFlags<MethodDisplayOptions>) -> Vec<String> {

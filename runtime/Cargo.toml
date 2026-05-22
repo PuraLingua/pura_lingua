@@ -19,7 +19,7 @@ bon = "3.6.5"
 derive_more = { workspace = true, features = ["debug"] }
 contracts = "0.6.7"
 line-ending = { git = "https://github.com/ExPuritate/rust-line-ending.git" }
-widestring = { version = "1.2.1", features = ["debugger_visualizer"] }
+widestring = { workspace = true }
 
 mem_leak_detector = { git = "https://github.com/ExPuritate/mem-leak-detector.git" }
 slab = "0.4.12"
@@ -36,9 +36,6 @@ features = [
 	"Win32_Globalization",
 	"Win32_System_Console",
 ]
-
-[target.'cfg(windows)'.dependencies]
-windows-result = "0.4.1"
 
 [target.'cfg(unix)'.dependencies.libc]
 version = "0.2.182"

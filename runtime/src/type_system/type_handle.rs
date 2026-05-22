@@ -1,7 +1,7 @@
 use std::{alloc::Layout, fmt::Debug, ptr::NonNull};
 
 use derive_more::Display;
-use global::{UnwrapEnum, dt_println, non_purus_call_configuration::NonPurusCallType};
+use global::{UnwrapEnum, non_purus_call_configuration::NonPurusCallType};
 
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdExt},
@@ -54,7 +54,7 @@ impl NonGenericTypeHandle {
         }
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &widestring::Utf16Str {
         match self {
             Self::Class(ty) => unsafe { ty.as_ref().name() },
             Self::Struct(ty) => unsafe { ty.as_ref().name() },
@@ -203,13 +203,13 @@ pub trait IGenericResolver {
 pub struct GenericUnresolvable;
 
 impl IGenericResolver for GenericUnresolvable {
+    #[inline(always)]
     fn resolve_type_generic(&self, _g_index: u32) -> Option<TypeHandle> {
-        dt_println!("Unreachable code may be reached");
         None
     }
 
+    #[inline(always)]
     fn resolve_method_generic(&self, _g_index: u32) -> Option<TypeHandle> {
-        dt_println!("Unreachable code may be reached");
         None
     }
 }

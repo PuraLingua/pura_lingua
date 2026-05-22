@@ -1,13 +1,17 @@
-use std::{alloc::Layout, cell::Cell, ptr::NonNull};
+use std::{alloc::Layout, cell::Cell};
 
 use global::{attrs::FieldAttr, getset::Getters, non_purus_call_configuration::NonPurusCallType};
 
 use crate::{
     memory::GetLayoutOptions,
-    type_system::type_handle::{
-        GenericUnresolvable, IGenericResolver, MaybeUnloadedTypeHandle, TypeGenericResolver,
-        TypeHandle,
+    type_system::{
+        cached_type_reference::CachedTypeReference,
+        type_handle::{
+            GenericUnresolvable, IGenericResolver, MaybeUnloadedTypeHandle, TypeGenericResolver,
+            TypeHandle,
+        },
     },
+    utils::clone_utf16str,
 };
 
 use super::{
@@ -16,12 +20,12 @@ use super::{
     type_handle::NonGenericTypeHandle,
 };
 
-#[derive(Getters, Clone, Debug)]
+#[derive(Getters, Debug)]
 #[getset(get = "pub")]
 pub struct Field {
-    pub(crate) name: Box<str>,
+    pub(crate) name: Box<widestring::Utf16Str>,
     pub(crate) attr: FieldAttr,
-    pub(crate) ty: MaybeUnloadedTypeHandle,
+    pub(crate) ty: CachedTypeReference,
 
     #[getset(skip)]
     pub(crate) cached_layout: Cell<Option<Layout>>,
@@ -31,12 +35,29 @@ pub struct Field {
     pub(crate) cached_static_offset: Cell<Option<usize>>,
 }
 
-impl Field {
-    pub fn new(name: String, attr: FieldAttr, ty: MaybeUnloadedTypeHandle) -> Self {
+impl Clone for Field {
+    fn clone(&self) -> Self {
         Self {
-            name: name.into_boxed_str(),
+            name: clone_utf16str(&self.name),
+            attr: self.attr,
+            ty: self.ty.clone(),
+            cached_layout: Cell::new(None),
+            cached_offset: Cell::new(None),
+            cached_static_offset: Cell::new(None),
+        }
+    }
+}
+
+impl Field {
+    pub fn new(
+        name: widestring::Utf16String,
+        attr: FieldAttr,
+        ty: MaybeUnloadedTypeHandle,
+    ) -> Self {
+        Self {
+            name: name.into_boxed_utfstr(),
             attr,
-            ty,
+            ty: CachedTypeReference::new(ty),
             cached_layout: Cell::new(None),
             cached_offset: Cell::new(None),
             cached_static_offset: Cell::new(None),
@@ -51,30 +72,27 @@ impl Field {
         {
             return Some(layout);
         }
-        match self.ty {
-            MaybeUnloadedTypeHandle::Loaded(th) => th.val_layout(),
-            MaybeUnloadedTypeHandle::Unloaded(_) => None,
-        }
-        .inspect(|x| {
-            if !options.discard_calculated_layout {
-                self.cached_layout.set(Some(*x));
-            }
-        })
+
+        self.ty
+            .to_handle()
+            .and_then(|x| x.val_layout())
+            .inspect(|x| {
+                if !options.discard_calculated_layout {
+                    self.cached_layout.set(Some(*x));
+                }
+            })
     }
 
     fn load_type(&self, manager: &AssemblyManager) -> Option<TypeHandle> {
         self.ty
-            .load_with_generic_resolver(manager, &GenericUnresolvable)
-            .inspect(|ty| unsafe {
-                NonNull::from_ref(self).as_mut().ty = MaybeUnloadedTypeHandle::Loaded(*ty);
-            })
+            .get_with_generic_resolver(manager, &GenericUnresolvable)
     }
 
     fn get_type_with_generic_resolver<TResolver: IGenericResolver>(
         &self,
         resolver: &TResolver,
     ) -> NonGenericTypeHandle {
-        let mut ty = self.ty.clone().assume_init();
+        let mut ty = self.ty.assume_init();
         loop {
             match ty.as_non_generic() {
                 Some(ty) => return *ty,

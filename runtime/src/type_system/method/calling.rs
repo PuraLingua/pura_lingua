@@ -4,7 +4,7 @@ use std::{
     ptr::NonNull,
 };
 
-use global::attrs::CallConvention;
+use global::attrs::{CallConvention, MethodImplementationFlags};
 
 use crate::{
     type_system::get_traits::{GetAssemblyRef, GetNonGenericTypeHandleKind, GetTypeVars},
@@ -16,13 +16,11 @@ use super::{Method, default_entry_point};
 impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
     fn get_cif(&self) -> libffi::middle::Cif {
         use libffi::middle::{Builder, Type};
-        let mut builder = Builder::new()
-            .abi(self.libffi_call_convention())
-            .res(self.libffi_return_type())
-            .args([
-                /* CPU */ Type::pointer(),
-                /* Method */ Type::pointer(),
-            ]);
+        let mut builder = Builder::new().abi(self.libffi_call_convention()).args([
+            /* CPU */ Type::pointer(),
+            /* Method */ Type::pointer(),
+        ]);
+
         if !self.attr.is_static() {
             builder = builder.arg(Type::pointer());
         }
@@ -37,6 +35,17 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
                 .arg(/* extra arg length */ Type::usize());
         }
 
+        if self
+            .attr
+            .impl_flags
+            .contains(MethodImplementationFlags::UseReturnBuffer)
+        {
+            builder = builder.res(libffi::middle::Type::void());
+            builder = builder.arg(Type::pointer());
+        } else {
+            builder = builder.res(self.libffi_return_type());
+        }
+
         builder.into_cif()
     }
 
@@ -47,6 +56,7 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         rest_arg_ptr: &mut NonNull<*mut c_void>,
         rest_arg_len: &mut usize,
         args: &[*mut c_void],
+        return_buffer: &mut NonNull<c_void>,
     ) -> Vec<*mut c_void> {
         // It will be either 0 or 1
         let this_arg_len = if self.attr.is_static() { 0 } else { 1 };
@@ -100,29 +110,46 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             complete_arg.push((&raw mut *rest_arg_len).cast());
         }
 
+        if self
+            .attr
+            .impl_flags
+            .contains(MethodImplementationFlags::UseReturnBuffer)
+        {
+            complete_arg.push((&raw mut *return_buffer).cast());
+        }
+
         complete_arg
     }
 
-    pub fn untyped_call(
+    pub unsafe fn buffered_call(
         &self,
         cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[*mut c_void],
-    ) -> (NonNull<u8>, Layout) {
+        mut return_buffer: NonNull<c_void>,
+    ) {
         #[cfg(feature = "print_invoke_and_call")]
         println!(
             "Calling Method: {}",
             self.display(enumflags2::BitFlags::all())
         );
 
+        unsafe {
+            return_buffer.write_bytes(
+                0,
+                crate::memory::get_return_layout_for_libffi(self.get_return_type().val_layout())
+                    .size(),
+            );
+        }
+
         if std::ptr::addr_eq(
             default_entry_point::__default_entry_point::<T> as *const c_void,
             self.entry_point.as_ptr(),
         ) {
             cpu.prepare_call_stack_for_method(self);
-            let res = default_entry_point::__default_entry_point::<T>(self, cpu, this, args);
+            default_entry_point::__default_entry_point::<T>(self, cpu, this, args, return_buffer);
             cpu.pop_call_stack();
-            return res;
+            return;
         }
         cpu.push_call_stack_native(self);
         let cif = self.get_cif();
@@ -136,20 +163,14 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             &mut rest_arg_ptr,
             &mut rest_arg_len,
             args,
+            &mut return_buffer,
         );
 
-        let mut ret_layout = self.get_return_type().val_layout();
-        if ret_layout.size() < size_of::<usize>() {
-            ret_layout = Layout::new::<usize>();
-        }
-
-        let result =
-            std::alloc::Allocator::allocate_zeroed(&std::alloc::Global, ret_layout).unwrap();
         unsafe {
             libffi::raw::ffi_call(
                 cif.as_raw_ptr(),
                 Some(*self.entry_point.as_safe_fun()),
-                result.as_non_null_ptr().cast::<c_void>().as_ptr(),
+                return_buffer.as_ptr(),
                 args.as_mut_ptr(),
             );
         }
@@ -163,6 +184,23 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         // }
 
         cpu.pop_call_stack();
+    }
+
+    pub fn untyped_call(
+        &self,
+        cpu: &mut CPU,
+        this: Option<NonNull<()>>,
+        args: &[*mut c_void],
+    ) -> (NonNull<u8>, Layout) {
+        let ret_layout =
+            crate::memory::get_return_layout_for_libffi(self.get_return_type().val_layout());
+
+        let result =
+            std::alloc::Allocator::allocate_zeroed(&std::alloc::Global, ret_layout).unwrap();
+
+        unsafe {
+            self.buffered_call(cpu, this, args, result.as_non_null_ptr().cast());
+        }
 
         (result.as_non_null_ptr(), ret_layout)
     }

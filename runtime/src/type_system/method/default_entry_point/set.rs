@@ -4,13 +4,14 @@ use global::instruction::{IRegisterAddr, Instruction_Set};
 
 use crate::{
     type_system::{
+        cached_type_reference::CachedTypeReference,
         class::Class,
         get_traits::{GetAssemblyRef, GetTypeVars},
         method::{
             Method,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
-        type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle},
+        type_handle::{MethodGenericResolver, NonGenericTypeHandle},
     },
     value::managed_reference::{FieldAccessor, ManagedReference},
     virtual_machine::cpu::CPU,
@@ -21,10 +22,10 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,
     #[allow(unused)] args: &[*mut c_void],
-    #[allow(unused)] result_ptr: NonNull<[u8]>,
+    #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
-    ins: &Instruction_Set<MaybeUnloadedTypeHandle, u32, TRegisterAddr>,
+    ins: &Instruction_Set<CachedTypeReference, u32, TRegisterAddr>,
 ) -> Option<Result<(), Termination>> {
     match ins {
         Instruction_Set::Common {
@@ -91,14 +92,16 @@ pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
         }
         Instruction_Set::Static { val, ty, field } => {
             let Some(ty) = ty
-                .load_with_generic_resolver(
+                .get_with_generic_resolver(
                     cpu.vm_ref().assembly_manager(),
                     MethodGenericResolver::new(method),
                 )
                 .map(|x| x.get_non_generic_with_method(method))
                 .flatten()
             else {
-                return Some(Err(Termination::LoadTypeHandleFailed(ty.clone())));
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    ty.to_maybe_unloaded_handle(),
+                )));
             };
             let Some((f_ptr, f_layout)) = cpu.vm_ref().get_static_field(ty, *field) else {
                 return Some(Err(Termination::LoadFieldFailed(*field)));

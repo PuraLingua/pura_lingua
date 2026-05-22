@@ -2,7 +2,7 @@ use crate::{CoreTypeId, CoreTypeRef};
 
 proc_macros::define_core_class! {
     #[Public {}] assembly
-    System_Array_1 1 "System::Array`1" Some((CoreTypeId::System_Object.into(), vec![])) =>
+    System_Array_1 1 Some((CoreTypeId::System_Object.into(), vec![])) =>
     #fields:
 
     #methods of super::Object::MethodId:
@@ -11,21 +11,14 @@ proc_macros::define_core_class! {
         Destructor "~" () -> CoreTypeRef::Core(CoreTypeId::System_Void);
         #[override Some(super::Object::MethodId::ToString as _) Public {}]
         ToString () -> CoreTypeRef::Core(CoreTypeId::System_String);
-        #[Private {}] GetPointerOfIndex (
+        #[Public {}] GetReference (
             #[{}] CoreTypeRef::Core(CoreTypeId::System_USize)
         ) -> CoreTypeRef::Core(CoreTypeId::System_Pointer);
-        #[
-            Public {}
-            CoreTypeRef::Core(CoreTypeId::System_Object),
-            CoreTypeRef::Core(CoreTypeId::System_USize), // arg 0
-            CoreTypeRef::Core(CoreTypeId::System_Pointer),
-            CoreTypeRef::Core(CoreTypeId::System_USize), // Size of T
-            CoreTypeRef::TypeGeneric(0),
-        ] get_Index (
+        #[Public {UseReturnBuffer}] get_Index (
             #[{}] CoreTypeRef::Core(CoreTypeId::System_USize)
         ) -> CoreTypeRef::TypeGeneric(0);
         #[
-            Public {}
+            Public {UseReturnBuffer}
             CoreTypeRef::Core(CoreTypeId::System_Object), // this
             CoreTypeRef::Core(CoreTypeId::System_USize), // arg 0
             CoreTypeRef::TypeGeneric(0), // arg 1

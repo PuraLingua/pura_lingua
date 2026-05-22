@@ -11,7 +11,7 @@ use super::type_handle::NonGenericTypeHandle;
 
 mod load_binary;
 
-pub use load_binary::TypeLoadState;
+pub use load_binary::{AtomicTypeLoadState, TypeLoadState};
 
 pub struct AssemblyManager {
     #[allow(dead_code)]
@@ -131,11 +131,11 @@ impl AssemblyManager {
 
     pub fn get_assembly_by_name<'a>(
         &'a self,
-        name: &str,
+        name: &widestring::Utf16Str,
     ) -> Result<Option<MappedRwLockReadGuard<'a, Assembly>>, ReadAssembliesPoisonError<'a>> {
         self.assemblies.read().map(|guard| {
-            RwLockReadGuard::filter_map(guard, |x| {
-                x.iter().find(|x| x.name.as_str().eq(name)).map(|x| &**x)
+            RwLockReadGuard::filter_map(guard, |x: &Vec<Box<Assembly>>| {
+                x.iter().find(|x| (&*x.name).eq(name)).map(|x| &**x)
             })
             .ok()
         })
@@ -155,7 +155,9 @@ impl AssemblyManager {
         r: &AssemblyRef,
     ) -> Result<Option<MappedRwLockReadGuard<'a, Assembly>>, ReadAssembliesPoisonError<'a>> {
         match r {
-            AssemblyRef::Name(name) => self.get_assembly_by_name(name.as_str()),
+            AssemblyRef::Name(name) => {
+                self.get_assembly_by_name(&widestring::Utf16String::from_str(name.as_str()))
+            }
             AssemblyRef::Id(id) => self.get_assembly(*id),
         }
     }

@@ -56,6 +56,7 @@ pub enum MethodImplementationFlags {
     Static,
     AllowExtraArgs,
     HideWhenCapturing,
+    UseReturnBuffer,
 }
 
 #[derive(
