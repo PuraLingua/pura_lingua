@@ -1,17 +1,14 @@
-#[cfg(windows)]
 use crate::{
     type_system::{class::Class, method::Method},
     value::managed_reference::{ManagedReference, StringAccessor},
     virtual_machine::cpu::CPU,
 };
 
-#[cfg(windows)]
 pub fn Constructor(cpu: &mut CPU, method: &Method<Class>, this: &mut ManagedReference<Class>) {
     let name = ManagedReference::new_string(cpu, "<unnamed>");
     Constructor_String(cpu, method, this, name);
 }
 
-#[cfg(windows)]
 pub fn Constructor_String(
     cpu: &mut CPU,
     method: &Method<Class>,

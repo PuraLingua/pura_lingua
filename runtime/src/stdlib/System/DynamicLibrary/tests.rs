@@ -411,32 +411,32 @@ fn gen_simple_dynamic_lib_to_invoke(
 
     Method::new(
         mt,
-        "ToInvoke".to_owned(),
+        widestring::utf16str!("ToInvoke").to_owned(),
         global::attr!(
             method Public {Static}
-            /* 0 */ g_core_type!(System_DynamicLibrary), // Library
-            /* 1 */ g_core_type!(System_String), // MethodName
-            /* 2 */ g_core_type!(System_Pointer), // lpMethod
+            /* 0 */ g_core_type!(System_DynamicLibrary).into(), // Library
+            /* 1 */ g_core_type!(System_String).into(), // MethodName
+            /* 2 */ g_core_type!(System_Pointer).into(), // lpMethod
 
             // CallConfig
-            /* 3 */ g_core_type!(System_NonPurusCallConfiguration), // Config
-            /* 4 */ g_core_type!(System_UInt8), // CallConvention
+            /* 3 */ g_core_type!(System_NonPurusCallConfiguration).into(), // Config
+            /* 4 */ g_core_type!(System_UInt8).into(), // CallConvention
 
-            /* 5 */ g_core_type!(System_NonPurusCallType), // ReturnType
+            /* 5 */ g_core_type!(System_NonPurusCallType).into(), // ReturnType
 
-            /* 6 */ g_core_type!(System_UInt8), // Encoding
-            /* 7 */ g_core_type!(System_UInt8), // ObjectStrategy
-            /* 8 */ g_core_type!(System_Object), // ByRefArguments(System::Array`1[System::USize])
+            /* 6 */ g_core_type!(System_UInt8).into(), // Encoding
+            /* 7 */ g_core_type!(System_UInt8).into(), // ObjectStrategy
+            /* 8 */ g_core_type!(System_Object).into(), // ByRefArguments(System::Array`1[System::USize])
 
-            /* 9 */ g_core_type!(System_Object), // Arguments(System::Array`1[System::NonPurusCallType])
-            /* 10 */ g_core_type!(System_USize), // IndexToSet
+            /* 9 */ g_core_type!(System_Object).into(), // Arguments(System::Array`1[System::NonPurusCallType])
+            /* 10 */ g_core_type!(System_USize).into(), // IndexToSet
 
             // Arg0
-            /* 11 */ g_core_type!(System_NonPurusCallType), // Arg0Type
+            /* 11 */ g_core_type!(System_NonPurusCallType).into(), // Arg0Type
 
             // Call
-            /* 12 */ g_core_type!(System_Pointer), // tLoc
-            /* 13 */ g_core_type!(System_Int64), // RET
+            /* 12 */ g_core_type!(System_Pointer).into(), // tLoc
+            /* 13 */ g_core_type!(System_Int64).into(), // RET
         ),
         GenericCountRequirement::default(),
         vec![],

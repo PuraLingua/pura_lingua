@@ -3,8 +3,7 @@ use std::{ffi::c_void, ptr::NonNull};
 use global::{
     attrs::CallConvention,
     instruction::{
-        CommonReadPointerTo, CommonWritePointer, IRegisterAddr, Instruction_Call, Instruction_Load,
-        LoadContent,
+        CommonWritePointer, IRegisterAddr, Instruction_Call, Instruction_Load, LoadContent,
     },
 };
 
