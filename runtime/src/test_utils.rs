@@ -13,7 +13,7 @@ use crate::{
         method::{ExceptionTable, Method, RuntimeInstruction},
         method_table::MethodTable,
     },
-    virtual_machine::{CpuID, global_vm},
+    virtual_machine::{cpu_manager::CpuID, global_vm},
 };
 
 pub macro g_core_type($i:ident) {
@@ -93,7 +93,7 @@ pub fn try_invoke_instructions(
         ]
     });
 
-    let class = assembly.get_class(0).unwrap().unwrap();
+    let class = assembly.get_class(0).unwrap();
     let mt_ref = unsafe { class.as_ref().method_table_ref() };
     let method = mt_ref
         .find_first_method_by_name(widestring::utf16str!("__Test"))

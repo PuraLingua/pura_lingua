@@ -24,6 +24,7 @@ use crate::{
     value::managed_reference::ManagedReference,
 };
 
+#[repr(align(8))]
 #[derive(Getters, MutGetters, derive_more::Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct Interface {

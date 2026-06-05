@@ -21,7 +21,9 @@ use crate::{
         type_ref::TypeRef,
     },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
-    virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, cpu::MainResult, global_vm},
+    virtual_machine::{
+        EnsureGlobalVirtualMachineInitialized, cpu::MainResult, cpu_manager::CpuID, global_vm,
+    },
 };
 
 use super::*;
@@ -93,7 +95,7 @@ fn test_normal_f() {
         .unwrap()
         .unwrap();
 
-    let class = assembly.get_class(0).unwrap().unwrap();
+    let class = assembly.get_class(0).unwrap();
     let obj = ManagedReference::<Class>::common_alloc(
         &mut cpu,
         unsafe { *class.as_ref().method_table() },
@@ -427,8 +429,7 @@ fn test_interface_call() {
         ]
     });
 
-    let main_class = assembly.get_class(3).unwrap().unwrap();
-    let mut main_class = *main_class;
+    let mut main_class = assembly.get_class(3).unwrap();
     unsafe {
         *main_class.as_mut().main_mut() =
             Some(stdlib_header::System::Object::MethodId::__END as u32);
@@ -468,7 +469,7 @@ fn test_interface_from_binary() {
         .unwrap()
         .unwrap();
 
-    let class = assembly.get_class(3).unwrap().unwrap();
+    let class = assembly.get_class(3).unwrap();
     assert_eq!(
         cpu.invoke_main_class(unsafe { class.as_ref() }, vec![]),
         MainResult::Void
@@ -610,8 +611,7 @@ fn test_extra_args() {
         ]
     });
 
-    let main_class = assembly.get_class(0).unwrap().unwrap();
-    let mut main_class = *main_class;
+    let mut main_class = assembly.get_class(0).unwrap();
     unsafe {
         *main_class.as_mut().main_mut() =
             Some(stdlib_header::System::Object::MethodId::__END as u32);

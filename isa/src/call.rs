@@ -193,52 +193,58 @@ impl<TTypeRef, TMethodRef> Instruction_Call<TTypeRef, TMethodRef, RegisterAddr> 
                 method,
                 args,
                 ret_at,
-            } => match val.try_into_short().and_then(|val| {
-                args.iter()
-                    .copied()
-                    .map(RegisterAddr::try_into_short)
-                    .try_collect::<Vec<_>>()
-                    .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
-                    .map(|(args, ret_at)| (val, args, ret_at))
-            }) {
-                Some((val, args, ret_at)) => Ok(Instruction_Call::InstanceCall {
-                    val,
-                    method,
-                    args,
-                    ret_at,
-                }),
-                None => Err(Instruction_Call::InstanceCall {
-                    val,
-                    method,
-                    args,
-                    ret_at,
-                }),
-            },
+            } => {
+                if let Some(val) = val.try_into_short()
+                    && let Some(args) = args
+                        .iter()
+                        .copied()
+                        .map(RegisterAddr::try_into_short)
+                        .try_collect::<Vec<_>>()
+                    && let Some(ret_at) = ret_at.try_into_short()
+                {
+                    Ok(Instruction_Call::InstanceCall {
+                        val,
+                        method,
+                        args,
+                        ret_at,
+                    })
+                } else {
+                    Err(Instruction_Call::InstanceCall {
+                        val,
+                        method,
+                        args,
+                        ret_at,
+                    })
+                }
+            }
             Instruction_Call::StaticCall {
                 ty,
                 method,
                 args,
                 ret_at,
-            } => match args
-                .iter()
-                .copied()
-                .map(RegisterAddr::try_into_short)
-                .try_collect::<Vec<_>>()
-                .and_then(|args| ret_at.try_into_short().map(|ret_at| (args, ret_at)))
-            {
-                Some((args, ret_at)) => Ok(Instruction_Call::StaticCall {
-                    ty,
-                    method,
-                    args,
-                    ret_at,
-                }),
-                None => Err(Instruction_Call::StaticCall {
-                    ty,
-                    method,
-                    args,
-                    ret_at,
-                }),
-            },
+            } => {
+                if let Some(args) = args
+                    .iter()
+                    .copied()
+                    .map(RegisterAddr::try_into_short)
+                    .try_collect::<Vec<_>>()
+                    && let Some(ret_at) = ret_at.try_into_short()
+                {
+                    Ok(Instruction_Call::StaticCall {
+                        ty,
+                        method,
+                        args,
+                        ret_at,
+                    })
+                } else {
+                    Err(Instruction_Call::StaticCall {
+                        ty,
+                        method,
+                        args,
+                        ret_at,
+                    })
+                }
+            }
             Instruction_Call::InterfaceCall {
                 interface,
                 val,

@@ -1,35 +1,31 @@
-use std::{
-    ptr::NonNull,
-    sync::{MappedRwLockReadGuard, PoisonError, RwLock, RwLockReadGuard},
-};
+use std::{ptr::NonNull, sync::RwLock};
 
 use global::{UnwrapEnum, traits::IUnwrap};
 
 use crate::{
     memory::OwnedPtr,
-    type_system::{
-        assembly_manager::AssemblyManager, interface::Interface,
-        type_handle::NonGenericTypeHandleKind,
-    },
+    type_system::{assembly_manager::AssemblyManager, interface::Interface},
 };
 
 use super::{class::Class, r#struct::Struct, type_handle::NonGenericTypeHandle};
 
-#[repr(u8)]
 #[derive(UnwrapEnum)]
 #[unwrap_enum(owned)]
 pub enum TypeContainer {
-    Class(Box<Class>) = NonGenericTypeHandleKind::Class as _,
-    Struct(Box<Struct>) = NonGenericTypeHandleKind::Struct as _,
-    Interface(Box<Interface>) = NonGenericTypeHandleKind::Interface as _,
+    Class(Box<Class>),
+    Struct(Box<Struct>),
+    Interface(Box<Interface>),
 }
 
 impl TypeContainer {
-    pub const fn as_handle(&self) -> &NonGenericTypeHandle {
-        const {
-            assert!(global::layout_eq!(TypeContainer, NonGenericTypeHandle));
+    pub const fn handle(&self) -> NonGenericTypeHandle {
+        match self {
+            TypeContainer::Class(ty) => NonGenericTypeHandle::Class(NonNull::from_ref(&**ty)),
+            TypeContainer::Struct(ty) => NonGenericTypeHandle::Struct(NonNull::from_ref(&**ty)),
+            TypeContainer::Interface(ty) => {
+                NonGenericTypeHandle::Interface(NonNull::from_ref(&**ty))
+            }
         }
-        unsafe { std::mem::transmute(self) }
     }
     pub fn name(&self) -> &widestring::Utf16Str {
         match self {
@@ -120,67 +116,38 @@ impl Assembly {
 #[allow(clippy::type_complexity)]
 impl Assembly {
     /// More convenient sometimes but may panic
-    pub fn get_type<T>(
-        &self,
-        index: u32,
-    ) -> Result<
-        Option<MappedRwLockReadGuard<'_, T>>,
-        PoisonError<RwLockReadGuard<'_, Vec<TypeContainer>>>,
-    >
+    pub fn get_type<T>(&self, index: u32) -> Option<T>
     where
-        for<'a> &'a NonGenericTypeHandle: IUnwrap<&'a T>,
+        NonGenericTypeHandle: IUnwrap<T>,
     {
-        self.get_type_handle(index)
-            .map(move |x| x.map(|x| MappedRwLockReadGuard::map(x, |x| x._unwrap())))
+        self.get_type_handle(index).map(IUnwrap::_unwrap)
     }
-    pub fn get_type_handle<'a>(
-        &'a self,
-        index: u32,
-    ) -> Result<
-        Option<MappedRwLockReadGuard<'a, NonGenericTypeHandle>>,
-        PoisonError<RwLockReadGuard<'a, Vec<TypeContainer>>>,
-    > {
-        self.types.read().map(|x| {
-            RwLockReadGuard::filter_map(x, |x: &Vec<TypeContainer>| {
-                x.get(index as usize).map(TypeContainer::as_handle)
-            })
-            .ok()
-        })
+    pub fn get_type_handle<'a>(&'a self, index: u32) -> Option<NonGenericTypeHandle> {
+        self.types
+            .read()
+            .unwrap()
+            .get(index as usize)
+            .map(TypeContainer::handle)
     }
 
     pub fn find_type_handle<'a>(
         &'a self,
         name: impl AsRef<widestring::Utf16Str>,
-    ) -> Result<
-        Option<MappedRwLockReadGuard<'a, NonGenericTypeHandle>>,
-        PoisonError<RwLockReadGuard<'a, Vec<TypeContainer>>>,
-    > {
+    ) -> Option<NonGenericTypeHandle> {
         let name = name.as_ref();
-        self.types.read().map(|x| {
-            RwLockReadGuard::filter_map(x, |x: &Vec<TypeContainer>| {
-                x.iter()
-                    .find(|x| x.name() == name)
-                    .map(TypeContainer::as_handle)
-            })
-            .ok()
-        })
+        self.types
+            .read()
+            .unwrap()
+            .iter()
+            .find(|x| x.name() == name)
+            .map(TypeContainer::handle)
     }
     /// More convenient sometimes but may panic
-    pub fn find_type<T>(
-        &self,
-        name: impl AsRef<widestring::Utf16Str>,
-    ) -> Result<
-        Option<MappedRwLockReadGuard<'_, T>>,
-        PoisonError<RwLockReadGuard<'_, Vec<TypeContainer>>>,
-    >
+    pub fn find_type<T>(&self, name: impl AsRef<widestring::Utf16Str>) -> Option<T>
     where
-        for<'a> &'a NonGenericTypeHandle: IUnwrap<&'a T>,
+        NonGenericTypeHandle: IUnwrap<T>,
     {
-        self.find_type_handle(name).map(move |x| {
-            x.map(|x: MappedRwLockReadGuard<'_, NonGenericTypeHandle>| {
-                MappedRwLockReadGuard::map(x, |x: &NonGenericTypeHandle| x._unwrap())
-            })
-        })
+        self.find_type_handle(name).map(IUnwrap::_unwrap)
     }
 }
 
@@ -191,10 +158,7 @@ macro gen_gets($(
     pub fn $name(
         &self,
         index: u32,
-    ) -> Result<
-        Option<MappedRwLockReadGuard<'_, NonNull<$Ty>>>,
-        PoisonError<RwLockReadGuard<'_, Vec<TypeContainer>>>,
-    > {
+    ) -> Option<NonNull<$Ty>> {
         self.get_type(index)
     }
 )*}
@@ -206,10 +170,7 @@ macro gen_finds($(
     pub fn $name(
         &self,
         name: impl AsRef<widestring::Utf16Str>,
-    ) -> Result<
-        Option<MappedRwLockReadGuard<'_, NonNull<$Ty>>>,
-        PoisonError<RwLockReadGuard<'_, Vec<TypeContainer>>>,
-    > {
+    ) -> Option<NonNull<$Ty>> {
         self.find_type(name)
     }
 )*}

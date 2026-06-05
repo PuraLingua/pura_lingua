@@ -15,10 +15,7 @@ use crate::{
     virtual_machine::cpu::CPU,
 };
 
-pub(super) fn read_pointer_to<
-    T: Sized + GetAssemblyRef + GetTypeVars,
-    TRegisterAddr: IRegisterAddr,
->(
+pub(super) fn read_pointer_to<T: GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
     #[allow(unused)] method: &Method<T>,
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,

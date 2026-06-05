@@ -7,7 +7,7 @@ use crate::{
     test_utils::{g_core_type, try_invoke_instructions},
     type_system::class::Class,
     value::managed_reference::{ManagedReference, StringAccessor},
-    virtual_machine::{CpuID, global_vm},
+    virtual_machine::{cpu_manager::CpuID, global_vm},
 };
 
 #[test]
@@ -153,13 +153,13 @@ fn gtest_test_fn() -> global::Result<()> {
         .unwrap()
         .unwrap();
 
-    let test_class = assembly.get_class(0).unwrap().unwrap();
+    let test_class = assembly.get_class(0).unwrap();
     let test_fn = unsafe { test_class.as_ref() }
         .method_table_ref()
         .find_first_method_by_name(widestring::utf16str!("TestFn"))
         .unwrap();
 
-    let result =
+    let result: ManagedReference<Class> =
         unsafe { test_fn.as_ref() }.typed_res_call::<ManagedReference<Class>>(&mut cpu, None, &[]);
 
     let res = result
@@ -190,7 +190,7 @@ fn gtest_test_msgbox() -> global::Result<()> {
         .unwrap()
         .unwrap();
 
-    let test_class = assembly.get_class(0).unwrap().unwrap();
+    let test_class = assembly.get_class(0).unwrap();
     let test_fn = unsafe { test_class.as_ref() }
         .method_table_ref()
         .find_first_method_by_name(widestring::utf16str!("TestFn"))
@@ -234,7 +234,7 @@ fn gtest_simple_console() -> global::Result<()> {
         .unwrap()
         .unwrap();
 
-    let console_class = assembly.get_class(0).unwrap().unwrap();
+    let console_class = assembly.get_class(0).unwrap();
 
     let to_write = ManagedReference::new_string(&mut cpu, "aaa\n");
     let write_stdout = unsafe {

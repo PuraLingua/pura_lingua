@@ -2,13 +2,13 @@ use std::{
     alloc::{Allocator, Layout},
     pin::Pin,
     ptr::NonNull,
-    sync::{MappedRwLockReadGuard, RwLock},
+    sync::nonpoison::{MappedRwLockReadGuard, RwLock},
 };
 
 use pura_lingua::runtime::{
     self,
     type_system::assembly_manager::AssemblyManager,
-    virtual_machine::{CpuID, VirtualMachine, cpu::CPU},
+    virtual_machine::{VirtualMachine, cpu::CPU, cpu_manager::CpuID},
 };
 
 #[unsafe(no_mangle)]
@@ -38,7 +38,7 @@ pub extern "C" fn GlobalVirtualMachineUnchecked() -> NonNull<VirtualMachine> {
 /// Returns owned pointer
 #[unsafe(no_mangle)]
 pub extern "C" fn NewVirtualMachine() -> NonNull<VirtualMachine> {
-    VirtualMachine::new_system().as_non_null_ptr()
+    Box::into_non_null_with_allocator(VirtualMachine::new_system()).0
 }
 
 // Methods

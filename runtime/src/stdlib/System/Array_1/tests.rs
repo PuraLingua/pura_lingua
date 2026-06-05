@@ -10,7 +10,7 @@ use crate::{
         assembly::Assembly, generics::GenericCountRequirement, method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle, type_ref::TypeRef,
     },
-    virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
+    virtual_machine::{EnsureGlobalVirtualMachineInitialized, cpu_manager::CpuID, global_vm},
 };
 
 use super::*;
@@ -181,7 +181,7 @@ fn array_get_set() -> global::Result<()> {
         .get_assembly(assembly_id)
         .unwrap()
         .unwrap();
-    let test_class = assembly.get_class(0).unwrap().unwrap();
+    let test_class = assembly.get_class(0).unwrap();
     let m_set = unsafe {
         test_class
             .as_ref()

@@ -43,51 +43,23 @@ impl<TTypeRef, TFieldRef> Instruction_Set<TTypeRef, TFieldRef, RegisterAddr> {
                 val,
                 container,
                 field,
-            } => match val.try_into_short().and_then({
-                struct MapContainer {
-                    container: RegisterAddr,
+            } => {
+                if let Some(val) = val.try_into_short()
+                    && let Some(container) = container.try_into_short()
+                {
+                    Ok(Instruction_Set::Common {
+                        val,
+                        container,
+                        field,
+                    })
+                } else {
+                    Err(Instruction_Set::Common {
+                        val,
+                        container,
+                        field,
+                    })
                 }
-                impl const FnOnce<(ShortRegisterAddr,)> for MapContainer {
-                    type Output = Option<(ShortRegisterAddr, ShortRegisterAddr)>;
-
-                    #[inline(always)]
-                    extern "rust-call" fn call_once(
-                        self,
-                        (val,): (ShortRegisterAddr,),
-                    ) -> Self::Output {
-                        let Self { container } = self;
-                        struct Zip {
-                            val: ShortRegisterAddr,
-                        }
-
-                        impl const FnOnce<(ShortRegisterAddr,)> for Zip {
-                            type Output = (ShortRegisterAddr, ShortRegisterAddr);
-
-                            #[inline(always)]
-                            extern "rust-call" fn call_once(
-                                self,
-                                (container,): (ShortRegisterAddr,),
-                            ) -> Self::Output {
-                                let Self { val } = self;
-                                (val, container)
-                            }
-                        }
-                        container.try_into_short().map(Zip { val })
-                    }
-                }
-                MapContainer { container }
-            }) {
-                Some((val, container)) => Ok(Instruction_Set::Common {
-                    val,
-                    container,
-                    field,
-                }),
-                None => Err(Instruction_Set::Common {
-                    val,
-                    container,
-                    field,
-                }),
-            },
+            }
             Instruction_Set::This { val, field } => match val.try_into_short() {
                 Some(val) => Ok(Instruction_Set::This { val, field }),
                 None => Err(Instruction_Set::This { val, field }),

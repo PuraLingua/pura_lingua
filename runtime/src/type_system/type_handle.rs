@@ -1,4 +1,4 @@
-use std::{alloc::Layout, fmt::Debug, ptr::NonNull};
+use std::{alloc::Layout, fmt::Debug, num::NonZero, ptr::NonNull};
 
 use derive_more::Display;
 use global::{UnwrapEnum, non_purus_call_configuration::NonPurusCallType};
@@ -17,6 +17,8 @@ use super::{
 };
 
 mod convert;
+#[cfg(test)]
+mod tests;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Display)]
@@ -24,6 +26,250 @@ pub enum NonGenericTypeHandleKind {
     Class = TypeHandleKind::Class as _,
     Struct = TypeHandleKind::Struct as _,
     Interface = TypeHandleKind::Interface as _,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct FlattenedNonGenericTypeHandle {
+    ptr: NonNull<u8>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct FlattenedTypeHandle {
+    ptr: NonNull<u8>,
+}
+
+macro impl_flatten {
+    (
+        enum NonGeneric {
+            $(
+                #[is($is:ident)]
+                #[unwrap($unwrap:ident)]
+                #[unwrap_unchecked($unwrap_unchecked:ident)]
+                #[try_into($try_into:ident)]
+                $Variant:ident($VariantTy:ty)
+            ),* $(,)?
+        }
+    ) => {
+        impl FlattenedNonGenericTypeHandle {
+            $(
+                #[allow(non_snake_case)]
+                pub fn $Variant(ptr: NonNull<$VariantTy>) -> Self {
+                    const _: NonGenericTypeHandleKind = NonGenericTypeHandleKind::$Variant;
+                    #[inline(always)]
+                    const fn map_addr(addr: NonZero<usize>) -> NonZero<usize> {
+                        TypeHandleKind::$Variant.tag(addr)
+                    }
+                    Self {
+                        ptr: ptr.map_addr(map_addr).cast(),
+                    }
+                }
+
+                pub fn $is(self) -> bool {
+                    TypeHandleKind::get_tag(self.ptr.addr().get()) == TypeHandleKind::$Variant
+                }
+                pub fn $unwrap(self) -> NonNull<$VariantTy> {
+                    if self.$is() {
+                        unsafe { self.$unwrap_unchecked() }
+                    } else {
+                        const MSG: &str = concat!("The handle does not contain ", stringify!($Variant));
+                        core::panicking::panic(MSG)
+                    }
+                }
+                pub unsafe fn $unwrap_unchecked(self) -> NonNull<$VariantTy> {
+                    self.ptr
+                        .map_addr(|x| unsafe {
+                            NonZero::new_unchecked(TypeHandleKind::untag(x.get()))
+                        })
+                        .cast()
+                }
+                pub fn $try_into(self) -> Option<NonNull<$VariantTy>> {
+                    if self.$is() {
+                        Some(unsafe { self.$unwrap_unchecked() })
+                    } else {
+                        None
+                    }
+                }
+            )*
+        }
+    },
+    (
+        enum {
+            $(
+                #[is($is:ident)]
+                #[unwrap($unwrap:ident)]
+                #[unwrap_unchecked($unwrap_unchecked:ident)]
+                #[try_into($try_into:ident)]
+                $Variant:ident($VariantTy:ty)
+            ),* $(,)?
+        }
+    ) => {
+        impl FlattenedTypeHandle {
+            $(
+                #[allow(non_snake_case)]
+                pub fn $Variant(ptr: NonNull<$VariantTy>) -> Self {
+                    #[inline(always)]
+                    const fn map_addr(addr: NonZero<usize>) -> NonZero<usize> {
+                        TypeHandleKind::$Variant.tag(addr)
+                    }
+                    Self {
+                        ptr: ptr.map_addr(map_addr).cast(),
+                    }
+                }
+
+                pub fn $is(self) -> bool {
+                    TypeHandleKind::get_tag(self.ptr.addr().get()) == TypeHandleKind::$Variant
+                }
+                pub fn $unwrap(self) -> NonNull<$VariantTy> {
+                    if self.$is() {
+                        unsafe { self.$unwrap_unchecked() }
+                    } else {
+                        const MSG: &str = concat!("The handle does not contain ", stringify!($Variant));
+                        core::panicking::panic(MSG)
+                    }
+                }
+                pub unsafe fn $unwrap_unchecked(self) -> NonNull<$VariantTy> {
+                    self.ptr
+                        .map_addr(|x| unsafe {
+                            NonZero::new_unchecked(TypeHandleKind::untag(x.get()))
+                        })
+                        .cast()
+                }
+                pub fn $try_into(self) -> Option<NonNull<$VariantTy>> {
+                    if self.$is() {
+                        Some(unsafe { self.$unwrap_unchecked() })
+                    } else {
+                        None
+                    }
+                }
+            )*
+        }
+    }
+}
+
+impl_flatten! {
+    enum NonGeneric {
+        #[is(is_class)]
+        #[unwrap(unwrap_class)]
+        #[unwrap_unchecked(unwrap_class_unchecked)]
+        #[try_into(try_into_class)]
+        Class(Class),
+        #[is(is_struct)]
+        #[unwrap(unwrap_struct)]
+        #[unwrap_unchecked(unwrap_struct_unchecked)]
+        #[try_into(try_into_struct)]
+        Struct(Struct),
+        #[is(is_interface)]
+        #[unwrap(unwrap_interface)]
+        #[unwrap_unchecked(unwrap_interface_unchecked)]
+        #[try_into(try_into_interface)]
+        Interface(Interface),
+    }
+}
+
+impl FlattenedNonGenericTypeHandle {
+    pub fn new(unflattened: NonGenericTypeHandle) -> Self {
+        match unflattened {
+            NonGenericTypeHandle::Class(ptr) => Self::Class(ptr),
+            NonGenericTypeHandle::Struct(ptr) => Self::Struct(ptr),
+            NonGenericTypeHandle::Interface(ptr) => Self::Interface(ptr),
+        }
+    }
+}
+
+impl_flatten! {
+    enum {
+        #[is(is_class)]
+        #[unwrap(unwrap_class)]
+        #[unwrap_unchecked(unwrap_class_unchecked)]
+        #[try_into(try_into_class)]
+        Class(Class),
+        #[is(is_struct)]
+        #[unwrap(unwrap_struct)]
+        #[unwrap_unchecked(unwrap_struct_unchecked)]
+        #[try_into(try_into_struct)]
+        Struct(Struct),
+        #[is(is_interface)]
+        #[unwrap(unwrap_interface)]
+        #[unwrap_unchecked(unwrap_interface_unchecked)]
+        #[try_into(try_into_interface)]
+        Interface(Interface),
+    }
+}
+
+impl FlattenedTypeHandle {
+    #[allow(non_snake_case)]
+    pub fn MethodGeneric(i: u32) -> Self {
+        Self {
+            ptr: NonNull::without_provenance(
+                TypeHandleKind::MethodGeneric
+                    .tag_maybe_zero((i as usize) << (usize::BITS - u32::BITS)),
+            ),
+        }
+    }
+    pub fn is_method_generic(self) -> bool {
+        TypeHandleKind::get_tag(self.ptr.addr().get()) == TypeHandleKind::MethodGeneric
+    }
+    pub fn unwrap_method_generic(self) -> u32 {
+        if self.is_method_generic() {
+            unsafe { self.unwrap_method_generic_unchecked() }
+        } else {
+            const MSG: &str = "The handle does not contain MethodGeneric";
+            core::panicking::panic(MSG)
+        }
+    }
+    pub unsafe fn unwrap_method_generic_unchecked(self) -> u32 {
+        (self.ptr.addr().get() >> (usize::BITS - u32::BITS)) as u32
+    }
+    pub fn try_into_method_generic(self) -> Option<u32> {
+        if self.is_method_generic() {
+            Some(unsafe { self.unwrap_method_generic_unchecked() })
+        } else {
+            None
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn TypeGeneric(i: u32) -> Self {
+        Self {
+            ptr: NonNull::without_provenance(
+                TypeHandleKind::TypeGeneric
+                    .tag_maybe_zero((i as usize) << (usize::BITS - u32::BITS)),
+            ),
+        }
+    }
+    pub fn is_type_generic(self) -> bool {
+        TypeHandleKind::get_tag(self.ptr.addr().get()) == TypeHandleKind::TypeGeneric
+    }
+    pub fn unwrap_type_generic(self) -> u32 {
+        if self.is_type_generic() {
+            unsafe { self.unwrap_method_generic_unchecked() }
+        } else {
+            const MSG: &str = "The handle does not contain TypeGeneric";
+            core::panicking::panic(MSG)
+        }
+    }
+    pub unsafe fn unwrap_type_generic_unchecked(self) -> u32 {
+        (self.ptr.addr().get() >> (usize::BITS - u32::BITS)) as u32
+    }
+    pub fn try_into_type_generic(self) -> Option<u32> {
+        if self.is_type_generic() {
+            Some(unsafe { self.unwrap_type_generic_unchecked() })
+        } else {
+            None
+        }
+    }
+}
+
+impl FlattenedTypeHandle {
+    pub fn new(unflattened: TypeHandle) -> Self {
+        match unflattened {
+            TypeHandle::Class(ptr) => Self::Class(ptr),
+            TypeHandle::Struct(ptr) => Self::Struct(ptr),
+            TypeHandle::Interface(ptr) => Self::Interface(ptr),
+            TypeHandle::MethodGeneric(i) => Self::MethodGeneric(i),
+            TypeHandle::TypeGeneric(i) => Self::TypeGeneric(i),
+        }
+    }
 }
 
 #[repr(u8)]
@@ -150,13 +396,48 @@ impl NonGenericTypeHandle {
 
 #[repr(u8)]
 #[derive(Clone, Copy)]
+#[derive_const(PartialEq, Eq)]
 pub enum TypeHandleKind {
-    Class,
+    Class = 1,
     Struct,
     Interface,
     MethodGeneric,
     TypeGeneric,
 }
+
+impl TypeHandleKind {
+    pub const MAX: usize = std::mem::variant_count::<Self>();
+
+    #[inline(always)]
+    const fn tag(self, addr: NonZero<usize>) -> NonZero<usize> {
+        addr | self as u8 as usize
+    }
+    #[inline(always)]
+    const fn tag_maybe_zero(self, addr: usize) -> NonZero<usize> {
+        unsafe { NonZero::new_unchecked(addr | self as u8 as usize) }
+    }
+    #[inline(always)]
+    const fn untag(addr: usize) -> usize {
+        addr & (usize::MAX << Self::MAX.bit_width())
+    }
+    #[inline(always)]
+    const fn get_tag(addr: usize) -> Self {
+        unsafe {
+            std::mem::transmute(
+                (addr & (usize::MAX >> (usize::BITS - Self::MAX.bit_width()))) as u8,
+            )
+        }
+    }
+}
+
+const _: () = {
+    assert!(
+        align_of::<Class>() == align_of::<Struct>()
+            && align_of::<Struct>() == align_of::<Interface>()
+    );
+
+    assert!(TypeHandleKind::MAX < align_of::<Class>());
+};
 
 #[repr(u8)]
 #[derive(Clone, Copy)]

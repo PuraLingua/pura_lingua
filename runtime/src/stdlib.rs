@@ -19,13 +19,13 @@ mod System;
 #[inline(always)]
 #[allow(unused)]
 fn get_core_class(id: CoreTypeId, assembly: &Assembly) -> NonNull<Class> {
-    *assembly.get_class(id as _).unwrap().unwrap()
+    assembly.get_class(id as _).unwrap()
 }
 
 #[inline(always)]
 #[allow(unused)]
 fn get_core_struct(id: CoreTypeId, assembly: &Assembly) -> NonNull<Struct> {
-    *assembly.get_struct(id as _).unwrap().unwrap()
+    assembly.get_struct(id as _).unwrap()
 }
 
 pub trait CoreTypeIdExt: Sized {

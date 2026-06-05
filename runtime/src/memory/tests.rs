@@ -73,9 +73,9 @@ fn test_layout() {
         .unwrap()
         .unwrap();
 
-    let class = assem.get_type::<NonNull<Class>>(0).unwrap().unwrap();
+    let class = assem.get_type::<NonNull<Class>>(0).unwrap();
 
-    let mt = unsafe { class.as_ref().method_table_ref() };
+    let mt: &MethodTable<Class> = unsafe { class.as_ref().method_table_ref() };
     assert_eq!(
         mt.mem_layout(Default::default()),
         Layout::from_size_align(16, 8).unwrap()

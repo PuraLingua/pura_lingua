@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use pura_lingua::{binary::prelude::Assembly, runtime::virtual_machine::CpuID};
+use pura_lingua::{binary::prelude::Assembly, runtime::virtual_machine::cpu_manager::CpuID};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -90,7 +90,6 @@ fn main() -> pura_lingua::global::Result<()> {
         .unwrap();
     let class = assembly
         .find_class(&main_class)
-        .unwrap()
         .expect(&format!("Class {main_class} not found"));
     let mt = unsafe { class.as_ref().method_table_ref() };
     let method_id = mt

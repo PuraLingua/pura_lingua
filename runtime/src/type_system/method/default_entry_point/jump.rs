@@ -32,7 +32,7 @@ fn do_jump(pc: &mut usize, target: JumpTarget) {
     }
 }
 
-pub(super) fn eval<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
+pub(super) fn eval<T: GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
     #[allow(unused)] method: &Method<T>,
     #[allow(unused)] cpu: &mut CPU,
     #[allow(unused)] this: Option<NonNull<()>>,

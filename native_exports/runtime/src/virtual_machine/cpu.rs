@@ -54,7 +54,7 @@ pub extern "C" fn CPU_InvokeMain4Class(
         {
             Ok(args) => args,
             Err(e) => {
-                crate::PURALINGUA_RUNTIME_ERROR.set(Some(e.into())).unwrap();
+                crate::PURALINGUA_RUNTIME_ERROR.set(Some(e.into()));
                 return false;
             }
         },

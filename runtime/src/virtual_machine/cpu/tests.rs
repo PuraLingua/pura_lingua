@@ -96,10 +96,7 @@ fn test_call_stack() {
         .unwrap()
         .unwrap();
 
-    let test_class = test_assembly
-        .get_type::<NonNull<Class>>(0)
-        .unwrap()
-        .unwrap();
+    let test_class = test_assembly.get_type::<NonNull<Class>>(0).unwrap();
 
     let method = unsafe {
         test_class

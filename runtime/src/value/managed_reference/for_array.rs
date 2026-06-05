@@ -424,7 +424,7 @@ mod tests {
         let vm = global_vm();
         let cpu_id = vm.add_cpu();
         let cpu = vm.get_cpu(cpu_id).unwrap();
-        let mut cpu_write = cpu.write().unwrap();
+        let mut cpu_write = cpu.write();
 
         let u8_t = *unsafe {
             vm.assembly_manager()

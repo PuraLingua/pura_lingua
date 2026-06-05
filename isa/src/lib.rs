@@ -37,6 +37,7 @@ mod load;
 mod new;
 mod read_write_pointer;
 mod set;
+mod stack_allocate;
 
 pub use calculate::*;
 pub use call::*;
@@ -46,6 +47,7 @@ pub use load::*;
 pub use new::*;
 pub use read_write_pointer::*;
 pub use set::*;
+pub use stack_allocate::*;
 
 #[repr(u8)]
 #[derive(Debug, Clone, WithType, ReadFromSection, WriteToSection)]
@@ -86,6 +88,9 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
 
     Jump(Instruction_Jump<RegisterAddr>),
     SJump(Instruction_Jump<ShortRegisterAddr>),
+
+    StackAllocate(Instruction_StackAllocate<RegisterAddr>),
+    SStackAllocate(Instruction_StackAllocate<ShortRegisterAddr>),
 }
 
 impl<TString, TTypeRef, TMethodRef, TFieldRef>
@@ -145,6 +150,9 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
 
             Jump(ins) => Some(Jump(ins)),
             SJump(ins) => Some(SJump(ins)),
+
+            StackAllocate(ins) => Some(StackAllocate(ins)),
+            SStackAllocate(ins) => Some(SStackAllocate(ins)),
         }
     }
 }
@@ -200,6 +208,9 @@ impl<TString, E1, TTypeRef, E2, TMethodRef, E3, TFieldRef, E4>
 
             Jump(ins) => Ok(Jump(ins)),
             SJump(ins) => Ok(SJump(ins)),
+
+            StackAllocate(ins) => Ok(StackAllocate(ins)),
+            SStackAllocate(ins) => Ok(SStackAllocate(ins)),
         }
     }
 }
@@ -270,6 +281,9 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
 
             Jump(ins) => Jump(ins),
             SJump(ins) => SJump(ins),
+
+            StackAllocate(ins) => StackAllocate(ins),
+            SStackAllocate(ins) => SStackAllocate(ins),
         }
     }
 }
@@ -343,6 +357,13 @@ where
 
             Instruction::Jump(ins) => f.write_fmt(format_args!("{NAME}::Jump{ins}")),
             Instruction::SJump(ins) => f.write_fmt(format_args!("{NAME}::SJump{ins}")),
+
+            Instruction::StackAllocate(ins) => {
+                f.write_fmt(format_args!("{NAME}::StackAllocate{ins}"))
+            }
+            Instruction::SStackAllocate(ins) => {
+                f.write_fmt(format_args!("{NAME}::SStackAllocate{ins}"))
+            }
         }
     }
 }
@@ -417,58 +438,17 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
             },
             SReturnVal { register_addr } => SReturnVal { register_addr },
 
-            Jump(ins) => {
-                let Instruction_Jump { target, condition } = ins;
-                match condition {
-                    JumpCondition::Unconditional => SJump(Instruction_Jump {
-                        target,
-                        condition: JumpCondition::Unconditional,
-                    }),
-                    JumpCondition::If(cond) => cond
-                        .try_into_short()
-                        .map(|cond| {
-                            Instruction::SJump(Instruction_Jump {
-                                target,
-                                condition: JumpCondition::If(cond),
-                            })
-                        })
-                        .unwrap_or(Instruction::Jump(Instruction_Jump {
-                            target,
-                            condition: JumpCondition::If(cond),
-                        })),
-                    JumpCondition::IfCheckSucceeds(to_check) => {
-                        to_check.try_to_short().map_or_else(
-                            |to_check| {
-                                Instruction::Jump(Instruction_Jump {
-                                    target,
-                                    condition: JumpCondition::IfCheckSucceeds(to_check),
-                                })
-                            },
-                            |to_check| {
-                                Instruction::SJump(Instruction_Jump {
-                                    target,
-                                    condition: JumpCondition::IfCheckSucceeds(to_check),
-                                })
-                            },
-                        )
-                    }
-                    JumpCondition::IfCheckFails(to_check) => to_check.try_to_short().map_or_else(
-                        |to_check| {
-                            Instruction::Jump(Instruction_Jump {
-                                target,
-                                condition: JumpCondition::IfCheckFails(to_check),
-                            })
-                        },
-                        |to_check| {
-                            Instruction::SJump(Instruction_Jump {
-                                target,
-                                condition: JumpCondition::IfCheckFails(to_check),
-                            })
-                        },
-                    ),
-                }
-            }
+            Jump(ins) => match ins.try_into_short() {
+                Ok(ins) => SJump(ins),
+                Err(ins) => Jump(ins),
+            },
             SJump(ins) => SJump(ins),
+
+            StackAllocate(ins) => match ins.try_into_short() {
+                Ok(ins) => SStackAllocate(ins),
+                Err(ins) => StackAllocate(ins),
+            },
+            SStackAllocate(ins) => SStackAllocate(ins),
         }
     }
 }

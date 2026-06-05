@@ -1,6 +1,7 @@
-use std::{alloc::Layout, ptr::NonNull};
+use std::{alloc::Layout, cell::RefCell, ptr::NonNull, rc::Rc};
 
 use enumflags2::BitFlags;
+use fastarena::Checkpoint;
 use global::{
     UnwrapEnum,
     attrs::MethodImplementationFlags,
@@ -16,21 +17,22 @@ use crate::{
         r#struct::Struct,
         type_handle::{MethodGenericResolver, NonGenericTypeHandle, NonGenericTypeHandleKind},
     },
-    value::managed_reference::ManagedReference,
+    value::managed_reference::{FieldAccessor, ManagedReference},
     virtual_machine::cpu::NonPurusCallArg,
 };
 
 pub struct CallStack {
     stack: Vec<CallStackFrame>,
+
+    allocator: Rc<RefCell<fastarena::Arena>>,
 }
 
 impl CallStack {
-    pub const fn new() -> Self {
-        Self { stack: Vec::new() }
-    }
-
-    pub fn push(&mut self, frame: CallStackFrame) {
-        self.stack.push(frame);
+    pub fn new() -> Self {
+        Self {
+            stack: Vec::new(),
+            allocator: Rc::new(RefCell::new(fastarena::Arena::new())),
+        }
     }
 
     pub fn pop(&mut self) {
@@ -49,13 +51,17 @@ impl CallStack {
         &mut self,
         method: &Method<T>,
     ) {
-        self.push(CallStackFrame::Common(
-            CommonCallStackFrame::prepare_for_method(method),
+        self.stack.push(CallStackFrame::Common(
+            CommonCallStackFrame::prepare_for_method(method, self.allocator.clone()),
         ));
     }
 
     pub fn push_native<T: GetNonGenericTypeHandleKind>(&mut self, method: &Method<T>) {
-        self.push(CallStackFrame::native(method));
+        self.stack
+            .push(CallStackFrame::Native(NativeCallStackFrame::new(
+                method,
+                self.allocator.clone(),
+            )));
     }
 
     pub fn mark_all(&mut self) {
@@ -137,6 +143,13 @@ impl CallStackFrame {
         }
     }
 
+    pub fn allocator(&self) -> &RefCell<fastarena::Arena> {
+        match self {
+            CallStackFrame::Native(frame) => &frame.allocator,
+            CallStackFrame::Common(frame) => &frame.allocator,
+        }
+    }
+
     pub fn should_hide_when_capturing(&self) -> bool {
         match self {
             Self::Native(native_call_stack_frame) => {
@@ -153,15 +166,6 @@ impl CallStackFrame {
             }
         }
     }
-
-    pub fn common_for_method<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind>(
-        method: &Method<T>,
-    ) -> Self {
-        Self::Common(CommonCallStackFrame::prepare_for_method(method))
-    }
-    pub const fn native<T: [const] GetNonGenericTypeHandleKind>(method: &Method<T>) -> Self {
-        Self::Native(NativeCallStackFrame::new(method))
-    }
 }
 
 impl CallStackFrame {
@@ -176,33 +180,61 @@ impl CallStackFrame {
 pub struct NativeCallStackFrame {
     pub(crate) method: NonNull<Method<()>>,
     pub(crate) kind: NonGenericTypeHandleKind,
-    pub(crate) references: Vec<ManagedReference<()>>,
+    pub(crate) references: Vec<ManagedReference<Class>>,
+
+    pub(crate) checkpoint: Checkpoint,
+    pub(crate) allocator: Rc<RefCell<fastarena::Arena>>,
 }
 
 impl NativeCallStackFrame {
-    pub const fn new<T: [const] GetNonGenericTypeHandleKind>(method: &Method<T>) -> Self {
+    pub fn new<T: GetNonGenericTypeHandleKind>(
+        method: &Method<T>,
+        allocator: Rc<RefCell<fastarena::Arena>>,
+    ) -> Self {
+        let checkpoint = allocator.borrow().checkpoint();
+
         Self {
             method: NonNull::from_ref(method).cast(),
             kind: T::__get_non_generic_type_handle_kind(method.require_method_table_ref().ty_ref()),
             references: Vec::new(),
+
+            checkpoint,
+            allocator,
         }
     }
     pub fn with_capacity<T: GetNonGenericTypeHandleKind>(
         method: &Method<T>,
         capacity: usize,
+        allocator: Rc<RefCell<fastarena::Arena>>,
     ) -> Self {
+        let checkpoint = allocator.borrow().checkpoint();
+
         Self {
             method: NonNull::from_ref(method).cast(),
             kind: T::__get_non_generic_type_handle_kind(method.require_method_table_ref().ty_ref()),
             references: Vec::with_capacity(capacity),
+
+            checkpoint,
+            allocator,
         }
     }
     pub fn mark_all(&mut self) {
         for r in &mut self.references {
-            if let Some(header) = r.header_mut() {
-                header.set_is_marked(true);
-            }
+            r.const_access_mut::<FieldAccessor<Class>>()
+                .set_marker(true);
         }
+    }
+    pub fn unmark_all(&mut self) {
+        for r in &mut self.references {
+            r.const_access_mut::<FieldAccessor<Class>>()
+                .set_marker(false);
+        }
+    }
+}
+
+impl Drop for NativeCallStackFrame {
+    fn drop(&mut self) {
+        self.allocator.borrow_mut().rewind(self.checkpoint);
     }
 }
 
@@ -344,50 +376,45 @@ pub struct CommonCallStackFrame {
     layouts: Vec<LocalVariableInfo>,
 
     register_ptr: NonNull<u8>,
+    checkpoint: fastarena::Checkpoint,
+    allocator: Rc<RefCell<fastarena::Arena>>,
 }
 
 impl CommonCallStackFrame {
     pub fn new<T: GetNonGenericTypeHandleKind>(
         method: &Method<T>,
+        allocator: Rc<RefCell<fastarena::Arena>>,
         full_layout: Layout,
         layouts: Vec<LocalVariableInfo>,
     ) -> Self {
+        let mut allocator_ = allocator.borrow_mut();
+        let checkpoint = allocator_.checkpoint();
         let register_ptr = if full_layout.size() == 0 {
-            NonNull::dangling()
+            NonNull::<u8>::dangling()
         } else {
-            #[cfg(not(debug_assertions))]
-            const ALLOCATE_FN: fn(
-                &std::alloc::Global,
-                Layout,
-            ) -> Result<NonNull<[u8]>, std::alloc::AllocError> =
-                <_ as std::alloc::Allocator>::allocate;
-
-            #[cfg(debug_assertions)]
-            const ALLOCATE_FN: fn(
-                &std::alloc::Global,
-                Layout,
-            ) -> Result<NonNull<[u8]>, std::alloc::AllocError> =
-                <_ as std::alloc::Allocator>::allocate_zeroed;
-
-            ALLOCATE_FN(&std::alloc::Global, full_layout)
-                .unwrap()
-                .as_non_null_ptr()
+            allocator_.alloc_zeroed(full_layout.size(), full_layout.align())
         };
+
+        drop(allocator_);
 
         Self {
             method: NonNull::from_ref(method).cast(),
             kind: T::__get_non_generic_type_handle_kind(method.require_method_table_ref().ty_ref()),
             full_layout,
             layouts,
+
             register_ptr,
+            checkpoint,
+            allocator,
         }
     }
 
     pub fn prepare_for_method<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind>(
         method: &Method<T>,
+        allocator: Rc<RefCell<fastarena::Arena>>,
     ) -> Self {
         let types = method.attr().local_variable_types();
-        let ty_ref = method.require_method_table_ref().ty_ref();
+        let ty_ref: &T = method.require_method_table_ref().ty_ref();
 
         let mut full_layout = Layout::new::<()>();
         let mut infos = Vec::with_capacity(types.len());
@@ -407,7 +434,7 @@ impl CommonCallStackFrame {
             infos.push(LocalVariableInfo { offset, layout, ty });
         }
 
-        Self::new(method, full_layout, infos)
+        Self::new(method, allocator, full_layout, infos)
     }
 
     pub fn get<TRegisterAddr: IRegisterAddr>(&self, i: TRegisterAddr) -> Option<LocalVariable> {
@@ -481,8 +508,27 @@ impl CommonCallStackFrame {
 
     pub fn mark_all(&mut self) {
         for mut var in self.iter().filter(|x| x.ty.is_managed_reference()) {
-            if let Some(header) = var.as_mut_typed::<ManagedReference<()>>().header_mut() {
-                header.set_is_marked(true);
+            match var.ty {
+                NonGenericTypeHandle::Class(_) => {
+                    var.as_mut_typed::<ManagedReference<Class>>()
+                        .const_access_mut::<FieldAccessor<Class>>()
+                        .set_marker(true);
+                }
+
+                _ => unreachable!(),
+            }
+        }
+    }
+    pub fn unmark_all(&mut self) {
+        for mut var in self.iter().filter(|x| x.ty.is_managed_reference()) {
+            match var.ty {
+                NonGenericTypeHandle::Class(_) => {
+                    var.as_mut_typed::<ManagedReference<Class>>()
+                        .const_access_mut::<FieldAccessor<Class>>()
+                        .set_marker(false);
+                }
+
+                _ => unreachable!(),
             }
         }
     }
@@ -521,15 +567,7 @@ impl<'a> Iterator for CommonCallStackFrameInfoIter<'a> {
 
 impl Drop for CommonCallStackFrame {
     fn drop(&mut self) {
-        if self.full_layout.size() != 0 {
-            unsafe {
-                std::alloc::Allocator::deallocate(
-                    &std::alloc::Global,
-                    self.register_ptr,
-                    self.full_layout,
-                );
-            }
-        }
+        self.allocator.borrow_mut().rewind(self.checkpoint);
     }
 }
 
@@ -544,14 +582,11 @@ mod getset_cpu {
     use super::{super::CPU, CallStackFrame, CommonCallStackFrame};
 
     impl CPU {
-        pub fn push_call_stack(&mut self, frame: CallStackFrame) {
-            self.call_stack.push(frame);
-        }
         pub fn push_call_stack_native<T: GetNonGenericTypeHandleKind>(
             &mut self,
             method: &Method<T>,
         ) {
-            self.push_call_stack(CallStackFrame::native(method))
+            self.call_stack.push_native(method)
         }
         pub fn pop_call_stack(&mut self) {
             self.call_stack.pop();
@@ -562,7 +597,7 @@ mod getset_cpu {
             &mut self,
             method: &Method<T>,
         ) {
-            self.push_call_stack(CallStackFrame::common_for_method(method))
+            self.call_stack.common_for_method(method)
         }
         pub fn current_call_frame<'a>(&'a self) -> Option<&'a CallStackFrame> {
             self.call_stack.current()

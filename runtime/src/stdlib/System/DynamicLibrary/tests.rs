@@ -23,7 +23,7 @@ use crate::{
         method_table::MethodTable,
         type_ref::TypeRef,
     },
-    virtual_machine::{CpuID, global_vm},
+    virtual_machine::{cpu_manager::CpuID, global_vm},
 };
 
 #[test]
@@ -125,7 +125,7 @@ fn simple_dynamic_lib_test() {
         .unwrap()
         .unwrap();
 
-    let class = assem.get_class(0).unwrap().unwrap();
+    let class = assem.get_class(0).unwrap();
     let mt = unsafe { class.as_ref().method_table_ref() };
     let fn_to_invoke = mt
         .find_first_method_by_name(widestring::utf16str!("ToInvoke"))

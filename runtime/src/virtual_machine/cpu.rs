@@ -1,4 +1,4 @@
-use std::{ffi::c_void, pin::Pin, process::Termination, ptr::NonNull, sync::RwLock};
+use std::{ffi::c_void, pin::Pin, process::Termination, ptr::NonNull, sync::nonpoison::RwLock};
 
 use crate::{
     stdlib::CoreTypeId,
@@ -8,6 +8,7 @@ use crate::{
         method::{Method, MethodRef},
     },
     value::managed_reference::{ArrayAccessor, FieldAccessor, ManagedReference},
+    virtual_machine::cpu_manager::CPUManager,
 };
 
 use super::VirtualMachine;
@@ -37,7 +38,7 @@ pub use non_purus_call::{NonPurusCallArg, NonPurusCallArgType};
 #[getset(get = "pub", get_mut = "pub")]
 pub struct CPU {
     #[getset(skip)]
-    vm: NonNull<VirtualMachine>,
+    man: NonNull<CPUManager>,
 
     call_stack: CallStack,
 
@@ -46,9 +47,9 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(vm: NonNull<VirtualMachine>) -> Pin<Box<RwLock<Self>>> {
+    pub fn new(man: NonNull<CPUManager>) -> Pin<Box<RwLock<Self>>> {
         Box::pin(RwLock::new(Self {
-            vm,
+            man,
             call_stack: CallStack::new(),
             mem_records: Vec::new(),
             exception_manager: ExceptionManager::new(),
@@ -57,8 +58,11 @@ impl CPU {
 }
 
 impl CPU {
+    pub fn manager_ref(&self) -> &CPUManager {
+        unsafe { self.man.as_ref() }
+    }
     pub fn vm_ref(&self) -> &VirtualMachine {
-        unsafe { self.vm.as_ref() }
+        unsafe { self.man.as_ref().vm_ref() }
     }
     #[track_caller]
     pub fn push_record(&mut self, record: MemoryRecord) {

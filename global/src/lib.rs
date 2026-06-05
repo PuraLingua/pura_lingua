@@ -37,6 +37,7 @@ pub use anyhow::{Error, Result};
 pub use cfg_if::cfg_if;
 pub use common_attributes as attrs;
 pub use derive_ctor;
+pub use enumflags2;
 pub use faststr::FastStr;
 pub use getset;
 pub use global_errors as errors;

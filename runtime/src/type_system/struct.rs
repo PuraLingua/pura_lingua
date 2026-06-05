@@ -28,6 +28,7 @@ use crate::{
 
 use super::method::Method;
 
+#[repr(align(8))]
 #[derive(Getters, MutGetters)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct Struct {

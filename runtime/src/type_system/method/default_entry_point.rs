@@ -62,6 +62,8 @@ mod jump;
 
 mod calculate;
 
+mod stack_allocate;
+
 fn eval_throw<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
     #[allow(unused)] method: &Method<T>,
     #[allow(unused)] cpu: &mut CPU,
@@ -258,6 +260,9 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
 
             Instruction::Jump(ins) => _eval!(ins by jump),
             Instruction::SJump(ins) => _eval!(ins by jump),
+
+            Instruction::StackAllocate(ins) => _eval!(ins by stack_allocate),
+            Instruction::SStackAllocate(ins) => _eval!(ins by stack_allocate),
         }
     }
 }

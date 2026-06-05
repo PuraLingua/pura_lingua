@@ -86,7 +86,7 @@ mod tests {
     use crate::{
         stdlib::{CoreTypeId, CoreTypeIdExt as _},
         value::managed_reference::{ArrayAccessor, StringAccessor},
-        virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
+        virtual_machine::{EnsureGlobalVirtualMachineInitialized, cpu_manager::CpuID, global_vm},
     };
 
     use super::*;

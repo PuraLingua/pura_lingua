@@ -269,7 +269,7 @@ pub fn define_class(
                 .unwrap_or_default(),
             parent.map(|x| match x {
                 stdlib_header::CoreTypeRef::Core(core_type_id) => {
-                    *assembly.get_class(core_type_id as _).unwrap().unwrap()
+                    assembly.get_class(core_type_id as _).unwrap()
                 }
                 _ => panic!("Unsupported parent"),
             }),

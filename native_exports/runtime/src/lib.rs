@@ -1,6 +1,8 @@
 #![feature(allocator_api)]
 #![feature(mapped_lock_guards)]
 #![feature(box_vec_non_null)]
+#![feature(sync_nonpoison)]
+#![feature(nonpoison_rwlock)]
 #![feature(iterator_try_collect)]
 #![feature(lock_value_accessors)]
 // lints
@@ -8,7 +10,7 @@
 
 use std::{
     ptr::NonNull,
-    sync::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
+    sync::nonpoison::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
 };
 
 use pura_lingua::global;
@@ -28,7 +30,10 @@ fn value_to_owned_ptr<T>(val: T) -> NonNull<T> {
 #[unsafe(no_mangle)]
 pub extern "C" fn GetLastPuralinguaRuntimeError()
 -> Option<NonNull<MappedRwLockReadGuard<'static, global::Error>>> {
-    RwLockReadGuard::filter_map(PURALINGUA_RUNTIME_ERROR.read().unwrap(), |x| x.as_ref())
-        .ok()
-        .map(value_to_owned_ptr)
+    RwLockReadGuard::filter_map(
+        PURALINGUA_RUNTIME_ERROR.read(),
+        |x: &Option<global::Error>| x.as_ref(),
+    )
+    .ok()
+    .map(value_to_owned_ptr)
 }

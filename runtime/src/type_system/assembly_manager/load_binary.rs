@@ -166,9 +166,8 @@ impl AssemblyManager {
                                     ),
                                 )?;
                                 ClassParent::new_simple(
-                                    *assembly
+                                    assembly
                                         .get_class(ind)
-                                        .unwrap()
                                         .ok_or(binary::binary_core::Error::UnknownType(ind))?,
                                 )
                             }
@@ -184,9 +183,8 @@ impl AssemblyManager {
                                             .ok_or(binary::binary_core::Error::UnknownAssembly(
                                                 assembly.to_string(),
                                             ))?;
-                                        *assembly
+                                        assembly
                                             .get_class(ind)
-                                            .unwrap()
                                             .ok_or(binary::binary_core::Error::UnknownType(ind))?
                                     }
                                     Either::Right(x) => x
@@ -737,8 +735,8 @@ impl MaybeUnloadedTypeHandle {
         match tt.ty() {
             binary::prelude::TypeType::TypeDef => {
                 if tt.index() < t_id {
-                    let th = assembly.get_type_handle(tt.index()).unwrap().unwrap();
-                    Ok((*th).into())
+                    let th = assembly.get_type_handle(tt.index()).unwrap();
+                    Ok(th.into())
                 } else {
                     Ok(TypeRef::Index {
                         assembly: AssemblyRef::Id(assembly_id),

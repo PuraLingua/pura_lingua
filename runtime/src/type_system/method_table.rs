@@ -212,7 +212,7 @@ where
         let id = if let Some(g) = self.ty_ref().__get_generic() {
             return unsafe { g.as_ref().__get_method_table_ref().get_core_type_id() };
         } else {
-            types.iter().position(|x| match x.as_handle() {
+            types.iter().position(|x| match x.handle() {
                 super::type_handle::NonGenericTypeHandle::Class(ty) => unsafe {
                     std::ptr::addr_eq(self, ty.as_ref().method_table_ref())
                 },

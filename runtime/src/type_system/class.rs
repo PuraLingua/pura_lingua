@@ -89,6 +89,7 @@ impl ClassParent {
     }
 }
 
+#[repr(align(8))]
 #[derive(Getters, MutGetters, derive_more::Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct Class {
@@ -386,8 +387,7 @@ impl Class {
             .assembly_ref()
             .manager_ref()
             .vm_ref()
-            .write_cpu_for_static()
-            .unwrap();
+            .write_cpu_for_static();
         let mut instance = self.static_instance.write().unwrap();
         *instance = Some(ManagedReference::common_alloc(
             &mut cpu,

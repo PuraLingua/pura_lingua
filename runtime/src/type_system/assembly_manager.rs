@@ -22,15 +22,18 @@ pub struct AssemblyManager {
 }
 
 impl AssemblyManager {
-    pub fn construct_in(mut vm: NonNull<VirtualMachine>) {
+    pub fn construct_in(vm: NonNull<VirtualMachine>) {
         unsafe {
-            vm.as_mut().assembly_manager = Self {
+            VirtualMachine::write_assembly_manager(
                 vm,
-                assemblies: RwLock::new(Vec::new()),
-            };
+                Self {
+                    vm,
+                    assemblies: RwLock::new(Vec::new()),
+                },
+            );
         }
 
-        let this = unsafe { vm.as_ref().assembly_manager() };
+        let this: &Self = unsafe { vm.as_ref().assembly_manager() };
         this.load_stdlib();
     }
 
@@ -123,10 +126,7 @@ impl AssemblyManager {
     /// It assumes that core assembly exists.
     pub fn get_core_type(&self, core_type_id: CoreTypeId) -> NonGenericTypeHandle {
         let assembly = self.get_core_assembly().unwrap();
-        *assembly
-            .get_type_handle(core_type_id as u32)
-            .unwrap()
-            .unwrap()
+        assembly.get_type_handle(core_type_id as u32).unwrap()
     }
 
     pub fn get_assembly_by_name<'a>(
