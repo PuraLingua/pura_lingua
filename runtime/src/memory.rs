@@ -12,7 +12,7 @@ pub struct GetLayoutOptions {
     pub(crate) discard_calculated_layout: bool,
 }
 
-impl const Default for GetLayoutOptions {
+const impl Default for GetLayoutOptions {
     fn default() -> Self {
         Self {
             prefer_cached: true,
@@ -28,7 +28,7 @@ pub struct GetFieldOffsetOptions {
     pub(crate) discard_calculated_offset: bool,
 }
 
-impl const Default for GetFieldOffsetOptions {
+const impl Default for GetFieldOffsetOptions {
     fn default() -> Self {
         Self {
             prefer_cached: true,
@@ -110,3 +110,6 @@ pub const fn get_return_layout_for_libffi(layout: Layout) -> Layout {
 
 mod owned_ptr;
 pub use owned_ptr::OwnedPtr;
+
+mod thread_safe_ptr;
+pub use thread_safe_ptr::{ThreadSafeMutPtr, ThreadSafeNonNull, ThreadSafePtr};

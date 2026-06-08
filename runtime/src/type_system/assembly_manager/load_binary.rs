@@ -6,7 +6,7 @@ use global::StringName;
 use crate::type_system::{
     assembly::{Assembly, TypeContainer},
     assembly_manager::AssemblyRef,
-    cached_type_reference::CachedTypeReference,
+    cached_type_reference::GenericCachedTypeReference,
     class::{Class, ClassParent, LoadedClassParent},
     field::Field,
     generics::{GenericBounds, GenericCountRequirement},
@@ -144,9 +144,9 @@ impl AssemblyManager {
         }
 
         for (b_assembly_id, loaded_id) in loaded_ids.into_iter().enumerate() {
-            let assembly = self.get_assembly(loaded_id).unwrap().unwrap();
+            let assembly = self.get_assembly(loaded_id).unwrap();
             let b_assembly = &binaries[b_assembly_id];
-            let types = assembly.types.read().unwrap();
+            let types = assembly.types.read();
             for (t_id, ty) in types.iter().enumerate() {
                 match ty {
                     TypeContainer::Class(class) => {
@@ -160,7 +160,7 @@ impl AssemblyManager {
                         let parent_type_ref = unsafe { Box::from_non_null(parent.unloaded) };
                         *parent = match Box::into_inner(parent_type_ref) {
                             TypeRef::Index { assembly, ind } => {
-                                let assembly = self.get_assembly_by_ref(&assembly).unwrap().ok_or(
+                                let assembly = self.get_assembly_by_ref(&assembly).ok_or(
                                     binary::binary_core::Error::UnknownAssembly(
                                         assembly.to_string(),
                                     ),
@@ -177,12 +177,11 @@ impl AssemblyManager {
                             } => {
                                 let to_instantiate = match assembly_and_index {
                                     Either::Left((assembly, ind)) => {
-                                        let assembly = self
-                                            .get_assembly_by_ref(&assembly)
-                                            .unwrap()
-                                            .ok_or(binary::binary_core::Error::UnknownAssembly(
+                                        let assembly = self.get_assembly_by_ref(&assembly).ok_or(
+                                            binary::binary_core::Error::UnknownAssembly(
                                                 assembly.to_string(),
-                                            ))?;
+                                            ),
+                                        )?;
                                         assembly
                                             .get_class(ind)
                                             .ok_or(binary::binary_core::Error::UnknownType(ind))?
@@ -238,7 +237,7 @@ impl AssemblyManager {
             widestring::Utf16String::from_str(name),
             false,
         )));
-        let assembly = self.get_assembly(id).unwrap().unwrap();
+        let assembly = self.get_assembly(id).unwrap();
         for (type_id, type_def) in binary.type_defs.iter().enumerate() {
             match type_def {
                 binary::ty::TypeDef::Class(class_def) => {
@@ -526,7 +525,7 @@ impl AssemblyManager {
                     &tt,
                     t_id,
                 )
-                .map(CachedTypeReference::from)
+                .map(GenericCachedTypeReference::from)
             })
             .transpose()?;
         Ok(Method::try_new(
@@ -579,7 +578,7 @@ impl AssemblyManager {
                                     &tt,
                                     t_id,
                                 )
-                                .map(CachedTypeReference::new)
+                                .map(GenericCachedTypeReference::new)
                             },
                             |tt| {
                                 MethodRef::from_token_for_type(
@@ -830,7 +829,7 @@ impl MethodRef {
     }
 }
 
-impl const From<binary::ty::GenericCountRequirement> for GenericCountRequirement {
+const impl From<binary::ty::GenericCountRequirement> for GenericCountRequirement {
     fn from(value: binary::ty::GenericCountRequirement) -> Self {
         match value {
             binary::ty::GenericCountRequirement::AtLeast(range_from) => Self::AtLeast(range_from),

@@ -1,4 +1,4 @@
-use std::{ptr::NonNull, sync::RwLock};
+use std::{ptr::NonNull, sync::nonpoison::RwLock};
 
 use global::{UnwrapEnum, traits::IUnwrap};
 
@@ -99,7 +99,7 @@ impl Assembly {
     }
 
     pub fn add_type_handle(&self, ty: TypeContainer) -> u32 {
-        let mut types = self.types.write().unwrap();
+        let mut types = self.types.write();
         let index = types.len();
         types.push(ty);
 
@@ -125,7 +125,6 @@ impl Assembly {
     pub fn get_type_handle<'a>(&'a self, index: u32) -> Option<NonGenericTypeHandle> {
         self.types
             .read()
-            .unwrap()
             .get(index as usize)
             .map(TypeContainer::handle)
     }
@@ -137,7 +136,6 @@ impl Assembly {
         let name = name.as_ref();
         self.types
             .read()
-            .unwrap()
             .iter()
             .find(|x| x.name() == name)
             .map(TypeContainer::handle)

@@ -242,6 +242,7 @@ static mut G_RUNTIME: MaybeUninit<VirtualMachine> = MaybeUninit::zeroed();
 static VM_INIT: Once = Once::new();
 
 #[inline(always)]
+#[allow(static_mut_refs)]
 pub const unsafe fn global_vm_unchecked() -> &'static mut VirtualMachine {
     unsafe { G_RUNTIME.assume_init_mut() }
 }
@@ -261,6 +262,7 @@ pub fn is_global_vm_init() -> bool {
 }
 
 #[allow(nonstandard_style)]
+#[allow(static_mut_refs)]
 pub fn EnsureGlobalVirtualMachineInitialized() {
     VM_INIT.call_once(|| unsafe {
         let rt_ptr = G_RUNTIME.as_mut_ptr();

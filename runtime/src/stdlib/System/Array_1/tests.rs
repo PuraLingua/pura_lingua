@@ -179,7 +179,6 @@ fn array_get_set() -> global::Result<()> {
     let assembly = global_vm()
         .assembly_manager()
         .get_assembly(assembly_id)
-        .unwrap()
         .unwrap();
     let test_class = assembly.get_class(0).unwrap();
     let m_set = unsafe {

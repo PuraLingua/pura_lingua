@@ -27,7 +27,7 @@ impl TypeRef {
     ) -> Option<TypeHandle> {
         match self {
             TypeRef::Index { assembly, ind } => {
-                let assembly = assembly_manager.get_assembly_by_ref(assembly).unwrap()?;
+                let assembly = assembly_manager.get_assembly_by_ref(assembly)?;
                 assembly.get_type_handle(*ind).map(TypeHandle::from)
             }
             TypeRef::Specific {
@@ -44,7 +44,7 @@ impl TypeRef {
 
                 match assembly_and_index {
                     Either::Left((assembly, ind)) => {
-                        let assembly = assembly_manager.get_assembly_by_ref(assembly).unwrap()?;
+                        let assembly = assembly_manager.get_assembly_by_ref(assembly)?;
                         let ty = assembly.get_type_handle(*ind)?;
                         Some(ty.instantiate(&type_vars).into())
                     }

@@ -70,7 +70,6 @@ fn test_layout() {
 
     let assem = assembly_manager
         .get_assembly_by_name(widestring::utf16str!("Test"))
-        .unwrap()
         .unwrap();
 
     let class = assem.get_type::<NonNull<Class>>(0).unwrap();

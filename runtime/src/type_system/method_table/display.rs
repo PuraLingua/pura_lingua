@@ -15,7 +15,7 @@ impl<T> MethodTable<T> {
 
 impl<T> fmt::Display for Display<'_, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let methods = self.0.methods.read().unwrap();
+        let methods = self.0.methods.read();
         for m in &*methods {
             writeln!(f, "{}", unsafe { m.as_ref() }.display(make_bitflags!(MethodDisplayOptions::{WithArgs | WithCallConvention | WithReturn})))?;
         }

@@ -3,7 +3,7 @@ use std::{
     cell::Cell,
     pin::Pin,
     ptr::NonNull,
-    sync::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
+    sync::nonpoison::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
 };
 
 use enumflags2::BitFlags;
@@ -60,7 +60,7 @@ impl<T> MethodTable<T> {
                 cached_layout: Cell::new(None),
                 cached_static_layout: Cell::new(None),
             }));
-            let mut methods = p.as_ref().methods.get_cloned().unwrap();
+            let mut methods = p.as_ref().methods.get_cloned();
             methods.iter_mut().for_each(|x| x.as_mut().mt = Some(this));
             this.as_mut().methods = RwLock::new(methods);
             this
@@ -70,10 +70,10 @@ impl<T> MethodTable<T> {
 
 impl<T> MethodTable<T> {
     pub fn get_method(&self, id: u32) -> Option<MappedRwLockReadGuard<'_, NonNull<Method<T>>>> {
-        RwLockReadGuard::filter_map(self.methods.read().unwrap(), |x| x.get(id as usize)).ok()
+        RwLockReadGuard::filter_map(self.methods.read(), |x| x.get(id as usize)).ok()
     }
     pub fn list_method_signatures(&self) -> Vec<String> {
-        let methods = self.methods.read().unwrap();
+        let methods = self.methods.read();
         methods
             .iter()
             .map(|x| unsafe { x.as_ref().display(BitFlags::all()).to_string() })
@@ -86,7 +86,7 @@ impl<T> MethodTable<T> {
     where
         widestring::Utf16Str: PartialEq<TName>,
     {
-        RwLockReadGuard::filter_map(self.methods.read().unwrap(), |x| {
+        RwLockReadGuard::filter_map(self.methods.read(), |x| {
             x.iter()
                 .find(|m| unsafe { (&**m.as_ref().name()).eq(name) })
         })
@@ -97,7 +97,7 @@ impl<T> MethodTable<T> {
     where
         widestring::Utf16Str: PartialEq<TName>,
     {
-        let x = self.methods.read().unwrap();
+        let x = self.methods.read();
         x.iter()
             /* cSpell:disable-next-line */
             .rposition(|m| unsafe { (&**m.as_ref().name()).eq(name) })
@@ -168,7 +168,7 @@ where
             .__get_parent()
             .map(|x| unsafe { x.as_ref().__get_method_table_ref() })
         {
-            let parent_methods = parent.methods.read().unwrap();
+            let parent_methods = parent.methods.read();
             // Stop on the first static method
             methods.extend(parent_methods.iter().map_while(|x| {
                 if unsafe { x.as_ref().attr().is_static() } {
@@ -208,7 +208,7 @@ where
             return None;
         }
 
-        let types = assem.types.read().unwrap();
+        let types = assem.types.read();
         let id = if let Some(g) = self.ty_ref().__get_generic() {
             return unsafe { g.as_ref().__get_method_table_ref().get_core_type_id() };
         } else {
@@ -239,7 +239,7 @@ impl CanCastToSpec for MethodTable<Class> {
     }
 }
 
-impl const CanCastToSpec for MethodTable<Struct> {
+const impl CanCastToSpec for MethodTable<Struct> {
     #[inline(always)]
     fn __can_cast_to(&self, _desired: &Self) -> bool {
         false
@@ -709,7 +709,7 @@ trait DropSpec {
 
 impl<T> DropSpec for MethodTable<T> {
     default fn __drop(&mut self) {
-        let mut methods = self.methods.write().unwrap();
+        let mut methods = self.methods.write();
         for m in methods
             .iter_mut()
             .enumerate()
@@ -737,12 +737,11 @@ impl<T: GetParent + GetMethodTableRef> DropSpec for MethodTable<T> {
                 unsafe { p.as_ref().__get_method_table_ref() }
                     .methods
                     .read()
-                    .unwrap()
                     .len()
             })
             .unwrap_or(0);
 
-        let mut methods = self.methods.replace(Vec::new()).unwrap();
+        let mut methods = self.methods.replace(Vec::new());
         methods.shrink_to_fit();
         let (parent_methods, this_methods) = methods.split_at(parent_mt_len);
         this_methods.iter().for_each(|x| unsafe {

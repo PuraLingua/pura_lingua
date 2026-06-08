@@ -6,7 +6,7 @@ use super::CPU;
 
 impl CPU {
     pub fn gc_collect(&mut self) {
-        self.call_stack.mark_all();
+        self.call_stack.set_marker(true);
 
         // Little hack
         for mem_record in self.mem_records.iter() {
@@ -33,6 +33,8 @@ impl CPU {
         }
         self.mem_records
             .retain(|x: &super::MemoryRecord| !x.to_be_dropped);
+
+        self.call_stack.set_marker(false);
     }
 }
 

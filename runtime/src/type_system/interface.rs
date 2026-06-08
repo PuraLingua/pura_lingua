@@ -2,7 +2,7 @@ use std::{
     alloc::{Allocator, Layout},
     mem::offset_of,
     ptr::NonNull,
-    sync::MappedRwLockReadGuard,
+    sync::nonpoison::MappedRwLockReadGuard,
 };
 
 use global::{

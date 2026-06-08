@@ -1,4 +1,4 @@
-use global::instruction::{
+use pura_lingua_isa::{
     IRegisterAddr, Instruction, Instruction_Load, Instruction_UntypedCalculate, LoadContent,
     RegisterAddr,
 };
@@ -150,7 +150,6 @@ fn gtest_test_fn() -> global::Result<()> {
     let assembly = vm
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("Test"))
-        .unwrap()
         .unwrap();
 
     let test_class = assembly.get_class(0).unwrap();
@@ -187,7 +186,6 @@ fn gtest_test_msgbox() -> global::Result<()> {
     let assembly = vm
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("MsgboxTest"))
-        .unwrap()
         .unwrap();
 
     let test_class = assembly.get_class(0).unwrap();
@@ -231,7 +229,6 @@ fn gtest_simple_console() -> global::Result<()> {
     let assembly = vm
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("SimpleIR::SimpleConsole"))
-        .unwrap()
         .unwrap();
 
     let console_class = assembly.get_class(0).unwrap();

@@ -61,6 +61,8 @@ pub enum CoreTypeId {
     /// It has the same size as [`Self::System_Pointer`]
     System_Reference_1,
 
+    System_ThreadLocal_1,
+
     System_NonPurusCallConfiguration,
     System_NonPurusCallType,
 
@@ -112,7 +114,7 @@ pub enum CoreTypeRef {
     TypeGeneric(u32),
 }
 
-impl const From<CoreTypeId> for CoreTypeRef {
+const impl From<CoreTypeId> for CoreTypeRef {
     #[inline(always)]
     fn from(value: CoreTypeId) -> Self {
         Self::Core(value)
@@ -238,6 +240,8 @@ impl CoreTypeId {
             Self::System_Pointer => "System::Pointer",
             Self::System_Reference_1 => "System::Reference`1",
 
+            Self::System_ThreadLocal_1 => "System::ThreadLocal`1",
+
             Self::System_NonPurusCallConfiguration => "System::NonPurusCallConfiguration",
             Self::System_NonPurusCallType => "System::NonPurusCallType",
 
@@ -313,6 +317,8 @@ impl CoreTypeId {
 
             System_Pointer in of!(Pointer),
             System_Reference_1 in of!(Reference_1),
+
+            System_ThreadLocal_1 in of!(ThreadLocal_1),
 
             System_NonPurusCallConfiguration in of!(NonPurusCallConfiguration),
             System_NonPurusCallType in of!(NonPurusCallType),

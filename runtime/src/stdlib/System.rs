@@ -5,7 +5,7 @@ use stdlib_header::{CoreTypeId, CoreTypeInfo, CoreTypeKind, CoreTypeRef, FieldIn
 
 use crate::type_system::{
     assembly::{Assembly, TypeContainer},
-    cached_type_reference::CachedTypeReference,
+    cached_type_reference::GenericCachedTypeReference,
     class::Class,
     field::Field,
     generics::GenericCountRequirement,
@@ -39,6 +39,7 @@ pub mod Reflection;
 pub mod RuntimeBasic;
 pub mod Span_1;
 pub mod String;
+pub mod ThreadLocal_1;
 pub mod Tuple;
 pub mod ValueType;
 pub mod Void;
@@ -90,8 +91,8 @@ fn map_interface_implementation(
     }
 }
 
-fn map_method_attr(val: MethodAttr<CoreTypeRef>) -> MethodAttr<CachedTypeReference> {
-    val.map_types(|x| CachedTypeReference::new(MaybeUnloadedTypeHandle::from(x)))
+fn map_method_attr(val: MethodAttr<CoreTypeRef>) -> MethodAttr<GenericCachedTypeReference> {
+    val.map_types(|x| GenericCachedTypeReference::new(MaybeUnloadedTypeHandle::from(x)))
 }
 
 fn map_parameter((attr, ty): (ParameterAttr, CoreTypeRef)) -> Parameter {

@@ -2,7 +2,7 @@ use std::alloc::{Allocator, Layout};
 use std::mem::{ManuallyDrop, offset_of};
 use std::ops::RangeBounds;
 use std::ptr::NonNull;
-use std::sync::{MappedRwLockReadGuard, RwLock};
+use std::sync::nonpoison::{MappedRwLockReadGuard, RwLock};
 
 use either::Either;
 use global::attrs::TypeAttr;
@@ -379,7 +379,7 @@ impl Class {
 /// *Experimental* Storing static instance in type
 impl Class {
     pub fn init_statics(&self) {
-        if self.static_instance.read().unwrap().is_some() {
+        if self.static_instance.read().is_some() {
             return;
         }
         std::hint::cold_path();
@@ -388,7 +388,7 @@ impl Class {
             .manager_ref()
             .vm_ref()
             .write_cpu_for_static();
-        let mut instance = self.static_instance.write().unwrap();
+        let mut instance = self.static_instance.write();
         *instance = Some(ManagedReference::common_alloc(
             &mut cpu,
             self.method_table,
@@ -405,7 +405,7 @@ impl Class {
         options: GetFieldOffsetOptions,
     ) -> Option<(NonNull<u8>, Layout)> {
         self.init_statics();
-        let instance = self.static_instance.read().unwrap();
+        let instance = self.static_instance.read();
         instance
             .as_ref()
             .unwrap()

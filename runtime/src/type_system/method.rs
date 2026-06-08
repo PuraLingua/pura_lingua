@@ -10,7 +10,7 @@ use libffi::low::CodePtr;
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
     type_system::{
-        cached_type_reference::CachedTypeReference,
+        cached_type_reference::GenericCachedTypeReference,
         generics::{GenericBounds, GenericCountRequirement},
         method_table::MethodTable,
         type_handle::{MaybeUnloadedTypeHandle, MethodGenericResolver},
@@ -31,7 +31,7 @@ mod parameter;
 pub use exception_table::{ExceptionTable, ExceptionTableEntry};
 pub use parameter::Parameter;
 
-pub type RuntimeInstruction = Instruction<String, CachedTypeReference, MethodRef, u32>;
+pub type RuntimeInstruction = Instruction<String, GenericCachedTypeReference, MethodRef, u32>;
 
 #[derive(Getters)]
 #[getset(get = "pub")]
@@ -41,10 +41,10 @@ pub struct Method<T> {
     generic: Option<NonNull<Self>>,
 
     name: Box<widestring::Utf16Str>,
-    attr: MethodAttr<CachedTypeReference>,
+    attr: MethodAttr<GenericCachedTypeReference>,
     generic_count_requirement: GenericCountRequirement,
     args: Vec<Parameter>,
-    return_type: CachedTypeReference,
+    return_type: GenericCachedTypeReference,
     #[getset(skip)]
     call_convention: CallConvention,
 
@@ -79,10 +79,10 @@ where
         mt: NonNull<MethodTable<T>>,
 
         name: widestring::Utf16String,
-        attr: MethodAttr<CachedTypeReference>,
+        attr: MethodAttr<GenericCachedTypeReference>,
         generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
-        return_type: CachedTypeReference,
+        return_type: GenericCachedTypeReference,
         call_convention: CallConvention,
 
         generic_bounds: Option<Vec<GenericBounds>>,
@@ -121,10 +121,10 @@ where
         mt: NonNull<MethodTable<T>>,
 
         name: widestring::Utf16String,
-        attr: MethodAttr<CachedTypeReference>,
+        attr: MethodAttr<GenericCachedTypeReference>,
         generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
-        return_type: CachedTypeReference,
+        return_type: GenericCachedTypeReference,
         call_convention: CallConvention,
 
         generic_bounds: Option<Vec<GenericBounds>>,
@@ -177,10 +177,10 @@ impl<T> Method<T> {
         mt: Option<NonNull<MethodTable<T>>>,
 
         name: widestring::Utf16String,
-        attr: MethodAttr<CachedTypeReference>,
+        attr: MethodAttr<GenericCachedTypeReference>,
         generic_count_requirement: GenericCountRequirement,
         args: Vec<Parameter>,
-        return_type: CachedTypeReference,
+        return_type: GenericCachedTypeReference,
         call_convention: CallConvention,
 
         generic_bounds: Option<Vec<GenericBounds>>,
@@ -217,7 +217,7 @@ impl<T> Method<T> {
     /// Creates a static method called `.sctor`
     pub fn default_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
-        attr: MethodAttr<CachedTypeReference>,
+        attr: MethodAttr<GenericCachedTypeReference>,
     ) -> Pin<Box<Self>> {
         extern "system" fn sctor<T>(_: &mut CPU, _: &Method<T>) {
             #[cfg(feature = "print_invoke_and_call")]
@@ -228,7 +228,7 @@ impl<T> Method<T> {
     /// Creates a static method called `.sctor`
     pub fn create_sctor(
         mt: Option<NonNull<MethodTable<T>>>,
-        mut attr: MethodAttr<CachedTypeReference>,
+        mut attr: MethodAttr<GenericCachedTypeReference>,
         rust_fn: extern "system" fn(&mut CPU, &Method<T>),
     ) -> Pin<Box<Self>> {
         attr.impl_flags_mut()

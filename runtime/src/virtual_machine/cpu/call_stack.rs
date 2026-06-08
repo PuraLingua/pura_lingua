@@ -64,9 +64,9 @@ impl CallStack {
             )));
     }
 
-    pub fn mark_all(&mut self) {
+    pub fn set_marker(&mut self, val: bool) {
         for frame in &mut self.stack {
-            frame.mark_all();
+            frame.set_marker(val);
         }
     }
 
@@ -169,10 +169,10 @@ impl CallStackFrame {
 }
 
 impl CallStackFrame {
-    pub fn mark_all(&mut self) {
+    pub fn set_marker(&mut self, val: bool) {
         match self {
-            Self::Native(frame) => frame.mark_all(),
-            Self::Common(frame) => frame.mark_all(),
+            Self::Native(frame) => frame.set_marker(val),
+            Self::Common(frame) => frame.set_marker(val),
         }
     }
 }
@@ -218,16 +218,9 @@ impl NativeCallStackFrame {
             allocator,
         }
     }
-    pub fn mark_all(&mut self) {
+    pub fn set_marker(&mut self, val: bool) {
         for r in &mut self.references {
-            r.const_access_mut::<FieldAccessor<Class>>()
-                .set_marker(true);
-        }
-    }
-    pub fn unmark_all(&mut self) {
-        for r in &mut self.references {
-            r.const_access_mut::<FieldAccessor<Class>>()
-                .set_marker(false);
+            r.const_access_mut::<FieldAccessor<Class>>().set_marker(val);
         }
     }
 }
@@ -365,6 +358,32 @@ impl LocalVariable {
         NonPurusCallArg {
             val: self.ptr.cast().as_ptr(),
             ty: self.ty.non_purus_call_type(),
+        }
+    }
+
+    pub fn set_marker(&self, val: bool) {
+        match self.ty {
+            NonGenericTypeHandle::Class(_) | NonGenericTypeHandle::Interface(_) => unsafe {
+                self.ptr
+                    .cast::<ManagedReference<Class>>()
+                    .as_mut()
+                    .const_access_mut::<FieldAccessor<Class>>()
+                    .set_marker(val);
+            },
+            NonGenericTypeHandle::Struct(s) => {
+                let s_ref: &Struct = unsafe { s.as_ref() };
+                for field_info in s_ref
+                    .method_table_ref()
+                    .all_fields_mem_info(Default::default(), Default::default())
+                {
+                    Self {
+                        ptr: unsafe { self.ptr.byte_add(field_info.offset) },
+                        layout: field_info.layout,
+                        ty: field_info.ty,
+                    }
+                    .set_marker(val);
+                }
+            }
         }
     }
 }
@@ -506,30 +525,9 @@ impl CommonCallStackFrame {
         }
     }
 
-    pub fn mark_all(&mut self) {
-        for mut var in self.iter().filter(|x| x.ty.is_managed_reference()) {
-            match var.ty {
-                NonGenericTypeHandle::Class(_) => {
-                    var.as_mut_typed::<ManagedReference<Class>>()
-                        .const_access_mut::<FieldAccessor<Class>>()
-                        .set_marker(true);
-                }
-
-                _ => unreachable!(),
-            }
-        }
-    }
-    pub fn unmark_all(&mut self) {
-        for mut var in self.iter().filter(|x| x.ty.is_managed_reference()) {
-            match var.ty {
-                NonGenericTypeHandle::Class(_) => {
-                    var.as_mut_typed::<ManagedReference<Class>>()
-                        .const_access_mut::<FieldAccessor<Class>>()
-                        .set_marker(false);
-                }
-
-                _ => unreachable!(),
-            }
+    pub fn set_marker(&mut self, val: bool) {
+        for var in self.iter() {
+            var.set_marker(val);
         }
     }
 }

@@ -28,8 +28,10 @@ pub use for_array::ArrayAccessor;
 pub use for_field::FieldAccessor;
 pub use for_large_string::LargeStringAccessor;
 pub use for_string::StringAccessor;
+use global::ThreadSafe;
 
 #[repr(transparent)]
+#[derive(ThreadSafe)]
 pub struct ManagedReference<T> {
     pub(crate) data: Option<NonNull<ManagedReferenceInner<T>>>,
 }
@@ -61,7 +63,7 @@ impl<T> std::fmt::Pointer for ManagedReference<T> {
     }
 }
 
-impl<T> const Clone for ManagedReference<T> {
+const impl<T> Clone for ManagedReference<T> {
     #[inline(always)]
     fn clone(&self) -> Self {
         *self
@@ -76,6 +78,17 @@ impl<T> PartialEq for ManagedReference<T> {
             unsafe { std::mem::transmute(self.data) },
             unsafe { std::mem::transmute(other.data) },
         )
+    }
+}
+
+impl<T> Eq for ManagedReference<T> {}
+
+impl<T> std::hash::Hash for ManagedReference<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash::<ManagedReferenceInner<T>, H>(
+            unsafe { std::mem::transmute(self.data) },
+            state,
+        );
     }
 }
 

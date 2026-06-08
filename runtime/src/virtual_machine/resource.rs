@@ -3,8 +3,11 @@ use std::{
     mem::Alignment,
     ptr::NonNull,
     sync::{
-        MappedRwLockReadGuard, MappedRwLockWriteGuard, OnceLock, RwLock, RwLockReadGuard,
-        RwLockWriteGuard,
+        OnceLock,
+        nonpoison::{
+            MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard,
+            RwLockWriteGuard,
+        },
     },
 };
 
@@ -90,17 +93,15 @@ pub struct ResourceHandle(usize);
 
 impl ResourceHandle {
     pub fn free(self) {
-        let mut resources = RESOURCES.write().unwrap();
+        let mut resources = RESOURCES.write();
         drop(resources.remove(self.0));
     }
 
     pub fn read(&self) -> MappedRwLockReadGuard<'static, BoxedResource> {
-        RwLockReadGuard::map(RESOURCES.read().unwrap(), |x| unsafe {
-            x.get_unchecked(self.0)
-        })
+        RwLockReadGuard::map(RESOURCES.read(), |x| unsafe { x.get_unchecked(self.0) })
     }
     pub fn write(&self) -> MappedRwLockWriteGuard<'static, BoxedResource> {
-        RwLockWriteGuard::map(RESOURCES.write().unwrap(), |x| unsafe {
+        RwLockWriteGuard::map(RESOURCES.write(), |x| unsafe {
             x.get_unchecked_mut(self.0)
         })
     }
@@ -109,7 +110,7 @@ impl ResourceHandle {
 static RESOURCES: RwLock<Slab<BoxedResource>> = RwLock::new(Slab::new());
 
 pub fn add_resource(resource: BoxedResource) -> ResourceHandle {
-    let mut resources = RESOURCES.write().unwrap();
+    let mut resources = RESOURCES.write();
     ResourceHandle(resources.insert(resource))
 }
 

@@ -86,7 +86,6 @@ fn main() -> pura_lingua::global::Result<()> {
     let assembly = vm
         .assembly_manager()
         .get_assembly_by_name(&main_assembly)
-        .unwrap()
         .unwrap();
     let class = assembly
         .find_class(&main_class)

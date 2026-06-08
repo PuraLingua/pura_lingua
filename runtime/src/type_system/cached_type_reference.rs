@@ -1,4 +1,4 @@
-use std::sync::RwLock;
+use std::sync::nonpoison::RwLock;
 
 use either::Either;
 
@@ -71,6 +71,41 @@ impl OriginTypeReference {
             OriginTypeReference::Already(handle) => Some(*handle),
         }
     }
+    fn has_generic(&self) -> bool {
+        fn has_generic(ty: &MaybeUnloadedTypeHandle) -> bool {
+            match ty {
+                MaybeUnloadedTypeHandle::Loaded(type_handle) => match type_handle {
+                    TypeHandle::Class(_) | TypeHandle::Struct(_) | TypeHandle::Interface(_) => {
+                        false
+                    }
+                    TypeHandle::MethodGeneric(_) | TypeHandle::TypeGeneric(_) => true,
+                },
+                MaybeUnloadedTypeHandle::Unloaded(type_ref) => match type_ref {
+                    TypeRef::Index { .. } => false,
+                    TypeRef::Specific {
+                        assembly_and_index: _,
+                        types,
+                    } => types.iter().any(has_generic),
+                },
+            }
+        }
+        match self {
+            OriginTypeReference::Unloaded(type_ref) => match type_ref {
+                TypeRef::Index { .. } => false,
+                TypeRef::Specific {
+                    assembly_and_index: _,
+                    types,
+                } => types.iter().any(has_generic),
+            },
+            OriginTypeReference::NotInstantiated { handle, type_vars } => {
+                has_generic(&MaybeUnloadedTypeHandle::Loaded(*handle))
+                    || type_vars.iter().any(has_generic)
+            }
+            OriginTypeReference::Already(type_handle) => {
+                has_generic(&MaybeUnloadedTypeHandle::Loaded(*type_handle))
+            }
+        }
+    }
 }
 
 impl From<MaybeUnloadedTypeHandle> for OriginTypeReference {
@@ -114,7 +149,7 @@ pub struct CachedTypeReference {
 
 impl std::fmt::Debug for CachedTypeReference {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.cache.get_cloned().unwrap() {
+        match self.cache.get_cloned() {
             None => match &self.inner {
                 OriginTypeReference::Unloaded(type_ref) => <_ as std::fmt::Debug>::fmt(type_ref, f),
                 OriginTypeReference::NotInstantiated { handle, type_vars } => {
@@ -165,7 +200,7 @@ impl CachedTypeReference {
         self.inner.restore()
     }
     pub fn to_handle(&self) -> Option<TypeHandle> {
-        let cache = self.cache.read().unwrap();
+        let cache = self.cache.read();
         if let Some(cache) = *cache {
             return Some(cache.into());
         }
@@ -179,7 +214,7 @@ impl CachedTypeReference {
         assembly_manager: &AssemblyManager,
         resolver: &TResolver,
     ) -> Option<TypeHandle> {
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self.cache.write();
 
         if let Some(cache) = *cache {
             return Some(cache.into());
@@ -189,6 +224,99 @@ impl CachedTypeReference {
             .inner
             .load_with_generic_resolver(assembly_manager, resolver)?;
         *cache = result.get_non_generic_with_generic_resolver(resolver);
+
+        Some(result)
+    }
+}
+
+pub struct GenericCachedTypeReference {
+    inner: OriginTypeReference,
+    has_generic: bool,
+    cache: RwLock<Option<TypeHandle>>,
+}
+
+impl std::fmt::Debug for GenericCachedTypeReference {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.cache.get_cloned() {
+            None => match &self.inner {
+                OriginTypeReference::Unloaded(type_ref) => <_ as std::fmt::Debug>::fmt(type_ref, f),
+                OriginTypeReference::NotInstantiated { handle, type_vars } => {
+                    write!(f, "{handle:?}{type_vars:?}")
+                }
+                OriginTypeReference::Already(type_handle) => {
+                    <_ as std::fmt::Debug>::fmt(type_handle, f)
+                }
+            },
+            Some(x) => <_ as std::fmt::Debug>::fmt(&x, f),
+        }
+    }
+}
+
+impl std::fmt::Display for GenericCachedTypeReference {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <_ as std::fmt::Display>::fmt(&self.to_maybe_unloaded_handle(), f)
+    }
+}
+
+impl Clone for GenericCachedTypeReference {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            has_generic: self.has_generic,
+            cache: RwLock::new(None),
+        }
+    }
+}
+
+impl<T> From<T> for GenericCachedTypeReference
+where
+    MaybeUnloadedTypeHandle: From<T>,
+{
+    fn from(ty: T) -> Self {
+        Self::new(ty.into())
+    }
+}
+
+impl GenericCachedTypeReference {
+    pub fn new(ty: MaybeUnloadedTypeHandle) -> Self {
+        let inner: OriginTypeReference = ty.into();
+        Self {
+            has_generic: inner.has_generic(),
+            inner,
+            cache: RwLock::new(None),
+        }
+    }
+
+    pub fn to_maybe_unloaded_handle(&self) -> MaybeUnloadedTypeHandle {
+        self.inner.restore()
+    }
+    pub fn to_handle(&self) -> Option<TypeHandle> {
+        let cache = self.cache.read();
+        if let Some(cache) = *cache {
+            return Some(cache);
+        }
+        self.inner.to_handle()
+    }
+    pub fn assume_init(&self) -> TypeHandle {
+        self.to_handle().unwrap()
+    }
+    pub fn get_with_generic_resolver<TResolver: IGenericResolver>(
+        &self,
+        assembly_manager: &AssemblyManager,
+        resolver: &TResolver,
+    ) -> Option<TypeHandle> {
+        let mut cache = self.cache.write();
+
+        if let Some(cache) = *cache {
+            return Some(cache);
+        }
+
+        let result = self
+            .inner
+            .load_with_generic_resolver(assembly_manager, resolver)?;
+        if !self.has_generic {
+            *cache = Some(result);
+        }
 
         Some(result)
     }

@@ -20,6 +20,7 @@ pub mod Reference_1;
 pub mod RuntimeBasic;
 pub mod Span_1;
 pub mod String;
+pub mod ThreadLocal_1;
 pub mod Tuple;
 pub mod ValueType;
 pub mod Void;

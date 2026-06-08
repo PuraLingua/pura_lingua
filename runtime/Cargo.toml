@@ -5,6 +5,7 @@ version.workspace = true
 
 [dependencies]
 global = { workspace = true }
+pura_lingua_isa = { workspace = true }
 either = { workspace = true }
 bitfields = { workspace = true }
 sealed = { workspace = true }

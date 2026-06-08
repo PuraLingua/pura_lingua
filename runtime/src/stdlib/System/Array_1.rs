@@ -154,7 +154,7 @@ pub extern "system" fn get_Index(
 }
 
 macro define_registers($($name:ident)*) {$(
-    const $name: global::instruction::ShortRegisterAddr = global::instruction::ShortRegisterAddr::new(${index()});
+    const $name: ::pura_lingua_isa::ShortRegisterAddr = ::pura_lingua_isa::ShortRegisterAddr::new(${index()});
 )*}
 
 _define_class!(

@@ -1,4 +1,4 @@
-use std::{alloc::Layout, ptr::NonNull, sync::MappedRwLockReadGuard};
+use std::{alloc::Layout, ptr::NonNull, sync::nonpoison::MappedRwLockReadGuard};
 
 use enumflags2::make_bitflags;
 use global::attrs::{CallConvention, MethodAttr, MethodImplementationFlags, Visibility};
@@ -7,7 +7,7 @@ use mem_leak_detector::LeakDetector;
 use crate::{
     type_system::{
         assembly::{Assembly, TypeContainer},
-        cached_type_reference::CachedTypeReference,
+        cached_type_reference::GenericCachedTypeReference,
         class::Class,
         generics::GenericCountRequirement,
         method::{ExceptionTable, Method, RuntimeInstruction},
@@ -41,16 +41,12 @@ pub fn new_global_assembly<F: FnOnce(NonNull<Assembly>) -> Vec<TypeContainer>>(
     let id = global_vm()
         .assembly_manager()
         .add_assembly(Assembly::new_for_adding(name.into(), false, f));
-    global_vm()
-        .assembly_manager()
-        .get_assembly(id)
-        .unwrap()
-        .unwrap()
+    global_vm().assembly_manager().get_assembly(id).unwrap()
 }
 
 pub fn try_invoke_instructions(
-    locals: Vec<CachedTypeReference>,
-    return_type: CachedTypeReference,
+    locals: Vec<GenericCachedTypeReference>,
+    return_type: GenericCachedTypeReference,
     instructions: Vec<RuntimeInstruction>,
 ) -> (NonNull<u8>, Layout) {
     let assembly = new_global_assembly("Test::TryInvoke", |assembly| {

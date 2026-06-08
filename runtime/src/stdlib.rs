@@ -45,7 +45,7 @@ pub const trait CoreTypeIdConstExt: Sized {
 use global::non_purus_call_configuration::NonPurusCallType;
 pub use stdlib_header::CoreTypeId;
 
-impl const CoreTypeIdConstExt for CoreTypeId {
+const impl CoreTypeIdConstExt for CoreTypeId {
     fn static_type_ref(self) -> TypeRef {
         TypeRef::Index {
             assembly: AssemblyRef::CORE,
@@ -90,6 +90,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
 
             System_Pointer => Some(Layout::new::<*const u8>()),
             System_Reference_1 => Some(Layout::new::<*const u8>()),
+
+            System_ThreadLocal_1 => None,
 
             System_NonPurusCallConfiguration => None,
             System_NonPurusCallType => None,
@@ -155,6 +157,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
 
             System_Pointer => Some(Layout::new::<*const u8>()),
             System_Reference_1 => Some(Layout::new::<*const u8>()),
+
+            System_ThreadLocal_1 => Some(Layout::new::<ManagedReference<Class>>()),
 
             System_NonPurusCallConfiguration => Some(Layout::new::<ManagedReference<Class>>()),
             System_NonPurusCallType => Some(Layout::new::<ManagedReference<Class>>()),
@@ -225,6 +229,8 @@ impl const CoreTypeIdConstExt for CoreTypeId {
 
             System_Pointer => of_System!(Pointer),
             System_Reference_1 => of_System!(Reference_1),
+
+            System_ThreadLocal_1 => of_System!(ThreadLocal_1),
 
             System_NonPurusCallConfiguration => of_System!(NonPurusCallConfiguration),
             System_NonPurusCallType => of_System!(NonPurusCallType),
@@ -300,6 +306,8 @@ impl CoreTypeIdExt for CoreTypeId {
             System_Pointer => Some(Type::pointer()),
             System_Reference_1 => Some(Type::pointer()),
 
+            System_ThreadLocal_1 => Some(Type::pointer()),
+
             System_NonPurusCallConfiguration => Some(Type::pointer()),
             System_NonPurusCallType => Some(Type::pointer()),
 
@@ -363,6 +371,8 @@ impl CoreTypeIdExt for CoreTypeId {
             System_Pointer => Some(NonPurusCallType::Pointer),
             System_Reference_1 => Some(NonPurusCallType::Pointer),
 
+            System_ThreadLocal_1 => Some(NonPurusCallType::Object),
+
             System_NonPurusCallConfiguration => Some(NonPurusCallType::Object),
             System_NonPurusCallType => Some(NonPurusCallType::Object),
 
@@ -413,10 +423,7 @@ pub fn load_stdlib(manager: &AssemblyManager) {
     ));
     assert_eq!(AssemblyRef::CORE, id);
 
-    let assembly = manager
-        .get_assembly_by_ref(&AssemblyRef::CORE)
-        .unwrap()
-        .unwrap();
+    let assembly = manager.get_assembly_by_ref(&AssemblyRef::CORE).unwrap();
 
     for id in CoreTypeId::ALL_VARIANTS.into_iter().filter(|x| {
         !([

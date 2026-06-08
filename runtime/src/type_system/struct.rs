@@ -3,7 +3,7 @@ use std::{
     mem::offset_of,
     ops::RangeBounds,
     ptr::NonNull,
-    sync::MappedRwLockReadGuard,
+    sync::nonpoison::MappedRwLockReadGuard,
 };
 
 use global::{

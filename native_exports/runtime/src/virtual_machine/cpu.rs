@@ -1,7 +1,7 @@
 use std::{
     ffi::{CStr, c_char},
     ptr::NonNull,
-    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::nonpoison::{RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use c_definitions::SlicePtr;
@@ -14,13 +14,13 @@ use pura_lingua::runtime::{
 pub extern "C" fn CPULock_Read<'a, 'lock: 'a>(
     lock: &'lock RwLock<CPU>,
 ) -> NonNull<RwLockReadGuard<'a, CPU>> {
-    Box::into_non_null(Box::new(lock.read().unwrap()))
+    Box::into_non_null(Box::new(lock.read()))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn CPULock_Write<'a, 'lock: 'a>(
     lock: &'lock RwLock<CPU>,
 ) -> NonNull<RwLockWriteGuard<'a, CPU>> {
-    Box::into_non_null(Box::new(lock.write().unwrap()))
+    Box::into_non_null(Box::new(lock.write()))
 }
 
 #[unsafe(no_mangle)]

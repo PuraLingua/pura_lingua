@@ -4,7 +4,7 @@ use global::instruction::{IRegisterAddr, Instruction_Set};
 
 use crate::{
     type_system::{
-        cached_type_reference::CachedTypeReference,
+        cached_type_reference::GenericCachedTypeReference,
         class::Class,
         get_traits::{GetAssemblyRef, GetTypeVars},
         method::{
@@ -25,7 +25,7 @@ pub(super) fn eval<T: GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr
     #[allow(unused)] result_ptr: NonNull<c_void>,
     #[allow(unused)] pc: &mut usize,
     #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
-    ins: &Instruction_Set<CachedTypeReference, u32, TRegisterAddr>,
+    ins: &Instruction_Set<GenericCachedTypeReference, u32, TRegisterAddr>,
 ) -> Option<Result<(), Termination>> {
     match ins {
         Instruction_Set::Common {

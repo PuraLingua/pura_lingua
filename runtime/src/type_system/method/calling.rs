@@ -1,8 +1,4 @@
-use std::{
-    alloc::{Allocator, Layout},
-    ffi::c_void,
-    ptr::NonNull,
-};
+use std::{alloc::Layout, ffi::c_void, mem::MaybeUninit, ptr::NonNull};
 
 use global::attrs::{CallConvention, MethodImplementationFlags};
 
@@ -211,29 +207,98 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         this: Option<NonNull<()>>,
         args: &[*mut std::ffi::c_void],
     ) -> R {
-        let (ret_ptr, ret_layout) = self.untyped_call(cpu, this, args);
-        let res = unsafe { ret_ptr.cast::<R>().read() };
-        unsafe {
-            Allocator::deallocate(&std::alloc::Global, ret_ptr, ret_layout);
+        #[cfg(debug_assertions)]
+        {
+            let return_layout = self.get_return_type().val_layout();
+            assert_eq!(return_layout, Layout::new::<R>());
         }
 
-        res
+        const fn check<R>() {
+            if size_of::<R>() < size_of::<usize>() {
+                assert!(align_of::<R>() <= align_of::<usize>());
+            }
+        }
+
+        const { check::<R>() }
+
+        // See
+        const _: unsafe fn(*mut libffi::raw::ffi_cif, libffi::low::CodePtr, *mut *mut c_void) =
+            libffi::low::call::<()>;
+        if size_of::<R>() < size_of::<usize>() {
+            #[cfg(not(debug_assertions))]
+            let mut result: MaybeUninit<usize> = MaybeUninit::uninit();
+            #[cfg(debug_assertions)]
+            let mut result: MaybeUninit<usize> = MaybeUninit::zeroed();
+
+            unsafe {
+                self.buffered_call(
+                    cpu,
+                    this,
+                    args,
+                    NonNull::new_unchecked(result.as_mut_ptr().cast()),
+                );
+            }
+
+            if cfg!(target_endian = "big") {
+                // See [libffi::low::call_return_small_big_endian_result]
+
+                let type_tag =
+                    unsafe { (*self.get_return_type().val_libffi_type().as_raw_ptr()).type_ };
+
+                if [
+                    libffi::raw::FFI_TYPE_FLOAT,
+                    libffi::raw::FFI_TYPE_STRUCT,
+                    libffi::raw::FFI_TYPE_VOID,
+                ]
+                .contains(&type_tag)
+                {
+                    // SAFETY: Testing has shown that these types appear at `result`.
+                    unsafe { result.as_ptr().cast::<R>().read() }
+                } else {
+                    // SAFETY: Consider `*result` an array with
+                    // `size_of::<usize>() / size_of::<R>()` items of `R`. The following
+                    // code reads the last element to get the least significant bits of
+                    // `result` on big endian architectures. The most significant bits are
+                    // zeroed by libffi.
+                    unsafe {
+                        result
+                            .as_ptr()
+                            .cast::<R>()
+                            .add((size_of::<usize>() / size_of::<R>()) - 1)
+                            .read()
+                    }
+                }
+            } else {
+                unsafe { result.as_ptr().cast::<R>().read() }
+            }
+        } else {
+            #[cfg(not(debug_assertions))]
+            let mut result: MaybeUninit<R> = MaybeUninit::uninit();
+            #[cfg(debug_assertions)]
+            let mut result: MaybeUninit<R> = MaybeUninit::zeroed();
+
+            unsafe {
+                self.buffered_call(
+                    cpu,
+                    this,
+                    args,
+                    NonNull::new_unchecked(result.as_mut_ptr().cast()),
+                );
+            }
+
+            unsafe { result.assume_init() }
+        }
     }
 
+    #[inline(always)]
     pub fn typed_call<'a, R>(
         &self,
         cpu: &mut CPU,
         this: Option<NonNull<()>>,
         args: &[libffi::middle::Arg<'a>],
     ) -> R {
-        let (ret_ptr, ret_layout) = self.untyped_call(cpu, this, unsafe {
+        self.typed_res_call(cpu, this, unsafe {
             &*(args as *const [_] as *const [*mut c_void])
-        });
-        let res = unsafe { ret_ptr.cast::<R>().read() };
-        unsafe {
-            Allocator::deallocate(&std::alloc::Global, ret_ptr, ret_layout);
-        }
-
-        res
+        })
     }
 }

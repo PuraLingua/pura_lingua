@@ -122,7 +122,6 @@ fn simple_dynamic_lib_test() {
     let assem = global_vm()
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("Test"))
-        .unwrap()
         .unwrap();
 
     let class = assem.get_class(0).unwrap();

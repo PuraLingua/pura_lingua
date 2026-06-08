@@ -1,4 +1,4 @@
-use std::{ptr::NonNull, sync::RwLock};
+use std::{ptr::NonNull, sync::nonpoison::RwLock};
 
 use crate::{type_system::class::Class, value::managed_reference::ManagedReference};
 

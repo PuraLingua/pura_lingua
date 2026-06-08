@@ -1,4 +1,4 @@
-use std::{hint::unlikely, sync::RwLock, thread::ThreadId};
+use std::{hint::unlikely, sync::nonpoison::RwLock, thread::ThreadId};
 
 use bitfields::{FromBits, IntoBits, bitfield};
 use parking_lot::{RawMutex, lock_api::RawMutex as _};
@@ -48,13 +48,14 @@ impl Sync {
         unsafe { std::mem::transmute(thin) }
     }
 
+    #[allow(static_mut_refs)]
     pub fn to_fat(&mut self) {
         if unlikely(unsafe { !self.thin.is_thin() }) {
             return;
         }
 
         let id = unsafe { self.thin.id() };
-        let _g = G_SYNC_BLOCKS_LOCK.write().unwrap();
+        let _g = G_SYNC_BLOCKS_LOCK.write();
         let index;
         if let Some((i, sync_block)) =
             unsafe { G_SYNC_BLOCKS.iter_mut().enumerate().find(|x| !x.1.is_valid) }
@@ -83,8 +84,7 @@ impl Sync {
         }
 
         unsafe {
-            let sync_block = G_SYNC_BLOCKS.get(self.fat.index()).unwrap();
-            sync_block.lock.lock();
+            self.fat.get_block().unwrap().lock.lock();
         }
     }
 
@@ -96,8 +96,7 @@ impl Sync {
         }
 
         unsafe {
-            let sync_block = G_SYNC_BLOCKS.get(self.fat.index()).unwrap();
-            sync_block.lock.unlock();
+            self.fat.get_block().unwrap().lock.unlock();
         }
     }
 
@@ -110,7 +109,7 @@ impl Sync {
     }
 }
 
-impl const FromBits for Sync {
+const impl FromBits for Sync {
     type Number = u32;
 
     fn from_bits(bits: Self::Number) -> Self {
@@ -118,7 +117,7 @@ impl const FromBits for Sync {
     }
 }
 
-impl const IntoBits for Sync {
+const impl IntoBits for Sync {
     type Number = u32;
 
     fn into_bits(self) -> Self::Number {
@@ -155,10 +154,12 @@ pub struct FatSync {
 }
 
 impl FatSync {
+    #[allow(static_mut_refs)]
     pub fn get_block(&self) -> Option<&SyncBlock> {
         unsafe { G_SYNC_BLOCKS.get(self.index()).filter(|x| x.is_valid) }
     }
 
+    #[allow(static_mut_refs)]
     pub fn get_block_mut(&self) -> Option<&mut SyncBlock> {
         unsafe { G_SYNC_BLOCKS.get_mut(self.index()).filter(|x| x.is_valid) }
     }

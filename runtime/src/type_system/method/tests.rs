@@ -92,7 +92,6 @@ fn test_normal_f() {
     let assembly = global_vm()
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("TestNormalF"))
-        .unwrap()
         .unwrap();
 
     let class = assembly.get_class(0).unwrap();
@@ -466,7 +465,6 @@ fn test_interface_from_binary() {
     let assembly = global_vm()
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("TestInterface"))
-        .unwrap()
         .unwrap();
 
     let class = assembly.get_class(3).unwrap();

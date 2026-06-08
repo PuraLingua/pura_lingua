@@ -93,7 +93,6 @@ fn test_static() {
     let test_assembly = global_vm()
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("Test"))
-        .unwrap()
         .unwrap();
 
     let test_class = test_assembly.get_class(0).unwrap();

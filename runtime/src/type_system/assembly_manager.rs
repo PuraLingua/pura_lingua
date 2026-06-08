@@ -1,6 +1,6 @@
 use std::{
     ptr::NonNull,
-    sync::{MappedRwLockReadGuard, PoisonError, RwLock, RwLockReadGuard},
+    sync::nonpoison::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
 };
 
 use global::StringName;
@@ -49,8 +49,6 @@ impl AssemblyManager {
     }
 }
 
-type ReadAssembliesPoisonError<'a> = PoisonError<RwLockReadGuard<'a, Vec<Box<Assembly>>>>;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum AssemblyRef {
@@ -84,15 +82,13 @@ impl AssemblyManager {
     /// Returns id of the assembly
     pub fn add_assembly(&self, mut assembly: Box<Assembly>) -> usize {
         assembly.manager = NonNull::from_ref(self);
-        let mut assemblies = self.assemblies.write().unwrap();
+        let mut assemblies = self.assemblies.write();
         assemblies.push(assembly);
         assemblies.len() - 1
     }
 
     /// It assumes that core assembly exists.
-    pub fn get_core_assembly<'a>(
-        &'a self,
-    ) -> Result<MappedRwLockReadGuard<'a, Assembly>, ReadAssembliesPoisonError<'a>> {
+    pub fn get_core_assembly<'a>(&'a self) -> MappedRwLockReadGuard<'a, Assembly> {
         if self.assemblies.try_read().is_err() {
             println!("Lock busy");
         }
@@ -116,44 +112,37 @@ impl AssemblyManager {
         fn map(x: &Box<Assembly>) -> &Assembly {
             x
         }
-        self.assemblies.read().map(|g| {
-            RwLockReadGuard::filter_map(g, |x| x.first().filter(filter).map(map))
-                .ok()
-                .expect("Core Assembly (aka. `!`) is not found")
+        RwLockReadGuard::filter_map(self.assemblies.read(), |x| {
+            x.first().filter(filter).map(map)
         })
+        .ok()
+        .unwrap()
     }
 
     /// It assumes that core assembly exists.
     pub fn get_core_type(&self, core_type_id: CoreTypeId) -> NonGenericTypeHandle {
-        let assembly = self.get_core_assembly().unwrap();
+        let assembly = self.get_core_assembly();
         assembly.get_type_handle(core_type_id as u32).unwrap()
     }
 
     pub fn get_assembly_by_name<'a>(
         &'a self,
         name: &widestring::Utf16Str,
-    ) -> Result<Option<MappedRwLockReadGuard<'a, Assembly>>, ReadAssembliesPoisonError<'a>> {
-        self.assemblies.read().map(|guard| {
-            RwLockReadGuard::filter_map(guard, |x: &Vec<Box<Assembly>>| {
-                x.iter().find(|x| (&*x.name).eq(name)).map(|x| &**x)
-            })
-            .ok()
+    ) -> Option<MappedRwLockReadGuard<'a, Assembly>> {
+        RwLockReadGuard::filter_map(self.assemblies.read(), |x: &Vec<Box<Assembly>>| {
+            x.iter().find(|x| (&*x.name).eq(name)).map(|x| &**x)
         })
+        .ok()
     }
 
-    pub fn get_assembly<'a>(
-        &'a self,
-        id: usize,
-    ) -> Result<Option<MappedRwLockReadGuard<'a, Assembly>>, ReadAssembliesPoisonError<'a>> {
-        self.assemblies
-            .read()
-            .map(|guard| RwLockReadGuard::filter_map(guard, |x| x.get(id).map(|x| &**x)).ok())
+    pub fn get_assembly<'a>(&'a self, id: usize) -> Option<MappedRwLockReadGuard<'a, Assembly>> {
+        RwLockReadGuard::filter_map(self.assemblies.read(), |x| x.get(id).map(|x| &**x)).ok()
     }
 
     pub fn get_assembly_by_ref<'a>(
         &'a self,
         r: &AssemblyRef,
-    ) -> Result<Option<MappedRwLockReadGuard<'a, Assembly>>, ReadAssembliesPoisonError<'a>> {
+    ) -> Option<MappedRwLockReadGuard<'a, Assembly>> {
         match r {
             AssemblyRef::Name(name) => {
                 self.get_assembly_by_name(&widestring::Utf16String::from_str(name.as_str()))
