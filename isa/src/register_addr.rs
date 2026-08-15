@@ -53,7 +53,7 @@ impl RegisterAddr {
 #[derive_const(Clone)]
 pub struct ShortRegisterAddr(u16);
 
-impl const IRegisterAddr for RegisterAddr {
+const impl IRegisterAddr for RegisterAddr {
     type TInner = u64;
     const ZERO: Self = Self(0);
 
@@ -70,7 +70,7 @@ impl const IRegisterAddr for RegisterAddr {
         self
     }
 }
-impl const IRegisterAddr for ShortRegisterAddr {
+const impl IRegisterAddr for ShortRegisterAddr {
     type TInner = u16;
     const ZERO: Self = Self(0);
 
@@ -88,14 +88,14 @@ impl const IRegisterAddr for ShortRegisterAddr {
     }
 }
 
-impl const Default for RegisterAddr {
+const impl Default for RegisterAddr {
     #[inline(always)]
     fn default() -> Self {
         Self::ZERO
     }
 }
 
-impl const Default for ShortRegisterAddr {
+const impl Default for ShortRegisterAddr {
     #[inline(always)]
     fn default() -> Self {
         Self::ZERO

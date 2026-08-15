@@ -1,17 +1,23 @@
 use std::alloc::{Allocator, Layout};
-use std::mem::{ManuallyDrop, offset_of};
+use std::mem::{ManuallyDrop, MaybeUninit, offset_of};
 use std::ops::RangeBounds;
 use std::ptr::NonNull;
 use std::sync::nonpoison::{MappedRwLockReadGuard, RwLock};
+use std::sync::{Arc, LazyLock};
 
 use either::Either;
 use global::attrs::TypeAttr;
 use global::getset::{Getters, MutGetters};
+use stdlib_header::CoreTypeId;
+use stdlib_header::System::Reflection::TypeInfo;
 
 use crate::memory::{GetFieldOffsetOptions, OwnedPtr};
 use crate::type_system::assembly_manager::{AssemblyManager, AtomicTypeLoadState};
 use crate::type_system::generics::GenericCountRequirement;
 use crate::type_system::interface::InterfaceImplementation;
+use crate::type_system::reflection_info_container::{
+    IReflect, ReflectionInfoCache, ReflectionInfoContainer,
+};
 use crate::type_system::type_handle::{
     GenericUnresolvable, IGenericResolver, NonGenericTypeHandle,
 };
@@ -21,6 +27,7 @@ use crate::type_system::{
 };
 use crate::utils::clone_utf16str;
 use crate::value::managed_reference::{FieldAccessor, ManagedReference};
+use crate::virtual_machine::VirtualMachine;
 
 use super::assembly_manager::TypeLoadState;
 use super::method::Method;
@@ -125,6 +132,9 @@ pub struct Class {
     implemented_interfaces: Vec<InterfaceImplementation>,
 
     static_instance: RwLock<Option<ManagedReference<Class>>>,
+
+    #[debug(skip)]
+    reflection_info: ReflectionInfoContainer<Self>,
 }
 
 impl Class {
@@ -137,6 +147,50 @@ impl Class {
             }
         }
         self.m_parent.as_ref().map(map)
+    }
+}
+
+fn reflection_info_factor(vm: &VirtualMachine, ty: NonNull<Class>) -> ManagedReference<Class> {
+    static CACHE: ReflectionInfoCache = ReflectionInfoCache::new();
+
+    let mut cpu = vm.write_cpu_for_static();
+
+    let mut info = CACHE.get_or(ty, || {
+        ManagedReference::common_alloc(
+            &mut cpu,
+            unsafe {
+                vm.assembly_manager()
+                    .get_core_type(CoreTypeId::System_Reflection_TypeInfo)
+                    .unwrap_class()
+                    .as_ref()
+                    .method_table
+            },
+            false,
+        )
+    });
+
+    let info_setter = info.const_access_mut::<FieldAccessor<_>>();
+    assert!(info_setter.write_typed_field(
+        TypeInfo::FieldId::Name as _,
+        Default::default(),
+        ManagedReference::new_string_w(&mut cpu, unsafe { ty.as_ref().name() }),
+    ));
+
+    info
+}
+static BOXED_REFLECTION_INFO_FACTOR: LazyLock<
+    Arc<dyn Fn(&VirtualMachine, NonNull<Class>) -> ManagedReference<Class> + Send + Sync>,
+> = LazyLock::new(|| Arc::new(reflection_info_factor));
+
+impl IReflect for Class {
+    fn __get_reflect_container(&self) -> Option<&ReflectionInfoContainer<Self>> {
+        Some(&self.reflection_info)
+    }
+    fn __reflect_update(&self) {
+        self.reflection_info.update();
+    }
+    fn __get_reflect_value(&self) -> ManagedReference<Class> {
+        self.reflection_info.value()
     }
 }
 
@@ -192,11 +246,22 @@ impl Class {
             implemented_interfaces: self.implemented_interfaces.clone(),
 
             static_instance: RwLock::new(None),
+
+            #[allow(invalid_value)]
+            reflection_info: unsafe { MaybeUninit::zeroed().assume_init() },
         });
 
         let instantiated = Box::into_non_null(instantiated);
 
         unsafe {
+            instantiated
+                .byte_add(offset_of!(Self, reflection_info))
+                .cast::<ReflectionInfoContainer<Self>>()
+                .write(ReflectionInfoContainer::with_assembly_gettable(
+                    instantiated,
+                    BOXED_REFLECTION_INFO_FACTOR.clone(),
+                ));
+
             let mut mt = instantiated.as_ref().method_table;
             mt.as_mut().ty = instantiated;
             NonNull::from_ref(self)
@@ -267,6 +332,9 @@ impl Class {
             implemented_interfaces,
 
             static_instance: RwLock::new(None),
+
+            #[allow(invalid_value)]
+            reflection_info: unsafe { MaybeUninit::zeroed().assume_init() },
         });
 
         let mut this = Box::into_non_null(this);
@@ -280,6 +348,13 @@ impl Class {
                     .expect("Static constructor not found")
             });
             this_m.method_table = mt;
+
+            this.byte_add(offset_of!(Self, reflection_info))
+                .cast::<ReflectionInfoContainer<Self>>()
+                .write(ReflectionInfoContainer::with_assembly_gettable(
+                    this,
+                    BOXED_REFLECTION_INFO_FACTOR.clone(),
+                ));
         }
 
         OwnedPtr::from_non_null(this)
@@ -345,6 +420,9 @@ impl Class {
             implemented_interfaces,
 
             static_instance: RwLock::new(None),
+
+            #[allow(invalid_value)]
+            reflection_info: unsafe { MaybeUninit::zeroed().assume_init() },
         });
 
         let mut this = Box::into_non_null(this);
@@ -361,6 +439,13 @@ impl Class {
             }
 
             this_m.method_table = mt;
+
+            this.byte_add(offset_of!(Self, reflection_info))
+                .cast::<ReflectionInfoContainer<Self>>()
+                .write(ReflectionInfoContainer::with_assembly_gettable(
+                    this,
+                    BOXED_REFLECTION_INFO_FACTOR.clone(),
+                ))
         }
 
         OwnedPtr::from_non_null(this)

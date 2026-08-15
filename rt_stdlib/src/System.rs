@@ -10,6 +10,7 @@ pub mod IDispose;
 pub mod IndexOutOfRangeException;
 pub mod InvalidEnumException;
 pub mod LargeString;
+pub mod MemoryManagement;
 pub mod NonPurusCallConfiguration;
 pub mod NonPurusCallType;
 pub mod NullReferenceException;

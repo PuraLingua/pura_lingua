@@ -86,15 +86,13 @@ mod tests {
     use crate::{
         stdlib::{CoreTypeId, CoreTypeIdExt as _},
         value::managed_reference::{ArrayAccessor, StringAccessor},
-        virtual_machine::{EnsureGlobalVirtualMachineInitialized, cpu_manager::CpuID, global_vm},
+        virtual_machine::{cpu_manager::CpuID, global_vm},
     };
 
     use super::*;
 
     #[test]
     fn test_construct_exception() {
-        EnsureGlobalVirtualMachineInitialized();
-
         let vm = global_vm();
         let u8_t = CoreTypeId::System_UInt8
             .global_type_handle()

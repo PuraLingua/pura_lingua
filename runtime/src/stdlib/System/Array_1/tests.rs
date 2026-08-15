@@ -10,15 +10,13 @@ use crate::{
         assembly::Assembly, generics::GenericCountRequirement, method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle, type_ref::TypeRef,
     },
-    virtual_machine::{EnsureGlobalVirtualMachineInitialized, cpu_manager::CpuID, global_vm},
+    virtual_machine::{cpu_manager::CpuID, global_vm},
 };
 
 use super::*;
 
 #[test]
 fn test_to_string() {
-    EnsureGlobalVirtualMachineInitialized();
-
     let mut cpu = CpuID::new_write_global();
     let string_t = CoreTypeId::System_String
         .global_type_handle()
@@ -62,8 +60,6 @@ fn test_to_string() {
 
 #[test]
 fn array_get_set() -> global::Result<()> {
-    EnsureGlobalVirtualMachineInitialized();
-
     let assembly_id = global_vm()
         .assembly_manager()
         .add_assembly(Assembly::new_for_adding(

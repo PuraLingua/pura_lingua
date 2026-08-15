@@ -1,5 +1,7 @@
 mod _sealed {
-    use crate::type_system::{class::Class, interface::Interface, r#struct::Struct};
+    use crate::type_system::{
+        assembly::Assembly, class::Class, interface::Interface, r#struct::Struct,
+    };
 
     pub trait TypeSealed {}
 
@@ -11,6 +13,7 @@ mod _sealed {
         Class
         Struct
         Interface
+        Assembly
     }
 }
 
@@ -73,7 +76,7 @@ pub trait GetName {
 }
 
 macro get_assembly_ref_default_impl($($T:ty)*) {$(
-	impl const GetAssemblyRef for $T {
+	const impl GetAssemblyRef for $T {
 		fn __get_assembly_ref(&self) -> &Assembly {
 			self.assembly_ref()
 		}
@@ -118,7 +121,7 @@ macro get_val_libffi_type_default_impl($($T:ty)*) {$(
 )*}
 
 macro get_static_constructor_id_default_impl($($T:ty)*) {$(
-    impl const GetStaticConstructorId for $T {
+    const impl GetStaticConstructorId for $T {
         fn __get_static_constructor_id(&self) -> u32 {
             *self.sctor()
         }
@@ -139,7 +142,7 @@ type_default_impls! {
     Struct
 }
 
-impl const GetAssemblyRef for Interface {
+const impl GetAssemblyRef for Interface {
     fn __get_assembly_ref(&self) -> &Assembly {
         self.assembly_ref()
     }
@@ -152,6 +155,12 @@ impl GetTypeVars for Interface {
 impl GetMethodTableRef for Interface {
     fn __get_method_table_ref(&self) -> &MethodTable<Self> {
         self.method_table_ref()
+    }
+}
+
+const impl GetAssemblyRef for Assembly {
+    fn __get_assembly_ref(&self) -> &Assembly {
+        self
     }
 }
 
@@ -181,7 +190,7 @@ impl GetParent for Interface {
     }
 }
 
-impl const GetValLayout for Class {
+const impl GetValLayout for Class {
     fn __get_val_layout(&self) -> Layout {
         self.val_layout()
     }
@@ -193,37 +202,37 @@ impl GetValLayout for Struct {
     }
 }
 
-impl const GetValLayout for Interface {
+const impl GetValLayout for Interface {
     fn __get_val_layout(&self) -> Layout {
         self.val_layout()
     }
 }
 
-impl const GetNonGenericTypeHandleKind for Class {
+const impl GetNonGenericTypeHandleKind for Class {
     fn __get_non_generic_type_handle_kind(&self) -> NonGenericTypeHandleKind {
         NonGenericTypeHandleKind::Class
     }
 }
 
-impl const GetNonGenericTypeHandleKind for Struct {
+const impl GetNonGenericTypeHandleKind for Struct {
     fn __get_non_generic_type_handle_kind(&self) -> NonGenericTypeHandleKind {
         NonGenericTypeHandleKind::Struct
     }
 }
 
-impl const GetGeneric for Class {
+const impl GetGeneric for Class {
     fn __get_generic(&self) -> Option<NonNull<Self>> {
         *self.generic()
     }
 }
 
-impl const GetGeneric for Struct {
+const impl GetGeneric for Struct {
     fn __get_generic(&self) -> Option<NonNull<Self>> {
         *self.generic()
     }
 }
 
-impl const GetGeneric for Interface {
+const impl GetGeneric for Interface {
     fn __get_generic(&self) -> Option<NonNull<Self>> {
         *self.generic()
     }

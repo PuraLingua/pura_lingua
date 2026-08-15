@@ -84,6 +84,7 @@ pub enum CoreTypeId {
 
     /* #region RuntimeBasic */
     System_RuntimeBasic,
+    System_MemoryManagement,
     /* #endregion */
 
     /* #region Exception */
@@ -258,6 +259,7 @@ impl CoreTypeId {
             Self::System_LargeString => "System::LargeString",
 
             Self::System_RuntimeBasic => "System::RuntimeBasic",
+            Self::System_MemoryManagement => "System::MemoryManagement",
 
             Self::System_Exception => "System::Exception",
             Self::System_NullReferenceException => "System::NullReferenceException",
@@ -336,6 +338,7 @@ impl CoreTypeId {
             System_LargeString in of!(LargeString),
 
             System_RuntimeBasic in of!(RuntimeBasic),
+            System_MemoryManagement in of!(MemoryManagement),
 
             System_Exception in of!(Exception),
             System_NullReferenceException in of!(NullReferenceException),

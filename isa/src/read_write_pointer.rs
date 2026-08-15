@@ -19,7 +19,7 @@ impl CommonReadPointerTo<RegisterAddr> {
             destination,
         } = self;
         struct ComposeSizeWithPtr(/* ptr */ ShortRegisterAddr);
-        impl const FnOnce<(ShortRegisterAddr,)> for ComposeSizeWithPtr {
+        const impl FnOnce<(ShortRegisterAddr,)> for ComposeSizeWithPtr {
             type Output = (ShortRegisterAddr, ShortRegisterAddr);
             #[inline(always)]
             extern "rust-call" fn call_once(self, (size,): (ShortRegisterAddr,)) -> Self::Output {
@@ -30,7 +30,7 @@ impl CommonReadPointerTo<RegisterAddr> {
             ptr: ShortRegisterAddr,
             size: ShortRegisterAddr,
         }
-        impl const FnOnce<(ShortRegisterAddr,)> for Construct {
+        const impl FnOnce<(ShortRegisterAddr,)> for Construct {
             type Output = CommonReadPointerTo<ShortRegisterAddr>;
             #[inline(always)]
             extern "rust-call" fn call_once(
@@ -46,7 +46,7 @@ impl CommonReadPointerTo<RegisterAddr> {
         }
 
         struct ThenSize(/* size */ RegisterAddr);
-        impl const FnOnce<(ShortRegisterAddr,)> for ThenSize {
+        const impl FnOnce<(ShortRegisterAddr,)> for ThenSize {
             type Output = Option<(ShortRegisterAddr, ShortRegisterAddr)>;
             #[inline(always)]
             extern "rust-call" fn call_once(self, (ptr,): (ShortRegisterAddr,)) -> Self::Output {
@@ -54,7 +54,7 @@ impl CommonReadPointerTo<RegisterAddr> {
             }
         }
         struct ThenDestination(/* destination */ RegisterAddr);
-        impl const FnOnce<((ShortRegisterAddr, ShortRegisterAddr),)> for ThenDestination {
+        const impl FnOnce<((ShortRegisterAddr, ShortRegisterAddr),)> for ThenDestination {
             type Output = Option<CommonReadPointerTo<ShortRegisterAddr>>;
             #[inline(always)]
             extern "rust-call" fn call_once(
@@ -72,7 +72,7 @@ impl CommonReadPointerTo<RegisterAddr> {
     }
 }
 
-impl<TRegisterAddr: IRegisterAddr> const Clone for CommonReadPointerTo<TRegisterAddr> {
+const impl<TRegisterAddr: IRegisterAddr> Clone for CommonReadPointerTo<TRegisterAddr> {
     fn clone(&self) -> Self {
         *self
     }
@@ -102,7 +102,7 @@ impl CommonWritePointer<RegisterAddr> {
     pub const fn try_into_short(self) -> Result<CommonWritePointer<ShortRegisterAddr>, Self> {
         let Self { source, size, ptr } = self;
         struct ComposeSizeWithSource(/* source */ ShortRegisterAddr);
-        impl const FnOnce<(ShortRegisterAddr,)> for ComposeSizeWithSource {
+        const impl FnOnce<(ShortRegisterAddr,)> for ComposeSizeWithSource {
             type Output = (ShortRegisterAddr, ShortRegisterAddr);
             #[inline(always)]
             extern "rust-call" fn call_once(self, (size,): (ShortRegisterAddr,)) -> Self::Output {
@@ -113,7 +113,7 @@ impl CommonWritePointer<RegisterAddr> {
             source: ShortRegisterAddr,
             size: ShortRegisterAddr,
         }
-        impl const FnOnce<(ShortRegisterAddr,)> for Construct {
+        const impl FnOnce<(ShortRegisterAddr,)> for Construct {
             type Output = CommonWritePointer<ShortRegisterAddr>;
             #[inline(always)]
             extern "rust-call" fn call_once(self, (ptr,): (ShortRegisterAddr,)) -> Self::Output {
@@ -126,7 +126,7 @@ impl CommonWritePointer<RegisterAddr> {
         }
 
         struct ThenSize(/* size */ RegisterAddr);
-        impl const FnOnce<(ShortRegisterAddr,)> for ThenSize {
+        const impl FnOnce<(ShortRegisterAddr,)> for ThenSize {
             type Output = Option<(ShortRegisterAddr, ShortRegisterAddr)>;
             #[inline(always)]
             extern "rust-call" fn call_once(self, (source,): (ShortRegisterAddr,)) -> Self::Output {
@@ -134,7 +134,7 @@ impl CommonWritePointer<RegisterAddr> {
             }
         }
         struct ThenPtr(/* ptr */ RegisterAddr);
-        impl const FnOnce<((ShortRegisterAddr, ShortRegisterAddr),)> for ThenPtr {
+        const impl FnOnce<((ShortRegisterAddr, ShortRegisterAddr),)> for ThenPtr {
             type Output = Option<CommonWritePointer<ShortRegisterAddr>>;
             #[inline(always)]
             extern "rust-call" fn call_once(
@@ -153,7 +153,7 @@ impl CommonWritePointer<RegisterAddr> {
     }
 }
 
-impl<TRegisterAddr: IRegisterAddr> const Clone for CommonWritePointer<TRegisterAddr> {
+const impl<TRegisterAddr: IRegisterAddr> Clone for CommonWritePointer<TRegisterAddr> {
     fn clone(&self) -> Self {
         *self
     }

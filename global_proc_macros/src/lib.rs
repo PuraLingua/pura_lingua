@@ -2,8 +2,6 @@
 #![feature(extend_one)]
 #![feature(macro_metavar_expr_concat)]
 #![feature(const_trait_impl)]
-#![feature(const_default)]
-#![feature(const_try)]
 #![allow(static_mut_refs)]
 // cSpell:enable
 

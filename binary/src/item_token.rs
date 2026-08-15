@@ -3,7 +3,7 @@
 
 use std::fmt::{Debug, Display};
 
-use bitfields::{FromBits, IntoBits, bitfield};
+use bitfields::bitfield;
 use derive_more::Display;
 use global::AllVariants;
 
@@ -67,11 +67,14 @@ macro impl_for_sub_item_tokens($($i:ident)*) {$(
 	}
 )*}
 
-macro impl_for_tokens_types($($i:ident)*) {$(
-    ty_from_into_bits!($i);
+macro impl_for_tokens_types(
+    @from_bits($from_bits:ident)
+    @into_bits($into_bits:ident):
+    $($i:ident)*
+) {$(
+    ty_from_into_bits!($i, $from_bits, $into_bits);
 )*}
 
-#[derive(Clone, Copy)]
 #[bitfield(u32, from_endian = little, into_endian = little, builder = true)]
 pub struct ItemToken {
     #[bits(8)]
@@ -80,7 +83,6 @@ pub struct ItemToken {
     pub index: u32,
 }
 
-#[derive(Clone, Copy)]
 #[bitfield(u32, from_endian = little, into_endian = little, builder = true)]
 pub struct TypeToken {
     #[bits(8)]
@@ -89,7 +91,6 @@ pub struct TypeToken {
     pub index: u32,
 }
 
-#[derive(Clone, Copy)]
 #[bitfield(u32, from_endian = little, into_endian = little, builder = true)]
 pub struct MethodToken {
     #[bits(8, default = MethodType::Method)]
@@ -192,15 +193,16 @@ pub enum ItemType {
 }
 
 impl_for_tokens_types! {
+@from_bits(from_bits)
+@into_bits(into_bits):
     TypeType
     MethodType
     ItemType
 }
 
-macro ty_from_into_bits($t:ty) {
-    impl const ::bitfields::FromBits for $t {
-        type Number = u8;
-        fn from_bits(i: u8) -> Self {
+macro ty_from_into_bits($t:ty, $from_bits:ident, $into_bits:ident) {
+    impl $t {
+        pub const fn $from_bits(i: u8) -> Self {
             const fn const_check(_: u8) {}
             fn check(i: u8) {
                 check_enum_cast!(($t)i);
@@ -215,9 +217,8 @@ macro ty_from_into_bits($t:ty) {
             unsafe { std::mem::transmute(i) }
         }
     }
-    impl const ::bitfields::IntoBits for $t {
-        type Number = u8;
-        fn into_bits(self) -> u8 {
+    impl $t {
+        pub const fn $into_bits(self) -> u8 {
             self as u8
         }
     }

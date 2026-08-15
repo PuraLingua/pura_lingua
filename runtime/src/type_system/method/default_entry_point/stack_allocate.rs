@@ -64,13 +64,11 @@ pub(super) fn eval<T: GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr
         }
     };
 
-    let mut allocator = cpu.call_stack().current().unwrap().allocator().borrow_mut();
-    let result = if should_zero {
-        allocator.alloc_zeroed(size, align)
+    *out = if should_zero {
+        call_frame(cpu).allocator().alloc_zeroed(size, align)
     } else {
-        allocator.alloc_raw(size, align)
+        call_frame(cpu).allocator().alloc_raw(size, align)
     };
-    *out = result;
 
     Some(Ok(()))
 }

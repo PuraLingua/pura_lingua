@@ -14,13 +14,13 @@ use super::{MaybeUnloadedTypeHandle, NonGenericTypeHandle, TypeHandle};
 
 const _: () = {
     macro easy_from_ptr($Source:ident -> $Target:ty) {
-        impl const From<NonNull<$Source>> for $Target {
+        const impl From<NonNull<$Source>> for $Target {
             fn from(value: NonNull<$Source>) -> Self {
                 Self::$Source(value)
             }
         }
 
-        impl const From<OwnedPtr<$Source>> for $Target {
+        const impl From<OwnedPtr<$Source>> for $Target {
             fn from(value: OwnedPtr<$Source>) -> Self {
                 Self::$Source(value.as_non_null_ptr())
             }
@@ -45,7 +45,7 @@ impl From<CoreTypeRef> for MaybeUnloadedTypeHandle {
     }
 }
 
-impl<T> const From<T> for MaybeUnloadedTypeHandle
+const impl<T> From<T> for MaybeUnloadedTypeHandle
 where
     TypeHandle: [const] From<T>,
 {
@@ -54,13 +54,13 @@ where
     }
 }
 
-impl const From<TypeRef> for MaybeUnloadedTypeHandle {
+const impl From<TypeRef> for MaybeUnloadedTypeHandle {
     fn from(value: TypeRef) -> Self {
         Self::Unloaded(value)
     }
 }
 
-impl<T> const From<T> for TypeHandle
+const impl<T> From<T> for TypeHandle
 where
     NonGenericTypeHandle: [const] From<T>,
 {
@@ -69,7 +69,7 @@ where
     }
 }
 
-impl const From<NonGenericTypeHandle> for TypeHandle {
+const impl From<NonGenericTypeHandle> for TypeHandle {
     fn from(value: NonGenericTypeHandle) -> Self {
         match value {
             NonGenericTypeHandle::Class(ty) => Self::Class(ty),
@@ -81,7 +81,7 @@ impl const From<NonGenericTypeHandle> for TypeHandle {
 
 const _: () = {
     macro easy_unwrap($Source:ident from $Target:ty) {
-        impl const IUnwrap<NonNull<$Source>> for $Target {
+        const impl IUnwrap<NonNull<$Source>> for $Target {
             fn _unwrap(self) -> NonNull<$Source> {
                 match self {
                     <$Target>::$Source(x) => x,
@@ -90,7 +90,7 @@ const _: () = {
             }
         }
 
-        impl<'a> const IUnwrap<&'a NonNull<$Source>> for &'a $Target {
+        const impl<'a> IUnwrap<&'a NonNull<$Source>> for &'a $Target {
             fn _unwrap(self) -> &'a NonNull<$Source> {
                 match self {
                     <$Target>::$Source(x) => x,

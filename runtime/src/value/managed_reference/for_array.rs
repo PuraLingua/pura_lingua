@@ -15,39 +15,94 @@ use crate::{
 use super::{IAccessor, ManagedReference};
 
 impl ManagedReference<Class> {
+    pub fn full_array_layout_of<T: GetValLayout>(
+        element_type: &MethodTable<T>,
+        len: usize,
+    ) -> Layout
+    where
+        NonGenericTypeHandle: From<NonNull<T>>,
+    {
+        let mut layout = Layout::new::<usize>();
+        let element_layout = element_type.ty_ref().__get_val_layout();
+        (layout, _) = layout
+            .extend(crate::memory::arrayed_layout(element_layout, len).unwrap())
+            .unwrap();
+
+        Self::calc_full_layout(layout).unwrap()
+    }
+
     pub fn alloc_array<T>(cpu: &mut CPU, element_type: NonNull<MethodTable<T>>, len: usize) -> Self
     where
         NonGenericTypeHandle: From<NonNull<T>>,
         T: GetValLayout,
     {
-        let array_t = cpu
-            .vm_ref()
-            .assembly_manager()
-            .get_core_type(CoreTypeId::System_Array_1)
-            .unwrap_class();
+        let array_t = unsafe {
+            cpu.vm_ref()
+                .assembly_manager()
+                .get_core_type(CoreTypeId::System_Array_1)
+                .unwrap_class()
+                .as_ref()
+        }
+        .instantiate(&[NonGenericTypeHandle::from(NonNull::from_ref(
+            unsafe { element_type.as_ref() }.ty_ref(),
+        ))]);
 
-        let array_t = unsafe { array_t.as_ref() };
-        let instantiated_array_t = array_t.instantiate(&[NonGenericTypeHandle::from(
-            NonNull::from_ref(unsafe { element_type.as_ref() }.ty_ref()),
-        )]);
-
-        let mut layout = Layout::new::<usize>();
-        let element_layout = unsafe { element_type.as_ref().ty_ref().__get_val_layout() };
-        (layout, _) = layout
-            .extend(crate::memory::arrayed_layout(element_layout, len).unwrap())
-            .unwrap();
-
-        let full_layout = Self::calc_full_layout(layout).unwrap();
+        let full_layout = Self::full_array_layout_of(unsafe { element_type.as_ref() }, len);
         let ptr = std::alloc::Allocator::allocate_zeroed(&std::alloc::Global, full_layout).unwrap();
         unsafe {
             ptr.cast::<ObjectHeader>().write(ObjectHeader::new(false));
             ptr.byte_add(offset_of!(ManagedReferenceInner<Class>, mt))
                 .cast::<NonNull<MethodTable<Class>>>()
-                .write(*instantiated_array_t.as_ref().method_table());
+                .write(*array_t.as_ref().method_table());
         }
 
-        let ptr = ptr.cast();
-        let this = Self { data: Some(ptr) };
+        let this = Self {
+            data: Some(ptr.cast()),
+        };
+
+        cpu.push_record(MemoryRecord::new(
+            NonGenericTypeHandleKind::Class,
+            this.cast(),
+        ));
+
+        unsafe {
+            this.data().unwrap().cast::<usize>().write(len);
+        }
+
+        this
+    }
+
+    pub fn alloc_array_on<T>(
+        cpu: &mut CPU,
+        element_type: NonNull<MethodTable<T>>,
+        len: usize,
+        ptr: NonNull<u8>,
+    ) -> Self
+    where
+        NonGenericTypeHandle: From<NonNull<T>>,
+        T: GetValLayout,
+    {
+        let array_t = unsafe {
+            cpu.vm_ref()
+                .assembly_manager()
+                .get_core_type(CoreTypeId::System_Array_1)
+                .unwrap_class()
+                .as_ref()
+        }
+        .instantiate(&[NonGenericTypeHandle::from(NonNull::from_ref(
+            unsafe { element_type.as_ref() }.ty_ref(),
+        ))]);
+
+        unsafe {
+            ptr.cast::<ObjectHeader>().write(ObjectHeader::new(false));
+            ptr.byte_add(offset_of!(ManagedReferenceInner<Class>, mt))
+                .cast::<NonNull<MethodTable<Class>>>()
+                .write(*array_t.as_ref().method_table());
+        }
+
+        let this = Self {
+            data: Some(ptr.cast()),
+        };
 
         cpu.push_record(MemoryRecord::new(
             NonGenericTypeHandleKind::Class,
@@ -414,13 +469,12 @@ impl ArrayAccessor {
 
 #[cfg(test)]
 mod tests {
-    use crate::virtual_machine::{EnsureGlobalVirtualMachineInitialized, global_vm};
+    use crate::virtual_machine::global_vm;
 
     use super::*;
 
     #[test]
     fn array_test() {
-        EnsureGlobalVirtualMachineInitialized();
         let vm = global_vm();
         let cpu_id = vm.add_cpu();
         let cpu = vm.get_cpu(cpu_id).unwrap();

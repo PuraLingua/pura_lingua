@@ -16,7 +16,7 @@ pub trait WriteToSection {
     fn write_to_section(&self, cursor: &mut Cursor<&mut Vec<u8>>) -> BinaryResult<()>;
 }
 
-macro_rules! tuple_read_impl {
+macro tuple_read_impl {
     () => {
         impl ReadFromSection for () {
             #[optimize(size)]
@@ -25,7 +25,7 @@ macro_rules! tuple_read_impl {
                 Ok(())
             }
         }
-    };
+    },
     ($i:ident) => {
         impl<$i> ReadFromSection for ($i,)
         where
@@ -37,7 +37,7 @@ macro_rules! tuple_read_impl {
             }
         }
         tuple_read_impl!();
-    };
+    },
     ($i:ident $($rest:ident)+) => {
         #[allow(nonstandard_style)]
         impl<$i $(,$rest)+> ReadFromSection for ($i $(,$rest)+)
@@ -57,10 +57,10 @@ macro_rules! tuple_read_impl {
             }
         }
         tuple_read_impl!($($rest)+);
-    };
+    }
 }
 
-macro_rules! tuple_write_impl {
+macro tuple_write_impl {
     () => {
         impl WriteToSection for () {
             #[optimize(size)]
@@ -68,7 +68,7 @@ macro_rules! tuple_write_impl {
                 Ok(())
             }
         }
-    };
+    },
     ($i:ident) => {
         impl<$i> WriteToSection for ($i,)
         where
@@ -80,7 +80,7 @@ macro_rules! tuple_write_impl {
             }
         }
         tuple_write_impl!();
-    };
+    },
     ($i:ident $($rest:ident)+) => {
         #[allow(nonstandard_style)]
         impl<$i $(,$rest)+> WriteToSection for ($i $(,$rest)+)
@@ -99,14 +99,8 @@ macro_rules! tuple_write_impl {
             }
         }
         tuple_write_impl!($($rest)+);
-    };
+    }
 }
 
-tuple_read_impl! (
-    A B
-    // C D E F G H I J K L M N O P Q R S T U V W X Y Z
-);
-tuple_write_impl!(
-    A B
-    // C D E F G H I J K L M N O P Q R S T U V W X Y Z
-);
+tuple_read_impl! (A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);
+tuple_write_impl!(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z);

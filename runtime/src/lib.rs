@@ -1,8 +1,6 @@
 /* cSpell:disable */
-#![feature(box_vec_non_null)]
 #![feature(mapped_lock_guards)]
 #![feature(allocator_api)]
-#![feature(layout_for_ptr)]
 #![feature(const_trait_impl)]
 #![feature(const_default)]
 #![feature(const_try)]

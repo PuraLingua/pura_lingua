@@ -9,30 +9,22 @@ use std::{
 use stdlib_header::{CoreTypeId, System::ThreadLocal_1};
 
 use crate::{
-    memory::ThreadSafeNonNull,
-    stdlib::CoreTypeIdExt,
-    test_utils::g_core_class,
-    type_system::class::Class,
-    virtual_machine::{EnsureGlobalVirtualMachineInitialized, cpu_manager::CpuID},
+    memory::ThreadSafeNonNull, stdlib::CoreTypeIdExt, test_utils::g_core_class,
+    virtual_machine::cpu_manager::CpuID,
 };
 
 #[test]
 fn tls_support() {
-    EnsureGlobalVirtualMachineInitialized();
-
     let mut cpu = CpuID::new_write_global();
 
-    let ThreadLocal_1: &Class = unsafe { g_core_class!(System_ThreadLocal_1).as_ref() };
+    let ThreadLocal_1 = unsafe { g_core_class!(System_ThreadLocal_1).as_ref() };
 
     let instantiated = ThreadLocal_1.instantiate(&[CoreTypeId::System_UInt64.global_type_handle()]);
 
-    let mt: &crate::type_system::method_table::MethodTable<Class> =
-        unsafe { instantiated.as_ref().method_table_ref() };
+    let mt = unsafe { instantiated.as_ref().method_table_ref() };
 
-    let Get: ThreadSafeNonNull<crate::type_system::method::Method<Class>> =
-        ThreadSafeNonNull::new(*mt.get_method(ThreadLocal_1::MethodId::Get as u32).unwrap());
-    let Set: ThreadSafeNonNull<crate::type_system::method::Method<Class>> =
-        ThreadSafeNonNull::new(*mt.get_method(ThreadLocal_1::MethodId::Set as u32).unwrap());
+    let Get = ThreadSafeNonNull::new(*mt.get_method(ThreadLocal_1::MethodId::Get as u32).unwrap());
+    let Set = ThreadSafeNonNull::new(*mt.get_method(ThreadLocal_1::MethodId::Set as u32).unwrap());
 
     let var = cpu
         .new_object(
@@ -49,8 +41,8 @@ fn tls_support() {
         let (lock, cvar) = &*synchronizer2;
         let mut started = lock.lock();
 
-        let Get: &crate::type_system::method::Method<Class> = unsafe { Get.as_ref() };
-        let Set: &crate::type_system::method::Method<Class> = unsafe { Set.as_ref() };
+        let Get = unsafe { Get.as_ref() };
+        let Set = unsafe { Set.as_ref() };
 
         let mut cpu = CpuID::new_write_global();
         let data = 100u64;
@@ -71,8 +63,8 @@ fn tls_support() {
     let thread2 = std::thread::spawn(move || {
         let (lock, cvar) = &*synchronizer;
 
-        let Get: &crate::type_system::method::Method<Class> = unsafe { Get.as_ref() };
-        let Set: &crate::type_system::method::Method<Class> = unsafe { Set.as_ref() };
+        let Get = unsafe { Get.as_ref() };
+        let Set = unsafe { Set.as_ref() };
 
         let mut started = lock.lock();
         while !*started {

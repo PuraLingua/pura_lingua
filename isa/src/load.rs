@@ -317,6 +317,11 @@ impl<TString, TTypeRef, TFieldRef> Instruction_Load<TString, TTypeRef, TFieldRef
                 addr,
                 content: LoadContent::CaughtException,
             }),
+
+            LoadContent::Type(ty) => Ok(Instruction_Load {
+                addr,
+                content: LoadContent::Type(ty),
+            }),
         }
     }
 }
@@ -376,6 +381,8 @@ where
     },
 
     CaughtException,
+
+    Type(TTypeRef),
 }
 
 impl<TString, TTypeRef, TFieldRef, TRegisterAddr: IRegisterAddr> Display
@@ -428,6 +435,8 @@ where
             }
 
             LoadContent::CaughtException => f.write_fmt(format_args!("caught exception")),
+
+            LoadContent::Type(ty) => f.write_fmt(format_args!("typeof({ty})")),
         }
     }
 }

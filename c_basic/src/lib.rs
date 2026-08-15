@@ -2,7 +2,6 @@
 #![feature(exact_div)]
 #![feature(sync_nonpoison)]
 #![feature(mapped_lock_guards)]
-#![feature(box_vec_non_null)]
 #![allow(nonstandard_style)]
 
 use std::{

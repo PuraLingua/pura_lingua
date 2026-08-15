@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use binary_core::traits::{ReadFromSection, WriteToSection};
-use bitfields::{FromBits, IntoBits};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum JumpTargetType {
@@ -17,9 +16,8 @@ impl std::fmt::Display for JumpTargetType {
     }
 }
 
-impl const FromBits for JumpTargetType {
-    type Number = u8;
-    fn from_bits(bits: Self::Number) -> Self {
+impl JumpTargetType {
+    pub const fn from_bits(bits: u8) -> Self {
         match bits {
             0b00 => Self::Absolute,
             0b01 => Self::Forward,
@@ -29,16 +27,14 @@ impl const FromBits for JumpTargetType {
     }
 }
 
-impl const IntoBits for JumpTargetType {
-    type Number = u8;
-
-    fn into_bits(self) -> Self::Number {
-        self as Self::Number
+impl JumpTargetType {
+    pub const fn into_bits(self) -> u8 {
+        self as u8
     }
 }
 
 #[bitfields::bitfield(u64, new = false, debug = true)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct JumpTarget {
     #[bits(2)]
     ty: JumpTargetType,

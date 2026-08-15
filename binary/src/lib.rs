@@ -1,7 +1,5 @@
 #![feature(decl_macro)]
 #![feature(const_trait_impl)]
-#![feature(const_default)]
-#![feature(const_try)]
 #![feature(const_eval_select)]
 #![feature(core_intrinsics)]
 #![allow(internal_features)]

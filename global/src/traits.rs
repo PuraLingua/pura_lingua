@@ -2,7 +2,7 @@ pub const trait IUnwrap<T>: Sized {
     fn _unwrap(self) -> T;
 }
 
-impl<T> const IUnwrap<T> for Option<T> {
+const impl<T> IUnwrap<T> for Option<T> {
     fn _unwrap(self) -> T {
         self.unwrap()
     }

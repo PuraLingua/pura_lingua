@@ -142,6 +142,158 @@ pub(super) fn eval<T: GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr
                 load_register_failed!(*output);
             }
         }
+
+        Instruction_New::NewObjectOnStack {
+            ty,
+            ctor_name,
+            args,
+            output,
+        } => {
+            let args = args
+                .iter()
+                .map(|x| {
+                    call_frame(cpu)
+                        .get(*x)
+                        .unwrap()
+                        .ptr
+                        .cast::<c_void>()
+                        .as_ptr()
+                })
+                .collect::<Vec<_>>();
+
+            let Some(class) = ty
+                .get_with_generic_resolver(
+                    method
+                        .require_method_table_ref()
+                        .ty_ref()
+                        .__get_assembly_ref()
+                        .manager_ref(),
+                    MethodGenericResolver::new(method),
+                )
+                .and_then(|x| x.get_non_generic_with_method(method))
+                .and_then(|x| match x {
+                    NonGenericTypeHandle::Class(c) => Some(c),
+                    _ => None,
+                })
+            else {
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    ty.to_maybe_unloaded_handle(),
+                )));
+            };
+
+            match cpu.new_object_on_stack(class, ctor_name, &args) {
+                Some(obj) => {
+                    if !call_frame(cpu).write_typed(*output, obj) {
+                        load_register_failed!(*output);
+                    }
+                }
+                None => {
+                    return Some(Err(Termination::NewObjectFailed));
+                }
+            }
+        }
+        Instruction_New::NewArrayOnStack {
+            element_type,
+            len,
+            output,
+        } => {
+            let Some(element_th) = element_type
+                .get_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
+                .and_then(|th| th.get_non_generic_with_method(method))
+            else {
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    element_type.to_maybe_unloaded_handle(),
+                )));
+            };
+            let len = (*len) as usize;
+            let arr = match element_th {
+                NonGenericTypeHandle::Class(ty) => {
+                    let ty_ref = unsafe { ty.as_ref() };
+                    let layout =
+                        ManagedReference::full_array_layout_of(ty_ref.method_table_ref(), len);
+                    let ptr = call_frame(cpu)
+                        .allocator()
+                        .alloc_raw(layout.size(), layout.align());
+                    ManagedReference::alloc_array_on(cpu, ty_ref.method_table, len, ptr)
+                }
+                NonGenericTypeHandle::Struct(ty) => {
+                    let ty_ref = unsafe { ty.as_ref() };
+                    let layout =
+                        ManagedReference::full_array_layout_of(ty_ref.method_table_ref(), len);
+                    let ptr = call_frame(cpu)
+                        .allocator()
+                        .alloc_raw(layout.size(), layout.align());
+                    ManagedReference::alloc_array_on(cpu, ty_ref.method_table, len, ptr)
+                }
+                NonGenericTypeHandle::Interface(ty) => {
+                    let ty_ref = unsafe { ty.as_ref() };
+                    let layout =
+                        ManagedReference::full_array_layout_of(ty_ref.method_table_ref(), len);
+                    let ptr = call_frame(cpu)
+                        .allocator()
+                        .alloc_raw(layout.size(), layout.align());
+                    ManagedReference::alloc_array_on(cpu, ty_ref.method_table, len, ptr)
+                }
+            };
+            if !call_frame(cpu).write_typed(*output, arr) {
+                load_register_failed!(*output);
+            }
+        }
+        Instruction_New::NewDynamicArrayOnStack {
+            element_type,
+            len_addr,
+            output,
+        } => {
+            let Some(&len) = call_frame(cpu).get_typed::<usize, _>(*len_addr) else {
+                load_register_failed!(*len_addr);
+            };
+            let Some(element_th) = element_type
+                .get_with_generic_resolver(
+                    cpu.vm_ref().assembly_manager(),
+                    MethodGenericResolver::new(method),
+                )
+                .and_then(|th| th.get_non_generic_with_method(method))
+            else {
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    element_type.to_maybe_unloaded_handle(),
+                )));
+            };
+            let arr = match element_th {
+                NonGenericTypeHandle::Class(ty) => {
+                    let ty_ref = unsafe { ty.as_ref() };
+                    let layout =
+                        ManagedReference::full_array_layout_of(ty_ref.method_table_ref(), len);
+                    let ptr = call_frame(cpu)
+                        .allocator()
+                        .alloc_raw(layout.size(), layout.align());
+                    ManagedReference::alloc_array_on(cpu, ty_ref.method_table, len, ptr)
+                }
+                NonGenericTypeHandle::Struct(ty) => {
+                    let ty_ref = unsafe { ty.as_ref() };
+                    let layout =
+                        ManagedReference::full_array_layout_of(ty_ref.method_table_ref(), len);
+                    let ptr = call_frame(cpu)
+                        .allocator()
+                        .alloc_raw(layout.size(), layout.align());
+                    ManagedReference::alloc_array_on(cpu, ty_ref.method_table, len, ptr)
+                }
+                NonGenericTypeHandle::Interface(ty) => {
+                    let ty_ref = unsafe { ty.as_ref() };
+                    let layout =
+                        ManagedReference::full_array_layout_of(ty_ref.method_table_ref(), len);
+                    let ptr = call_frame(cpu)
+                        .allocator()
+                        .alloc_raw(layout.size(), layout.align());
+                    ManagedReference::alloc_array_on(cpu, ty_ref.method_table, len, ptr)
+                }
+            };
+            if !call_frame(cpu).write_typed(*output, arr) {
+                load_register_failed!(*output);
+            }
+        }
     }
 
     Some(Ok(()))

@@ -23,7 +23,7 @@ pub enum GenericCountRequirement {
     Exact(u32),
 }
 
-impl const From<stdlib_header::GenericCount> for GenericCountRequirement {
+const impl From<stdlib_header::GenericCount> for GenericCountRequirement {
     fn from(value: stdlib_header::GenericCount) -> Self {
         if value.is_infinite {
             Self::AtLeast(RangeFrom { start: value.count })
@@ -33,7 +33,7 @@ impl const From<stdlib_header::GenericCount> for GenericCountRequirement {
     }
 }
 
-impl const Default for GenericCountRequirement {
+const impl Default for GenericCountRequirement {
     fn default() -> Self {
         Self::Exact(0)
     }
@@ -57,7 +57,7 @@ impl GenericCountRequirement {
     }
 }
 
-impl const RangeBounds<u32> for GenericCountRequirement {
+const impl RangeBounds<u32> for GenericCountRequirement {
     fn start_bound(&self) -> Bound<&u32> {
         match self {
             Self::AtLeast(range_from) => range_from.start_bound(),

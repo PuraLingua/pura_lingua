@@ -11,6 +11,7 @@ use crate::{
             Method,
             default_entry_point::{Termination, call_frame, load_register_failed},
         },
+        reflection_info_container::IReflect,
         type_handle::{MethodGenericResolver, NonGenericTypeHandle},
     },
     value::managed_reference::{FieldAccessor, ManagedReference},
@@ -216,8 +217,7 @@ pub(super) fn eval<T: GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr
                     cpu.vm_ref().assembly_manager(),
                     MethodGenericResolver::new(method),
                 )
-                .map(|x| x.get_non_generic_with_method(method))
-                .flatten()
+                .and_then(|x| x.get_non_generic_with_method(method))
             else {
                 return Some(Err(Termination::LoadTypeHandleFailed(
                     ty.to_maybe_unloaded_handle(),
@@ -338,6 +338,28 @@ pub(super) fn eval<T: GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr
             }
             None => return Some(Err(Termination::LoadCaughtExceptionWithoutExceptions)),
         },
+
+        LoadContent::Type(ty) => {
+            let Some(ty) = ty
+                .get_with_generic_resolver(
+                    method
+                        .require_method_table_ref()
+                        .ty_ref()
+                        .__get_assembly_ref()
+                        .manager_ref(),
+                    MethodGenericResolver::new(method),
+                )
+                .and_then(|ty| ty.get_non_generic_with_method(method))
+            else {
+                return Some(Err(Termination::LoadTypeHandleFailed(
+                    ty.to_maybe_unloaded_handle(),
+                )));
+            };
+
+            if !call_frame(cpu).write_typed(*register_addr, ty.__get_reflect_value()) {
+                load_register_failed!(*register_addr);
+            }
+        }
     }
 
     Some(Ok(()))

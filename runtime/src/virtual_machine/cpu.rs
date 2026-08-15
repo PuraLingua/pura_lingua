@@ -341,4 +341,38 @@ impl CPU {
         }
         Some(obj)
     }
+
+    pub fn new_object_on_stack(
+        &mut self,
+        class: NonNull<Class>,
+        ctor_name: &MethodRef,
+        args: &[*mut c_void],
+    ) -> Option<ManagedReference<Class>> {
+        let mt = unsafe { class.as_ref() }.method_table_ref();
+
+        let layout = ManagedReference::full_layout_of(mt, false);
+        let ptr = self
+            .call_stack()
+            .current()
+            .unwrap()
+            .allocator()
+            .borrow_mut()
+            .alloc_raw(layout.size(), layout.align());
+
+        let obj = unsafe {
+            ManagedReference::<Class>::base_common_alloc_on(
+                NonNull::from_ref(mt),
+                false,
+                |_| (),
+                ptr,
+            )
+        };
+
+        let ctor = mt.get_method_by_ref(ctor_name)?;
+        unsafe {
+            ctor.as_ref()
+                .typed_res_call::<()>(self, Some(NonNull::from_ref(&obj).cast()), &args);
+        }
+        Some(obj)
+    }
 }

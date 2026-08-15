@@ -21,7 +21,7 @@ impl CompressedU32 {
 }
 
 macro impl_op($($T:ty => $f:ident)*) {$(
-	impl const $T for CompressedU32 {
+	const impl $T for CompressedU32 {
 		type Output = Self;
 
 		fn $f(self, rhs: Self) -> Self::Output {

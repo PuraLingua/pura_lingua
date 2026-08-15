@@ -28,7 +28,7 @@ impl<T> Clone for ExceptionTable<T> {
 
 struct ExceptionTableNew<T>(core::marker::PhantomData<T>);
 
-impl<T> const FnOnce<(&Method<T>,)> for ExceptionTableNew<T> {
+const impl<T> FnOnce<(&Method<T>,)> for ExceptionTableNew<T> {
     type Output = ExceptionTable<T>;
     extern "rust-call" fn call_once(self, args: (&Method<T>,)) -> Self::Output {
         ExceptionTable::new(NonNull::from_ref(args.0))

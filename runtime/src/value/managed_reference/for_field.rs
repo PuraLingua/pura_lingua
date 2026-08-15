@@ -19,14 +19,14 @@ use super::{IAccessor, ManagedReference};
 #[repr(transparent)]
 pub struct FieldAccessor<T>(ManagedReference<T>);
 
-impl<T> const IAccessor<T> for FieldAccessor<T> {
+const impl<T> IAccessor<T> for FieldAccessor<T> {
     #[inline(always)]
     default fn is_valid(_: &ManagedReference<T>) -> bool {
         false
     }
 }
 
-impl<T> const IAccessor<T> for FieldAccessor<T>
+const impl<T> IAccessor<T> for FieldAccessor<T>
 where
     T: GetFields<Field = Field>
         + GetTypeVars

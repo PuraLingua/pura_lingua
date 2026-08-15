@@ -1,14 +1,15 @@
 use std::{
     alloc::{Allocator, Layout},
-    mem::offset_of,
+    mem::{MaybeUninit, offset_of},
     ptr::NonNull,
-    sync::nonpoison::MappedRwLockReadGuard,
+    sync::{Arc, LazyLock, nonpoison::MappedRwLockReadGuard},
 };
 
 use global::{
     attrs::TypeAttr,
     getset::{Getters, MutGetters},
 };
+use stdlib_header::{CoreTypeId, System::Reflection::TypeInfo};
 
 use crate::{
     memory::OwnedPtr,
@@ -18,10 +19,12 @@ use crate::{
         generics::{GenericBounds, GenericCountRequirement},
         method::Method,
         method_table::MethodTable,
+        reflection_info_container::{IReflect, ReflectionInfoCache, ReflectionInfoContainer},
         type_handle::{MaybeUnloadedTypeHandle, NonGenericTypeHandle},
     },
     utils::clone_utf16str,
-    value::managed_reference::ManagedReference,
+    value::managed_reference::{FieldAccessor, ManagedReference},
+    virtual_machine::VirtualMachine,
 };
 
 #[repr(align(8))]
@@ -45,6 +48,53 @@ pub struct Interface {
     generic_instances: Vec<NonNull<Self>>,
     generic_bounds: Option<NonNull<[GenericBounds]>>,
     type_vars: Option<Box<[NonGenericTypeHandle]>>,
+
+    #[debug(skip)]
+    reflection_info: ReflectionInfoContainer<Self>,
+}
+
+fn reflection_info_factor(vm: &VirtualMachine, ty: NonNull<Interface>) -> ManagedReference<Class> {
+    static CACHE: ReflectionInfoCache = ReflectionInfoCache::new();
+
+    let mut cpu = vm.write_cpu_for_static();
+
+    let mut info = CACHE.get_or(ty, || {
+        ManagedReference::common_alloc(
+            &mut cpu,
+            unsafe {
+                vm.assembly_manager()
+                    .get_core_type(CoreTypeId::System_Reflection_TypeInfo)
+                    .unwrap_class()
+                    .as_ref()
+                    .method_table
+            },
+            false,
+        )
+    });
+
+    let info_setter = info.const_access_mut::<FieldAccessor<_>>();
+    assert!(info_setter.write_typed_field(
+        TypeInfo::FieldId::Name as _,
+        Default::default(),
+        ManagedReference::new_string_w(&mut cpu, unsafe { ty.as_ref().name() }),
+    ));
+
+    info
+}
+static BOXED_REFLECTION_INFO_FACTOR: LazyLock<
+    Arc<dyn Fn(&VirtualMachine, NonNull<Interface>) -> ManagedReference<Class> + Send + Sync>,
+> = LazyLock::new(|| Arc::new(reflection_info_factor));
+
+impl IReflect for Interface {
+    fn __get_reflect_container(&self) -> Option<&ReflectionInfoContainer<Self>> {
+        Some(&self.reflection_info)
+    }
+    fn __reflect_update(&self) {
+        self.reflection_info.update();
+    }
+    fn __get_reflect_value(&self) -> ManagedReference<Class> {
+        self.reflection_info.value()
+    }
 }
 
 impl Interface {
@@ -75,11 +125,22 @@ impl Interface {
             generic_instances: Vec::new(),
             generic_bounds: None,
             type_vars: Some(Box::clone_from_ref(type_vars)),
+
+            #[allow(invalid_value)]
+            reflection_info: unsafe { MaybeUninit::zeroed().assume_init() },
         });
 
         let instantiated = Box::into_non_null(instantiated);
 
         unsafe {
+            instantiated
+                .byte_add(offset_of!(Self, reflection_info))
+                .cast::<ReflectionInfoContainer<Self>>()
+                .write(ReflectionInfoContainer::with_assembly_gettable(
+                    instantiated,
+                    BOXED_REFLECTION_INFO_FACTOR.clone(),
+                ));
+
             let mut mt = instantiated.as_ref().method_table;
             mt.as_mut().ty = instantiated;
             NonNull::from_ref(self)
@@ -128,6 +189,9 @@ impl Interface {
                 .filter(|x| !x.is_empty())
                 .map(|x| Box::into_non_null(x.into_boxed_slice())),
             type_vars: None,
+
+            #[allow(invalid_value)]
+            reflection_info: unsafe { MaybeUninit::zeroed().assume_init() },
         });
 
         let mut this = Box::into_non_null(this);
@@ -136,6 +200,13 @@ impl Interface {
             let mt = mt_generator(this);
             let this_m = this.as_mut();
             this_m.method_table = mt;
+
+            this.byte_add(offset_of!(Self, reflection_info))
+                .cast::<ReflectionInfoContainer<Self>>()
+                .write(ReflectionInfoContainer::with_assembly_gettable(
+                    this,
+                    BOXED_REFLECTION_INFO_FACTOR.clone(),
+                ));
         }
 
         OwnedPtr::from_non_null(this)

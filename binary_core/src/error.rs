@@ -25,13 +25,13 @@ pub enum Error {
 
 pub type BinaryResult<T> = Result<T, Error>;
 
-impl const From<std::io::Error> for Error {
+const impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
         Self::IoError(value)
     }
 }
 
-impl const From<global_errors::Error> for Error {
+const impl From<global_errors::Error> for Error {
     fn from(value: global_errors::Error) -> Self {
         Self::Custom(value)
     }

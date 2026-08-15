@@ -1,6 +1,6 @@
 use std::{hint::unlikely, sync::nonpoison::RwLock, thread::ThreadId};
 
-use bitfields::{FromBits, IntoBits, bitfield};
+use bitfields::{bitfield, std_impl::IBitExtensions};
 use parking_lot::{RawMutex, lock_api::RawMutex as _};
 
 #[bitfield(u64, new = false)]
@@ -75,7 +75,7 @@ impl Sync {
             };
         }
 
-        self.fat = FatSyncBuilder::new().with_index(index).build();
+        self.fat = FatSyncBuilder::new().with_index(index as u32).build();
     }
 
     pub fn lock(&mut self) {
@@ -109,23 +109,18 @@ impl Sync {
     }
 }
 
-const impl FromBits for Sync {
-    type Number = u32;
-
-    fn from_bits(bits: Self::Number) -> Self {
+impl Sync {
+    pub const fn from_bits(bits: u32) -> Self {
         unsafe { std::mem::transmute(bits) }
     }
 }
 
-const impl IntoBits for Sync {
-    type Number = u32;
-
-    fn into_bits(self) -> Self::Number {
+impl Sync {
+    pub const fn into_bits(self) -> u32 {
         unsafe { std::mem::transmute(self) }
     }
 }
 
-#[derive(Clone, Copy)]
 #[bitfield(u32, from_endian = little, into_endian = little, order = lsb, new = false, builder = false)]
 pub struct ThinSync {
     #[bits(31)]
@@ -144,11 +139,10 @@ impl ThinSync {
     }
 }
 
-#[derive(Clone, Copy)]
 #[bitfield(u32)]
 pub struct FatSync {
     #[bits(31)]
-    index: usize,
+    index: u32,
     #[bits(default = false)]
     is_thin: bool,
 }
@@ -156,12 +150,20 @@ pub struct FatSync {
 impl FatSync {
     #[allow(static_mut_refs)]
     pub fn get_block(&self) -> Option<&SyncBlock> {
-        unsafe { G_SYNC_BLOCKS.get(self.index()).filter(|x| x.is_valid) }
+        unsafe {
+            G_SYNC_BLOCKS
+                .get(self.index() as usize)
+                .filter(|x| x.is_valid)
+        }
     }
 
     #[allow(static_mut_refs)]
     pub fn get_block_mut(&self) -> Option<&mut SyncBlock> {
-        unsafe { G_SYNC_BLOCKS.get_mut(self.index()).filter(|x| x.is_valid) }
+        unsafe {
+            G_SYNC_BLOCKS
+                .get_mut(self.index() as usize)
+                .filter(|x| x.is_valid)
+        }
     }
 
     pub fn destroy(&self) {

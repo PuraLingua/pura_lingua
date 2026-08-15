@@ -11,12 +11,11 @@ use crate::{
         method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle,
     },
-    virtual_machine::{EnsureGlobalVirtualMachineInitialized, global_vm},
+    virtual_machine::global_vm,
 };
 
 #[test]
 fn test_layout() {
-    EnsureGlobalVirtualMachineInitialized();
     let vm = global_vm();
     let assembly_manager = vm.assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(

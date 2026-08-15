@@ -95,7 +95,7 @@ pub fn derive_str_enum_impl(input: DeriveInput) -> syn::Result<TokenStream> {
             pub const VARIANTS_ORDERED_REV: [Self; #variant_len] = [#variants_ordered_rev_ts];
         }
 
-        impl #i_generic const TryFrom<&str> for #name #t_generic #w_clauses {
+        const impl #i_generic TryFrom<&str> for #name #t_generic #w_clauses {
             type Error = #global_crate::errors::ConstFromStrError;
 
             fn try_from(x: &str) -> Result<Self, <Self as TryFrom::<&str>>::Error> {
@@ -170,7 +170,7 @@ pub fn derive_char_enum_impl(input: DeriveInput) -> syn::Result<TokenStream> {
             }
         }
 
-        impl #i_generic const TryFrom<char> for #name #t_generic #w_clauses {
+        const impl #i_generic TryFrom<char> for #name #t_generic #w_clauses {
             type Error = #global_crate::errors::ConstFromStrError;
 
             fn try_from(x: char) -> Result<Self, <Self as TryFrom<char>>::Error> {

@@ -279,20 +279,45 @@ where
         + GetMethodTableRef
         + GetGeneric,
 {
+    pub fn full_layout_of(mt: &MethodTable<T>, is_static: bool) -> Layout {
+        Self::calc_full_layout(if is_static {
+            mt.static_layout(Default::default())
+        } else {
+            mt.mem_layout(Default::default())
+        })
+        .unwrap()
+    }
+
     #[inline]
     pub fn base_common_alloc<Recorder: FnOnce(Self)>(
         mt: NonNull<MethodTable<T>>,
         is_static: bool,
         recorder: Recorder,
     ) -> Self {
-        let mt_ref = unsafe { mt.as_ref() };
-        let layout = if is_static {
-            mt_ref.static_layout(Default::default())
-        } else {
-            mt_ref.mem_layout(Default::default())
-        };
-        let full_layout = Self::calc_full_layout(layout).unwrap();
+        let full_layout = Self::full_layout_of(unsafe { mt.as_ref() }, is_static);
         let ptr = std::alloc::Allocator::allocate_zeroed(&std::alloc::Global, full_layout).unwrap();
+        unsafe {
+            ptr.cast::<ObjectHeader>()
+                .write(ObjectHeader::new(is_static));
+            ptr.byte_add(offset_of!(ManagedReferenceInner<T>, mt))
+                .cast::<NonNull<MethodTable<T>>>()
+                .write(mt);
+        }
+
+        let ptr = ptr.cast();
+        let this = Self { data: Some(ptr) };
+        recorder(this);
+
+        this
+    }
+
+    #[inline]
+    pub unsafe fn base_common_alloc_on<Recorder: FnOnce(Self)>(
+        mt: NonNull<MethodTable<T>>,
+        is_static: bool,
+        recorder: Recorder,
+        ptr: NonNull<u8>,
+    ) -> Self {
         unsafe {
             ptr.cast::<ObjectHeader>()
                 .write(ObjectHeader::new(is_static));
@@ -320,10 +345,28 @@ where
             })),
         )
     }
+    pub unsafe fn common_alloc_on(
+        cpu: &mut CPU,
+        mt: NonNull<MethodTable<T>>,
+        is_static: bool,
+        ptr: NonNull<u8>,
+    ) -> Self
+    where
+        T: GetNonGenericTypeHandleKind,
+    {
+        unsafe {
+            Self::base_common_alloc_on(
+                mt,
+                is_static,
+                cpu.gen_mem_recorder(T::__get_non_generic_type_handle_kind(mt.as_ref().ty_ref())),
+                ptr,
+            )
+        }
+    }
 }
 
 impl<T> ManagedReference<T> {
-    const fn calc_full_layout(mem_layout: Layout) -> Result<Layout, LayoutError> {
+    pub(crate) const fn calc_full_layout(mem_layout: Layout) -> Result<Layout, LayoutError> {
         let mut full_layout = Layout::new::<ObjectHeader>();
         (full_layout, _) = full_layout.extend(Layout::new::<NonNull<MethodTable<T>>>())?;
         (full_layout, _) = full_layout.extend(mem_layout)?;

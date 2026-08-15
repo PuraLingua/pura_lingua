@@ -9,7 +9,7 @@ use global::{
 };
 
 use crate::{
-    stdlib::CoreTypeId,
+    stdlib::{CoreTypeId, CoreTypeIdExt},
     test_utils::{g_core_class, g_core_type},
     type_system::{
         assembly::Assembly,
@@ -30,8 +30,6 @@ use super::*;
 
 #[test]
 fn test_call() {
-    EnsureGlobalVirtualMachineInitialized();
-
     let mut cpu = CpuID::new_write_global();
     let assembly_manager = global_vm().assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(
@@ -77,7 +75,14 @@ fn test_call() {
 
 #[test]
 fn test_normal_f() {
-    EnsureGlobalVirtualMachineInitialized();
+    dbg!(unsafe {
+        CoreTypeId::System_Exception
+            .global_type_handle()
+            .unwrap_class()
+            .as_ref()
+            .method_table_ref()
+            .list_method_signatures()
+    });
 
     let mut cpu = CpuID::new_write_global();
     let assembly_manager = global_vm().assembly_manager();

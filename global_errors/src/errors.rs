@@ -36,7 +36,7 @@ macro single_error($($(#[$($meta:meta)*])* $i:ident @ $ctor:ident)*) {$(
     #[derive(Clone, Copy, Debug, ::derive_more::Display, ::thiserror::Error)]
     pub struct $i;
 
-    impl const Default for $i {
+    const impl Default for $i {
         fn default() -> Self {
             Self::$ctor()
         }

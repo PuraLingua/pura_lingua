@@ -109,6 +109,7 @@ const impl CoreTypeIdConstExt for CoreTypeId {
             System_LargeString => Some(Layout::new::<usize>()),
 
             System_RuntimeBasic => None,
+            System_MemoryManagement => None,
 
             System_Exception
             | System_NullReferenceException
@@ -176,6 +177,7 @@ const impl CoreTypeIdConstExt for CoreTypeId {
             System_LargeString => Some(Layout::new::<ManagedReference<Class>>()),
 
             System_RuntimeBasic => Some(Layout::new::<ManagedReference<Class>>()),
+            System_MemoryManagement => Some(Layout::new::<ManagedReference<Class>>()),
 
             System_Exception
             | System_NullReferenceException
@@ -248,6 +250,7 @@ const impl CoreTypeIdConstExt for CoreTypeId {
             System_LargeString => of_System!(LargeString),
 
             System_RuntimeBasic => of_System!(RuntimeBasic),
+            System_MemoryManagement => of_System!(MemoryManagement),
 
             System_Exception => of_System!(Exception),
             System_NullReferenceException => of_System!(NullReferenceException),
@@ -269,7 +272,6 @@ const impl CoreTypeIdConstExt for CoreTypeId {
 
 impl CoreTypeIdExt for CoreTypeId {
     fn global_type_handle(self) -> NonGenericTypeHandle {
-        crate::virtual_machine::EnsureGlobalVirtualMachineInitialized();
         crate::virtual_machine::global_vm()
             .assembly_manager()
             .get_core_type(self)
@@ -324,6 +326,7 @@ impl CoreTypeIdExt for CoreTypeId {
             System_LargeString => Some(Type::pointer()),
 
             System_RuntimeBasic => Some(Type::pointer()),
+            System_MemoryManagement => Some(Type::pointer()),
 
             System_Exception
             | System_NullReferenceException
@@ -389,6 +392,7 @@ impl CoreTypeIdExt for CoreTypeId {
             System_LargeString => Some(NonPurusCallType::Object),
 
             System_RuntimeBasic => Some(NonPurusCallType::Object),
+            System_MemoryManagement => Some(NonPurusCallType::Object),
 
             System_Exception
             | System_NullReferenceException

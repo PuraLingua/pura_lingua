@@ -23,15 +23,13 @@ use crate::{
         method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle,
     },
-    virtual_machine::{CpuID, EnsureGlobalVirtualMachineInitialized, global_vm},
+    virtual_machine::{CpuID, global_vm},
 };
 
 use super::*;
 
 #[test]
 fn test_call_stack() {
-    EnsureGlobalVirtualMachineInitialized();
-
     global_vm()
         .assembly_manager()
         .add_assembly(Assembly::new_for_adding(

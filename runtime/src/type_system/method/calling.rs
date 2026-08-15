@@ -68,7 +68,11 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
         if (self.call_convention() != CallConvention::CDeclWithVararg)
             && (!self.attr.allow_extra_args())
         {
-            assert_eq!(args.len(), self.args.len());
+            assert_eq!(
+                args.len(),
+                self.args.len(),
+                "Argument lengths are not the same"
+            );
         }
 
         for (ind, param) in self.args.iter().enumerate() {

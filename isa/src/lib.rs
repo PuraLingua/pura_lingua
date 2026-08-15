@@ -9,7 +9,6 @@
 #![feature(const_trait_impl)]
 #![feature(fn_traits)]
 #![feature(decl_macro)]
-#![feature(const_try)]
 #![feature(const_convert)]
 #![feature(const_option_ops)]
 #![feature(const_destruct)]

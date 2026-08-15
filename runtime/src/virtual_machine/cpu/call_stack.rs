@@ -530,6 +530,10 @@ impl CommonCallStackFrame {
             var.set_marker(val);
         }
     }
+
+    pub fn allocator(&self) -> std::cell::RefMut<'_, fastarena::Arena> {
+        self.allocator.borrow_mut()
+    }
 }
 
 pub struct CommonCallStackFrameIter<'a> {

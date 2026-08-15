@@ -23,8 +23,6 @@ use super::*;
 
 #[test]
 fn test_static() {
-    EnsureGlobalVirtualMachineInitialized();
-
     global_vm()
         .assembly_manager()
         .add_assembly(Assembly::new_for_adding(

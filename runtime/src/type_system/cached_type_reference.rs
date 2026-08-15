@@ -4,7 +4,12 @@ use either::Either;
 
 use crate::type_system::{
     assembly_manager::AssemblyManager,
-    type_handle::{IGenericResolver, MaybeUnloadedTypeHandle, NonGenericTypeHandle, TypeHandle},
+    get_traits::{GetAssemblyRef, GetTypeVars},
+    method::Method,
+    type_handle::{
+        IGenericResolver, MaybeUnloadedTypeHandle, MethodGenericResolver, NonGenericTypeHandle,
+        TypeHandle,
+    },
     type_ref::TypeRef,
 };
 
@@ -299,6 +304,19 @@ impl GenericCachedTypeReference {
     }
     pub fn assume_init(&self) -> TypeHandle {
         self.to_handle().unwrap()
+    }
+    pub fn get_with_method<T: GetAssemblyRef + GetTypeVars>(
+        &self,
+        method: &Method<T>,
+    ) -> Option<TypeHandle> {
+        self.get_with_generic_resolver(
+            method
+                .require_method_table_ref()
+                .ty_ref()
+                .__get_assembly_ref()
+                .manager_ref(),
+            MethodGenericResolver::new(method),
+        )
     }
     pub fn get_with_generic_resolver<TResolver: IGenericResolver>(
         &self,

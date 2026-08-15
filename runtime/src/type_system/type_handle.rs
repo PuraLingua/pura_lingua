@@ -6,14 +6,15 @@ use global::{UnwrapEnum, non_purus_call_configuration::NonPurusCallType};
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdExt},
     type_system::{
-        assembly_manager::AssemblyManager, class::Class, interface::Interface, r#struct::Struct,
-        type_ref::TypeRef,
+        assembly_manager::AssemblyManager, class::Class, interface::Interface,
+        reflection_info_container::IReflect, r#struct::Struct, type_ref::TypeRef,
     },
 };
 
 use super::{
     get_traits::{GetAssemblyRef, GetTypeVars},
     method::Method,
+    reflection_info_container::ReflectionInfoContainer,
 };
 
 mod convert;
@@ -287,6 +288,26 @@ impl Debug for NonGenericTypeHandle {
             Self::Class(cl) => write!(f, "Class {}", unsafe { cl.as_ref().name() }),
             Self::Struct(s) => write!(f, "Struct {}", unsafe { s.as_ref().name() }),
             Self::Interface(s) => write!(f, "Interface {}", unsafe { s.as_ref().name() }),
+        }
+    }
+}
+
+impl IReflect for NonGenericTypeHandle {
+    fn __get_reflect_container(&self) -> Option<&ReflectionInfoContainer<Self>> {
+        None
+    }
+    fn __reflect_update(&self) {
+        match self {
+            NonGenericTypeHandle::Class(ty) => unsafe { ty.as_ref().__reflect_update() },
+            NonGenericTypeHandle::Struct(ty) => unsafe { ty.as_ref().__reflect_update() },
+            NonGenericTypeHandle::Interface(ty) => unsafe { ty.as_ref().__reflect_update() },
+        }
+    }
+    fn __get_reflect_value(&self) -> crate::value::managed_reference::ManagedReference<Class> {
+        match self {
+            NonGenericTypeHandle::Class(ty) => unsafe { ty.as_ref().__get_reflect_value() },
+            NonGenericTypeHandle::Struct(ty) => unsafe { ty.as_ref().__get_reflect_value() },
+            NonGenericTypeHandle::Interface(ty) => unsafe { ty.as_ref().__get_reflect_value() },
         }
     }
 }

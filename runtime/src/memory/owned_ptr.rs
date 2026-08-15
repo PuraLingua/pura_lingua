@@ -196,7 +196,7 @@ impl<T: PointeeSized> fmt::Pointer for OwnedPtr<T> {
     }
 }
 
-impl<T: PointeeSized> const From<&mut T> for OwnedPtr<T> {
+const impl<T: PointeeSized> From<&mut T> for OwnedPtr<T> {
     /// Converts a `&mut T` to a `OwnedPtr<T>`.
     ///
     /// This conversion is infallible since references cannot be null.
@@ -206,7 +206,7 @@ impl<T: PointeeSized> const From<&mut T> for OwnedPtr<T> {
     }
 }
 
-impl<T: PointeeSized> const From<NonNull<T>> for OwnedPtr<T> {
+const impl<T: PointeeSized> From<NonNull<T>> for OwnedPtr<T> {
     /// Converts a `NonNull<T>` to a `OwnedPtr<T>`.
     ///
     /// This conversion is infallible since `NonNull` cannot be null.
@@ -216,7 +216,7 @@ impl<T: PointeeSized> const From<NonNull<T>> for OwnedPtr<T> {
     }
 }
 
-impl<T: PointeeSized> const From<OwnedPtr<T>> for NonNull<T> {
+const impl<T: PointeeSized> From<OwnedPtr<T>> for NonNull<T> {
     #[inline]
     fn from(unique: OwnedPtr<T>) -> Self {
         unique.as_non_null_ptr()

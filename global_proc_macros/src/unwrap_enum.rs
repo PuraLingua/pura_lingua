@@ -1,3 +1,5 @@
+#![allow(nonstandard_style)]
+
 use bitfields::bitfield;
 use convert_case::{Case, Casing};
 use proc_macro_utils::crate_name_resolution::PredefinedCrateName;
@@ -9,12 +11,11 @@ use syn::{
 };
 
 #[bitfield(u8)]
-#[derive(Clone, Copy)]
 struct EnableOptions {
     owned: bool,
-    r#ref: bool,
+    ref_: bool,
     ref_mut: bool,
-    r#try: bool,
+    try_: bool,
     #[bits(4)]
     _pad: u8,
 }
@@ -29,13 +30,13 @@ fn parse_enable_options(orig: &mut EnableOptions, attrs: &[Attribute]) -> syn::R
             match meta {
                 proc_macro2::TokenTree::Ident(ident) => {
                     if ident.eq("ref") {
-                        orig.set_ref(true);
+                        orig.set_ref_(true);
                     } else if ident.eq("ref_mut") {
                         orig.set_ref_mut(true);
                     } else if ident.eq("owned") {
                         orig.set_owned(true);
                     } else if ident.eq("try") {
-                        orig.set_try(true);
+                        orig.set_try_(true);
                     } else {
                         return Err(syn::Error::new(ident.span(), "unknown ident"));
                     }
@@ -93,7 +94,7 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                     .map(|x| x.ident.as_ref().unwrap())
                     .collect();
 
-                let ref_impl = if enable_options.r#ref() {
+                let ref_impl = if enable_options.ref_() {
                     let mut ret_ty = proc_macro2::TokenStream::new();
                     Paren::default().surround(&mut ret_ty, |x| {
                         let mut punctuated: Punctuated<TokenStream, Token![,]> =
@@ -105,17 +106,17 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                         }
                         x.extend_one(punctuated.to_token_stream());
                     });
-                    let success = if enable_options.r#try() {
+                    let success = if enable_options.try_() {
                         quote!(Ok((#(#identifiers),*)))
                     } else {
                         quote!((#(#identifiers),*))
                     };
-                    let fallback = if enable_options.r#try() {
+                    let fallback = if enable_options.try_() {
                         quote!(Err(#leading_colon2 #global_ident::errors::UnwrapError.into()))
                     } else {
                         quote!(panic!("call unwrap at incorrect value"))
                     };
-                    if enable_options.r#try() {
+                    if enable_options.try_() {
                         ret_ty = quote!(#leading_colon2 #global_ident::Result<#ret_ty, #global_ident::errors::UnwrapError>);
                     }
 
@@ -146,17 +147,17 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                         }
                         x.extend_one(punctuated.to_token_stream());
                     });
-                    let success = if enable_options.r#try() {
+                    let success = if enable_options.try_() {
                         quote!(Ok((#(#identifiers),*)))
                     } else {
                         quote!((#(#identifiers),*))
                     };
-                    let fallback = if enable_options.r#try() {
+                    let fallback = if enable_options.try_() {
                         quote!(Err(#leading_colon2 #global_ident::errors::UnwrapError.into()))
                     } else {
                         quote!(panic!("call unwrap at incorrect value"))
                     };
-                    if enable_options.r#try() {
+                    if enable_options.try_() {
                         ret_ty = quote!(#leading_colon2 #global_ident::Result<#ret_ty, #global_ident::errors::UnwrapError>);
                     }
                     let fn_name = format_ident!(
@@ -186,17 +187,17 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                         }
                         x.extend_one(punctuated.to_token_stream());
                     });
-                    let success = if enable_options.r#try() {
+                    let success = if enable_options.try_() {
                         quote!(Ok((#(#identifiers),*)))
                     } else {
                         quote!((#(#identifiers),*))
                     };
-                    let fallback = if enable_options.r#try() {
+                    let fallback = if enable_options.try_() {
                         quote!(Err(#leading_colon2 #global_ident::errors::UnwrapError.into()))
                     } else {
                         quote!(panic!("call unwrap at incorrect value"))
                     };
-                    if enable_options.r#try() {
+                    if enable_options.try_() {
                         ret_ty = quote!(#leading_colon2 #global_ident::Result<#ret_ty, #global_ident::errors::UnwrapError>);
                     }
                     let fn_name = format_ident!(
@@ -223,7 +224,7 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                     .enumerate()
                     .map(|x| Ident::new(&format!("a{}", x.0), x.1.span()))
                     .collect();
-                let ref_impl = if enable_options.r#ref() {
+                let ref_impl = if enable_options.ref_() {
                     let mut ret_ty = proc_macro2::TokenStream::new();
                     Paren::default().surround(&mut ret_ty, |x| {
                         let mut punctuated: Punctuated<TokenStream, Token![,]> =
@@ -235,17 +236,17 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                         }
                         x.extend_one(punctuated.to_token_stream());
                     });
-                    let success = if enable_options.r#try() {
+                    let success = if enable_options.try_() {
                         quote!(Ok((#(#identifiers),*)))
                     } else {
                         quote!((#(#identifiers),*))
                     };
-                    let fallback = if enable_options.r#try() {
+                    let fallback = if enable_options.try_() {
                         quote!(Err(#leading_colon2 #global_ident::errors::UnwrapError.into()))
                     } else {
                         quote!(panic!("call unwrap at incorrect value"))
                     };
-                    if enable_options.r#try() {
+                    if enable_options.try_() {
                         ret_ty = quote!(#leading_colon2 #global_ident::Result<#ret_ty, #global_ident::errors::UnwrapError>);
                     }
 
@@ -276,17 +277,17 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                         }
                         x.extend_one(punctuated.to_token_stream());
                     });
-                    let success = if enable_options.r#try() {
+                    let success = if enable_options.try_() {
                         quote!(Ok((#(#identifiers),*)))
                     } else {
                         quote!((#(#identifiers),*))
                     };
-                    let fallback = if enable_options.r#try() {
+                    let fallback = if enable_options.try_() {
                         quote!(Err(#leading_colon2 #global_ident::errors::UnwrapError.into()))
                     } else {
                         quote!(panic!("call unwrap at incorrect value"))
                     };
-                    if enable_options.r#try() {
+                    if enable_options.try_() {
                         ret_ty = quote!(#leading_colon2 #global_ident::Result<#ret_ty, #global_ident::errors::UnwrapError>);
                     }
                     let fn_name = format_ident!(
@@ -316,17 +317,17 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
                         }
                         x.extend_one(punctuated.to_token_stream());
                     });
-                    let success = if enable_options.r#try() {
+                    let success = if enable_options.try_() {
                         quote!(Ok((#(#identifiers),*)))
                     } else {
                         quote!((#(#identifiers),*))
                     };
-                    let fallback = if enable_options.r#try() {
+                    let fallback = if enable_options.try_() {
                         quote!(Err(#leading_colon2 #global_ident::errors::UnwrapError.into()))
                     } else {
                         quote!(panic!("call unwrap at incorrect value"))
                     };
-                    if enable_options.r#try() {
+                    if enable_options.try_() {
                         ret_ty = quote!(#leading_colon2 #global_ident::Result<#ret_ty, #global_ident::errors::UnwrapError>);
                     }
                     let fn_name = format_ident!(
@@ -348,20 +349,20 @@ pub fn derive_unwrap_enum_impl(ast: DeriveInput) -> syn::Result<TokenStream> {
             }
             Fields::Unit => {
                 let mut ret_ty = quote!(());
-                let success = if enable_options.r#try() {
+                let success = if enable_options.try_() {
                     quote!(Ok(()))
                 } else {
                     quote!(())
                 };
-                let fallback = if enable_options.r#try() {
+                let fallback = if enable_options.try_() {
                     quote!(Err(#leading_colon2 #global_ident::errors::UnwrapError.into()))
                 } else {
                     quote!(panic!("call unwrap at incorrect value"))
                 };
-                if enable_options.r#try() {
+                if enable_options.try_() {
                     ret_ty = quote!(#leading_colon2 #global_ident::Result<#ret_ty, #global_ident::errors::UnwrapError>);
                 }
-                let ref_impl = if enable_options.r#ref() {
+                let ref_impl = if enable_options.ref_() {
                     let fn_name = format_ident!(
                         "unwrap_{ident}_ref",
                         ident = name.to_string().to_case(Case::Snake)

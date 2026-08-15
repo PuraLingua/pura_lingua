@@ -5,7 +5,11 @@ use crate::type_system::{class::Class, r#struct::Struct, type_handle::NonGeneric
 use super::CPU;
 
 impl CPU {
+    #[allow(unreachable_code)]
     pub fn gc_collect(&mut self) {
+        eprintln!("GC is incomplete");
+        return;
+
         self.call_stack.set_marker(true);
 
         // Little hack
