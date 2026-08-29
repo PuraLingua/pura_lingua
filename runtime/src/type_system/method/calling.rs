@@ -134,6 +134,13 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             self.display(enumflags2::BitFlags::all())
         );
 
+        if self.attr.is_unsafe() && cfg!(debug_assertions) {
+            eprintln!(
+                "Calling unsafe method: {}",
+                self.display(enumflags2::BitFlags::all())
+            );
+        }
+
         // Write default value & ensure that `return_buffer` has enough space to write
         unsafe {
             return_buffer.write_bytes(
