@@ -134,6 +134,7 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             self.display(enumflags2::BitFlags::all())
         );
 
+        // Write default value & ensure that `return_buffer` has enough space to write
         unsafe {
             return_buffer.write_bytes(
                 0,

@@ -472,7 +472,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                     t_println!("Cannot load Field {f}");
                 }
                 Termination::NewObjectFailed => {
-                    t_println!("NewObject failed");
+                    t_println!("NewObject[OnStack] failed");
                 }
                 Termination::UnmarshalFailed(err) => {
                     t_println!("Unmarshal failed because:\n{err}");

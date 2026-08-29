@@ -1,0 +1,196 @@
+use binary_proc_macros::{ReadFromSection, WriteToSection};
+use derive_ctor::ctor;
+use enumflags2::{BitFlags, bitflags, make_bitflags};
+use getset::{CopyGetters, Getters, MutGetters, Setters};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+use crate::Visibility;
+
+#[bitflags]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum MethodImplementationFlags {
+    Static,
+    AllowExtraArgs,
+    HideWhenCapturing,
+    UseReturnBuffer,
+    Unsafe,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    TryFromPrimitive,
+    IntoPrimitive,
+    Eq,
+    PartialEq,
+    ReadFromSection,
+    WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[derive_const(Default)]
+#[repr(u8)]
+pub enum CallConvention {
+    /// i.e. extern "system"
+    #[default]
+    PlatformDefault,
+    CDecl,
+    CDeclWithVararg,
+    Win64,
+    SystemV,
+    Stdcall,
+    Fastcall,
+}
+
+impl std::fmt::Display for CallConvention {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::PlatformDefault => write!(f, "system"),
+            Self::CDecl => write!(f, "C"),
+            Self::CDeclWithVararg => write!(f, "C"),
+            Self::Win64 => write!(f, "win64"),
+            /* cSpell:disable-next-line */
+            Self::SystemV => write!(f, "sysv64"),
+            Self::Stdcall => write!(f, "stdcall"),
+            Self::Fastcall => write!(f, "fastcall"),
+        }
+    }
+}
+
+#[derive(
+    Clone,
+    CopyGetters,
+    Debug,
+    ctor,
+    Setters,
+    MutGetters,
+    Getters,
+    ReadFromSection,
+    WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[ctor(pub new)]
+#[getset(set = "pub", get_mut = "pub")]
+#[get_copy = "pub"]
+#[serde(deny_unknown_fields)]
+pub struct MethodAttr<TType> {
+    pub vis: Visibility,
+    pub impl_flags: BitFlags<MethodImplementationFlags>,
+    #[getset(skip)]
+    #[getset(get = "pub", get_mut = "pub")]
+    pub overrides: Option<u32>,
+    #[getset(skip)]
+    #[get = "pub"]
+    pub local_variable_types: Vec<TType>,
+}
+
+impl<TType> MethodAttr<TType> {
+    pub fn for_sctor(local_variable_types: Vec<TType>) -> Self {
+        Self {
+            vis: Visibility::Public,
+            impl_flags: make_bitflags!(MethodImplementationFlags::{Static}),
+            overrides: None,
+            local_variable_types,
+        }
+    }
+    pub fn is_static(&self) -> bool {
+        self.impl_flags()
+            .contains(MethodImplementationFlags::Static)
+    }
+    pub fn is_unsafe(&self) -> bool {
+        self.impl_flags()
+            .contains(MethodImplementationFlags::Unsafe)
+    }
+    pub fn allow_extra_args(&self) -> bool {
+        self.impl_flags()
+            .contains(MethodImplementationFlags::AllowExtraArgs)
+    }
+    pub fn map_types<_TType, F>(self, f: F) -> MethodAttr<_TType>
+    where
+        F: Fn(TType) -> _TType,
+    {
+        MethodAttr {
+            vis: self.vis,
+            impl_flags: self.impl_flags,
+            overrides: self.overrides,
+            local_variable_types: self.local_variable_types.into_iter().map(f).collect(),
+        }
+    }
+    pub fn try_map_types<_TType, E, F>(self, f: F) -> Result<MethodAttr<_TType>, E>
+    where
+        F: FnMut(TType) -> Result<_TType, E>,
+    {
+        Ok(MethodAttr {
+            vis: self.vis,
+            impl_flags: self.impl_flags,
+            overrides: self.overrides,
+            local_variable_types: self.local_variable_types.into_iter().map(f).try_collect()?,
+        })
+    }
+    pub fn add_local_variable(&mut self, ty: TType) {
+        self.local_variable_types.push(ty);
+    }
+}
+
+impl<TType, E> MethodAttr<Result<TType, E>> {
+    pub fn transpose(self) -> Result<MethodAttr<TType>, E> {
+        Ok(MethodAttr {
+            vis: self.vis,
+            impl_flags: self.impl_flags,
+            overrides: self.overrides,
+            local_variable_types: self.local_variable_types.into_iter().try_collect()?,
+        })
+    }
+}
+
+impl<TType> MethodAttr<Option<TType>> {
+    pub fn transpose(self) -> Option<MethodAttr<TType>> {
+        Some(MethodAttr {
+            vis: self.vis,
+            impl_flags: self.impl_flags,
+            overrides: self.overrides,
+            local_variable_types: self.local_variable_types.into_iter().try_collect()?,
+        })
+    }
+}
+
+#[bitflags]
+#[repr(u8)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, derive_more::Display, serde::Serialize, serde::Deserialize,
+)]
+pub enum ParameterImplementationFlags {
+    ByRef,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    CopyGetters,
+    Debug,
+    ctor,
+    Setters,
+    Getters,
+    MutGetters,
+    ReadFromSection,
+    WriteToSection,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[ctor(pub const new)]
+#[getset(set = "pub", get_mut = "pub")]
+#[get_copy = "pub"]
+#[serde(deny_unknown_fields)]
+pub struct ParameterAttr {
+    impl_flags: BitFlags<ParameterImplementationFlags>,
+}
+
+impl ParameterAttr {
+    pub fn is_by_ref(&self) -> bool {
+        self.impl_flags
+            .contains(ParameterImplementationFlags::ByRef)
+    }
+}
