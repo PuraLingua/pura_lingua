@@ -60,9 +60,15 @@ impl<T> MethodTable<T> {
                 cached_layout: Cell::new(None),
                 cached_static_layout: Cell::new(None),
             }));
-            let mut methods = p.as_ref().methods.get_cloned();
-            methods.iter_mut().for_each(|x| x.as_mut().mt = Some(this));
-            this.as_mut().methods = RwLock::new(methods);
+            this.as_mut().methods = RwLock::new(
+                p.as_ref()
+                    .methods
+                    .read()
+                    .iter()
+                    .map(|x| Method::dup(*x, Some(this)))
+                    .collect(),
+            );
+
             this
         }
     }

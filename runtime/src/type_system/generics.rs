@@ -8,7 +8,7 @@ use global::getset::Getters;
 
 use crate::type_system::type_handle::MaybeUnloadedTypeHandle;
 
-#[derive(Getters)]
+#[derive(Getters, Clone)]
 pub struct GenericBounds {
     #[allow(dead_code)]
     pub(crate) implemented_interfaces: Vec<MaybeUnloadedTypeHandle>,

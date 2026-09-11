@@ -21,9 +21,7 @@ use crate::{
         type_ref::TypeRef,
     },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
-    virtual_machine::{
-        EnsureGlobalVirtualMachineInitialized, cpu::MainResult, cpu_manager::CpuID, global_vm,
-    },
+    virtual_machine::{cpu::MainResult, cpu_manager::CpuID, global_vm},
 };
 
 use super::*;

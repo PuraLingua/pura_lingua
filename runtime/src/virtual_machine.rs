@@ -4,10 +4,7 @@ use std::{
     mem::MaybeUninit,
     pin::Pin,
     ptr::NonNull,
-    sync::{
-        Once,
-        nonpoison::{RwLock, RwLockWriteGuard},
-    },
+    sync::nonpoison::{RwLock, RwLockWriteGuard},
 };
 
 use cpu::CPU;
@@ -47,7 +44,10 @@ pub struct VirtualMachine {
 }
 
 impl VirtualMachine {
-    pub unsafe fn write_assembly_manager(this: NonNull<Self>, assembly_manager: AssemblyManager) {
+    pub(crate) unsafe fn write_assembly_manager(
+        this: NonNull<Self>,
+        assembly_manager: AssemblyManager,
+    ) {
         unsafe {
             this.byte_add(std::mem::offset_of!(Self, assembly_manager))
                 .cast::<AssemblyManager>()
@@ -237,35 +237,47 @@ impl VirtualMachine {
     }
 }
 
-/* cSpell: disable-next-line */
+impl Drop for VirtualMachine {
+    fn drop(&mut self) {
+        let mut static_cpu = self.write_cpu_for_static();
+        self.class_static_map
+            .write()
+            .iter_mut()
+            .for_each(|(_, obj)| {
+                obj.destroy(&mut static_cpu);
+                *obj = ManagedReference::null();
+            });
+        self.struct_static_map
+            .write()
+            .iter_mut()
+            .for_each(|(_, (ptr, layout))| {
+                unsafe {
+                    std::alloc::Global.deallocate(*ptr, *layout);
+                }
+                *layout = const { Layout::new::<()>() };
+            });
+    }
+}
+
 static mut G_RUNTIME: MaybeUninit<VirtualMachine> = MaybeUninit::zeroed();
-static VM_INIT: Once = Once::new();
 
 #[inline(always)]
 #[allow(static_mut_refs)]
-pub const unsafe fn global_vm_unchecked() -> &'static mut VirtualMachine {
+pub fn global_vm() -> &'static mut VirtualMachine {
     unsafe { G_RUNTIME.assume_init_mut() }
 }
 
-#[inline(always)]
-pub fn global_vm() -> &'static mut VirtualMachine {
-    if !VM_INIT.is_completed() {
-        std::hint::cold_path();
-        EnsureGlobalVirtualMachineInitialized();
-    }
-    unsafe { global_vm_unchecked() }
-}
-
-#[inline(always)]
-pub fn is_global_vm_init() -> bool {
-    VM_INIT.is_completed()
-}
-
-#[allow(nonstandard_style)]
+#[ctor::ctor(unsafe)]
 #[allow(static_mut_refs)]
-pub fn EnsureGlobalVirtualMachineInitialized() {
-    VM_INIT.call_once(|| unsafe {
-        let rt_ptr = G_RUNTIME.as_mut_ptr();
-        VirtualMachine::construct_in(NonNull::new_unchecked(rt_ptr));
-    });
+fn init_vm() {
+    let rt_ptr = unsafe { G_RUNTIME.as_mut_ptr() };
+    VirtualMachine::construct_in(unsafe { NonNull::new_unchecked(rt_ptr) });
+}
+
+#[dtor::dtor(unsafe)]
+#[allow(static_mut_refs)]
+fn shutdown_vm() {
+    unsafe {
+        G_RUNTIME.assume_init_drop();
+    }
 }

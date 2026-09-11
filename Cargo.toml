@@ -47,8 +47,6 @@ string_name = { package = "pura_lingua_string_name", path = "./string_name" }
 common_attributes = { package = "pura_lingua_common_attributes", path = "./common_attributes" }
 non_purus_call = { package = "pura_lingua_non_purus_call", path = "./non_purus_call" }
 pura_lingua_isa = { path = "./isa" }
-
-dynamic_format = { package = "pura_lingua_dynamic_format", path = "./dynamic_format" }
 c_definitions = { package = "pura_lingua_c_definitions", path = "./c_definitions" }
 
 binary_core = { package = "pura_lingua_binary_core", path = "./binary_core" }
@@ -59,7 +57,6 @@ proc_macro_utils = { package = "pura_lingua_proc_macro_utils", path = "./proc_ma
 bitfields = { git = "https://github.com/ExPuritate/bitfields-rs.git", features = [
 	"std",
 ] }
-line-ending = { git = "https://github.com/ExPuritate/rust-line-ending.git" }
 
 widestring = { version = "1.2.1", features = ["debugger_visualizer"] }
 serde = { version = "1.0.219", features = ["std", "derive"] }
@@ -71,7 +68,6 @@ konst = { version = "0.4", features = [
 either = { version = "1.15" }
 enumflags2 = { version = "0.7.11", features = ["std", "serde"] }
 derive_more = { version = "2.0.1", features = ["full", "std"] }
-paste = "1.0.15"
 string-interner = "0.19.0"
 sealed = "0.6"
 indexmap = { version = "2.13" }

@@ -49,7 +49,7 @@ pub struct Method<T> {
     call_convention: CallConvention,
 
     generic_instances: Vec<NonNull<Self>>,
-    generic_bounds: Option<NonNull<[GenericBounds]>>,
+    generic_bounds: Option<Box<[GenericBounds]>>,
     type_vars: Option<Box<[NonGenericTypeHandle]>>,
 
     instructions: Vec<RuntimeInstruction>,
@@ -67,6 +67,39 @@ pub(crate) mod default_entry_point;
 impl<T> Method<T> {
     pub const fn require_method_table_ref(&self) -> &MethodTable<T> {
         unsafe { self.mt.unwrap().as_ref() }
+    }
+}
+
+impl<T> Method<T> {
+    pub fn dup(this: NonNull<Self>, new_mt: Option<NonNull<MethodTable<T>>>) -> NonNull<Self> {
+        unsafe {
+            let res = Box::into_non_null(Box::new(Self {
+                mt: new_mt,
+                generic: None,
+                name: widestring::Utf16String::from(&**this.as_ref().name()).into_boxed_utfstr(),
+                attr: this.as_ref().attr.clone(),
+                generic_count_requirement: this.as_ref().generic_count_requirement,
+                args: this.as_ref().args.clone(),
+                return_type: this.as_ref().return_type.clone(),
+                call_convention: this.as_ref().call_convention.clone(),
+                generic_instances: Vec::new(),
+                generic_bounds: this.as_ref().generic_bounds.as_deref().map(|x| {
+                    let mut o = Vec::new();
+                    o.extend_from_slice(x);
+                    o.into_boxed_slice()
+                }),
+                type_vars: this.as_ref().type_vars.as_deref().map(|x| {
+                    let mut o = Vec::new();
+                    o.extend_from_slice(x);
+                    o.into_boxed_slice()
+                }),
+                instructions: this.as_ref().instructions.clone(),
+                entry_point: this.as_ref().entry_point,
+                exception_table: this.as_ref().exception_table.clone(),
+            }));
+
+            res
+        }
     }
 }
 
@@ -105,7 +138,7 @@ where
             generic_instances: Vec::new(),
             generic_bounds: generic_bounds
                 .filter(|x| !x.is_empty())
-                .map(|x| Box::into_non_null(x.into_boxed_slice())),
+                .map(Vec::into_boxed_slice),
             type_vars: None,
 
             instructions,
@@ -147,7 +180,7 @@ where
             generic_instances: Vec::new(),
             generic_bounds: generic_bounds
                 .filter(|x| !x.is_empty())
-                .map(|x| Box::into_non_null(x.into_boxed_slice())),
+                .map(Vec::into_boxed_slice),
             type_vars: None,
 
             instructions,
@@ -203,7 +236,7 @@ impl<T> Method<T> {
             generic_instances: Vec::new(),
             generic_bounds: generic_bounds
                 .filter(|x| !x.is_empty())
-                .map(|x| Box::into_non_null(x.into_boxed_slice())),
+                .map(Vec::into_boxed_slice),
             type_vars: None,
 
             instructions: Vec::new(),

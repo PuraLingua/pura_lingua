@@ -11,28 +11,12 @@ use pura_lingua::runtime::{
     virtual_machine::{VirtualMachine, cpu::CPU, cpu_manager::CpuID},
 };
 
-#[unsafe(no_mangle)]
-pub extern "C" fn EnsureGlobalVirtualMachineInitialized() {
-    runtime::virtual_machine::EnsureGlobalVirtualMachineInitialized();
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn IsGlobalVirtualMachineInitialized() -> bool {
-    runtime::virtual_machine::is_global_vm_init()
-}
-
 // Constructors
 
 /// Returns borrowed pointer
 #[unsafe(no_mangle)]
 pub extern "C" fn GlobalVirtualMachine() -> NonNull<VirtualMachine> {
     NonNull::from_mut(runtime::virtual_machine::global_vm())
-}
-
-/// Returns borrowed pointer
-#[unsafe(no_mangle)]
-pub extern "C" fn GlobalVirtualMachineUnchecked() -> NonNull<VirtualMachine> {
-    unsafe { NonNull::from_mut(runtime::virtual_machine::global_vm_unchecked()) }
 }
 
 /// Returns owned pointer
