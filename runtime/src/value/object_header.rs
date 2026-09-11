@@ -1,4 +1,8 @@
-use std::{hint::unlikely, sync::nonpoison::RwLock, thread::ThreadId};
+use std::{
+    hint::unlikely,
+    sync::{atomic::AtomicU64, nonpoison::RwLock},
+    thread::ThreadId,
+};
 
 use bitfields::{bitfield, std_impl::IBitExtensions};
 use parking_lot::{RawMutex, lock_api::RawMutex as _};
@@ -22,6 +26,33 @@ impl ObjectHeader {
             .with_is_static(is_static)
             .with_sync(Sync::new())
             .build()
+    }
+
+    fn atom_sync_update<F: FnMut(Sync) -> Sync>(
+        &mut self,
+        set_order: std::sync::atomic::Ordering,
+        fetch_order: std::sync::atomic::Ordering,
+        mut f: F,
+    ) {
+        unsafe { AtomicU64::from_ptr(&mut self.0) }.update(set_order, fetch_order, |x| {
+            let mut this = ObjectHeader(x);
+            this.set_sync(f(this.sync()));
+            this.0
+        });
+    }
+
+    pub fn lock(&mut self) {
+        self.atom_sync_update(
+            std::sync::atomic::Ordering::SeqCst,
+            std::sync::atomic::Ordering::SeqCst,
+            |mut sync| {
+                sync.lock();
+                sync
+            },
+        );
+    }
+    pub fn unlock(&self) {
+        self.sync().unlock();
     }
 }
 
@@ -88,7 +119,7 @@ impl Sync {
         }
     }
 
-    pub fn unlock(&mut self) {
+    pub fn unlock(&self) {
         if unsafe { self.thin.is_thin() }
             || unsafe { self.fat.get_block().is_none_or(|x| !x.lock.is_locked()) }
         {

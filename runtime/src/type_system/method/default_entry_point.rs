@@ -102,6 +102,47 @@ fn eval_return_val<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegi
     return Some(Err(Termination::Returned));
 }
 
+fn eval_lock<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
+    #[allow(unused)] method: &Method<T>,
+    #[allow(unused)] cpu: &mut CPU,
+    #[allow(unused)] this: Option<NonNull<()>>,
+    #[allow(unused)] args: &[*mut c_void],
+    #[allow(unused)] result_ptr: NonNull<c_void>,
+    #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
+    register_addr: &TRegisterAddr,
+) -> Option<Result<(), Termination>> {
+    let Some(to_locked) =
+        call_frame(cpu).get_mut_typed::<ManagedReference<Class>, _>(*register_addr)
+    else {
+        load_register_failed!(*register_addr);
+    };
+
+    to_locked.header_mut().unwrap().lock();
+
+    Some(Ok(()))
+}
+
+fn eval_unlock<T: Sized + GetAssemblyRef + GetTypeVars, TRegisterAddr: IRegisterAddr>(
+    #[allow(unused)] method: &Method<T>,
+    #[allow(unused)] cpu: &mut CPU,
+    #[allow(unused)] this: Option<NonNull<()>>,
+    #[allow(unused)] args: &[*mut c_void],
+    #[allow(unused)] result_ptr: NonNull<c_void>,
+    #[allow(unused)] pc: &mut usize,
+    #[allow(unused)] caught_exception: Option<ManagedReference<Class>>,
+    register_addr: &TRegisterAddr,
+) -> Option<Result<(), Termination>> {
+    let Some(to_locked) = call_frame(cpu).get_typed::<ManagedReference<Class>, _>(*register_addr)
+    else {
+        load_register_failed!(*register_addr);
+    };
+
+    to_locked.header().unwrap().unlock();
+
+    Some(Ok(()))
+}
+
 trait Spec: Sized + GetAssemblyRef + GetTypeVars {
     /// Return false if it's terminated
     fn spec_match_code(
@@ -263,6 +304,48 @@ trait Spec: Sized + GetAssemblyRef + GetTypeVars {
 
             Instruction::StackAllocate(ins) => _eval!(ins by stack_allocate),
             Instruction::SStackAllocate(ins) => _eval!(ins by stack_allocate),
+
+            Instruction::Lock(register_addr) => eval_lock(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                register_addr,
+            ),
+            Instruction::SLock(register_addr) => eval_lock(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                register_addr,
+            ),
+
+            Instruction::Unlock(register_addr) => eval_unlock(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                register_addr,
+            ),
+            Instruction::SUnlock(register_addr) => eval_unlock(
+                method,
+                cpu,
+                this,
+                args,
+                result_ptr,
+                pc,
+                caught_exception,
+                register_addr,
+            ),
         }
     }
 }

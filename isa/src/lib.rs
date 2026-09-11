@@ -90,6 +90,12 @@ pub enum Instruction<TString, TTypeRef, TMethodRef, TFieldRef> {
 
     StackAllocate(Instruction_StackAllocate<RegisterAddr>),
     SStackAllocate(Instruction_StackAllocate<ShortRegisterAddr>),
+
+    Lock(RegisterAddr),
+    SLock(ShortRegisterAddr),
+
+    Unlock(RegisterAddr),
+    SUnlock(ShortRegisterAddr),
 }
 
 impl<TString, TTypeRef, TMethodRef, TFieldRef>
@@ -152,6 +158,12 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
 
             StackAllocate(ins) => Some(StackAllocate(ins)),
             SStackAllocate(ins) => Some(SStackAllocate(ins)),
+
+            Lock(addr) => Some(Lock(addr)),
+            SLock(addr) => Some(SLock(addr)),
+
+            Unlock(addr) => Some(Unlock(addr)),
+            SUnlock(addr) => Some(SUnlock(addr)),
         }
     }
 }
@@ -210,6 +222,12 @@ impl<TString, E1, TTypeRef, E2, TMethodRef, E3, TFieldRef, E4>
 
             StackAllocate(ins) => Ok(StackAllocate(ins)),
             SStackAllocate(ins) => Ok(SStackAllocate(ins)),
+
+            Lock(addr) => Ok(Lock(addr)),
+            SLock(addr) => Ok(SLock(addr)),
+
+            Unlock(addr) => Ok(Unlock(addr)),
+            SUnlock(addr) => Ok(SUnlock(addr)),
         }
     }
 }
@@ -283,6 +301,12 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
 
             StackAllocate(ins) => StackAllocate(ins),
             SStackAllocate(ins) => SStackAllocate(ins),
+
+            Lock(addr) => Lock(addr),
+            SLock(addr) => SLock(addr),
+
+            Unlock(addr) => Unlock(addr),
+            SUnlock(addr) => SUnlock(addr),
         }
     }
 }
@@ -363,6 +387,12 @@ where
             Instruction::SStackAllocate(ins) => {
                 f.write_fmt(format_args!("{NAME}::SStackAllocate{ins}"))
             }
+
+            Instruction::Lock(addr) => f.write_fmt(format_args!("{NAME}::Lock at {addr:#x}")),
+            Instruction::SLock(addr) => f.write_fmt(format_args!("{NAME}::SLock at {addr:#x}")),
+
+            Instruction::Unlock(addr) => f.write_fmt(format_args!("{NAME}::SUnlock at {addr:#x}")),
+            Instruction::SUnlock(addr) => f.write_fmt(format_args!("{NAME}::SUnlock at {addr:#x}")),
         }
     }
 }
@@ -448,6 +478,18 @@ impl<TString, TTypeRef, TMethodRef, TFieldRef>
                 Err(ins) => StackAllocate(ins),
             },
             SStackAllocate(ins) => SStackAllocate(ins),
+
+            Lock(addr) => match addr.try_into_short() {
+                Some(addr) => SLock(addr),
+                None => Lock(addr),
+            },
+            SLock(addr) => SLock(addr),
+
+            Unlock(addr) => match addr.try_into_short() {
+                Some(addr) => SUnlock(addr),
+                None => Unlock(addr),
+            },
+            SUnlock(addr) => SUnlock(addr),
         }
     }
 }
