@@ -24,7 +24,6 @@
 #![feature(ptr_metadata)]
 #![feature(const_result_trait_fn)]
 #![feature(derive_const)]
-#![feature(maybe_uninit_as_bytes)]
 // #![feature(generic_const_exprs)]
 #![feature(pointer_is_aligned_to)]
 #![feature(more_qualified_paths)]
