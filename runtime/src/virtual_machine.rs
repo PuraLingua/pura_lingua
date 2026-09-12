@@ -43,6 +43,13 @@ pub struct VirtualMachine {
     pub(crate) struct_static_map: RwLock<HashMap<NonNull<Struct>, (NonNull<u8>, Layout)>>,
 }
 
+pub macro create_vm_on_stack($name:ident) {
+    #[allow(invalid_value)]
+    let $name: $crate::virtual_machine::VirtualMachine =
+        unsafe { std::mem::MaybeUninit::zeroed().assume_init() };
+    $crate::virtual_machine::VirtualMachine::construct_in(NonNull::from_ref(&$name));
+}
+
 impl VirtualMachine {
     pub(crate) unsafe fn write_assembly_manager(
         this: NonNull<Self>,
@@ -102,6 +109,10 @@ impl VirtualMachine {
 
     pub fn get_cpu(&self, index: CpuID) -> Option<Pin<&RwLock<CPU>>> {
         self.cpu_manager.get_cpu(index)
+    }
+
+    pub fn add_write_cpu<'a>(&'a self) -> RwLockWriteGuard<'a, CPU> {
+        self.write_cpu(self.add_cpu()).unwrap()
     }
 
     pub fn write_cpu<'a>(&'a self, index: CpuID) -> Option<RwLockWriteGuard<'a, CPU>> {

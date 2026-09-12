@@ -14,84 +14,75 @@ use widestring::U16CStr;
 
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _},
-    test_utils::{LEAK_DETECTOR, g_core_type, try_invoke_instructions},
+    test_utils::{LEAK_DETECTOR, core_type_in, new_assembly_on, try_invoke_instructions_on},
     type_system::{
-        assembly::{Assembly, TypeContainer},
+        assembly::TypeContainer,
         class::Class,
         generics::GenericCountRequirement,
         method::{ExceptionTable, Method},
         method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle,
     },
-    virtual_machine::{CpuID, global_vm},
+    virtual_machine::{create_vm_on_stack, global_vm},
 };
 
 use super::*;
 
 #[test]
 fn test_call_stack() {
-    global_vm()
-        .assembly_manager()
-        .add_assembly(Assembly::new_for_adding(
-            widestring::utf16str!("Test").to_owned(),
-            false,
-            |assembly| {
-                vec![TypeContainer::from(Class::new(
-                    assembly,
-                    widestring::utf16str!("Test::Test").to_owned(),
-                    global::attr!(
-                        class Public {}
-                    ),
-                    GenericCountRequirement::default(),
-                    Some(
-                        global_vm()
-                            .assembly_manager()
-                            .get_core_type(CoreTypeId::System_Object)
-                            .unwrap_class(),
-                    ),
-                    vec![],
-                    |class| {
-                        MethodTable::new(class, |mt| {
-                            vec![
-                                Method::new(
-                                    mt,
-                                    widestring::utf16str!("F").to_owned(),
-                                    global::attr!(
-                                        method Public {}
-                                        g_core_type!(System_UInt64).into(),
-                                        g_core_type!(System_UInt8).into(),
-                                        g_core_type!(System_UInt32).into(),
-                                        g_core_type!(System_UInt16).into(),
-                                    ),
-                                    GenericCountRequirement::default(),
-                                    vec![],
-                                    MaybeUnloadedTypeHandle::from(
-                                        CoreTypeId::System_Void.global_type_handle(),
-                                    )
-                                    .into(),
-                                    CallConvention::PlatformDefault,
-                                    None,
-                                    vec![],
-                                    ExceptionTable::gen_new(),
-                                ),
-                                // Statics
-                                Method::default_sctor(Some(mt), global::attr!(method Public {})),
-                            ]
-                        })
-                        .as_non_null_ptr()
-                    },
-                    vec![],
-                    None,
-                    vec![],
-                    None,
-                ))]
-            },
-        ));
+    create_vm_on_stack!(vm);
 
-    let test_assembly = global_vm()
-        .assembly_manager()
-        .get_assembly_by_name(widestring::utf16str!("Test"))
-        .unwrap();
+    let test_assembly = new_assembly_on(&vm, "Test", |assembly| {
+        vec![TypeContainer::from(Class::new(
+            assembly,
+            widestring::utf16str!("Test::Test").to_owned(),
+            global::attr!(
+                class Public {}
+            ),
+            GenericCountRequirement::default(),
+            Some(
+                global_vm()
+                    .assembly_manager()
+                    .get_core_type(CoreTypeId::System_Object)
+                    .unwrap_class(),
+            ),
+            vec![],
+            |class| {
+                MethodTable::new(class, |mt| {
+                    vec![
+                        Method::new(
+                            mt,
+                            widestring::utf16str!("F").to_owned(),
+                            global::attr!(
+                                method Public {}
+                                core_type_in!(System_UInt64 in vm).into(),
+                                core_type_in!(System_UInt8 in vm).into(),
+                                core_type_in!(System_UInt32 in vm).into(),
+                                core_type_in!(System_UInt16 in vm).into(),
+                            ),
+                            GenericCountRequirement::default(),
+                            vec![],
+                            MaybeUnloadedTypeHandle::from(
+                                CoreTypeId::System_Void.global_type_handle(),
+                            )
+                            .into(),
+                            CallConvention::PlatformDefault,
+                            None,
+                            vec![],
+                            ExceptionTable::gen_new(),
+                        ),
+                        // Statics
+                        Method::default_sctor(Some(mt), global::attr!(method Public {})),
+                    ]
+                })
+                .as_non_null_ptr()
+            },
+            vec![],
+            None,
+            vec![],
+            None,
+        ))]
+    });
 
     let test_class = test_assembly.get_type::<NonNull<Class>>(0).unwrap();
 
@@ -104,7 +95,7 @@ fn test_call_stack() {
     };
     unsafe { assert_eq!(method.as_ref().attr().local_variable_types().len(), 4) };
 
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
     cpu.prepare_call_stack_for_method(unsafe { method.as_ref() });
 
     let call_frame = cpu.current_common_call_frame().unwrap();
@@ -143,9 +134,11 @@ fn static_non_purus_call() {
         );
         0
     }
+
+    create_vm_on_stack!(vm);
+
     let f_ptr = test as *const u8;
-    let cpu_id = global_vm().add_cpu();
-    let mut cpu = cpu_id.as_global_write_cpu().unwrap();
+    let mut cpu = vm.add_write_cpu();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: CallConvention::PlatformDefault,
@@ -195,8 +188,10 @@ fn non_purus_call_marshal() {
         );
         0
     }
+    create_vm_on_stack!(vm);
+
     let f_ptr = test as *const u8;
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: CallConvention::PlatformDefault,
@@ -250,27 +245,30 @@ fn dynamic_non_purus_call() -> global::Result<()> {
         0
     }
 
-    let (result_ptr, result_layout) = try_invoke_instructions(
+    create_vm_on_stack!(vm);
+
+    let (result_ptr, result_layout) = try_invoke_instructions_on(
+        &vm,
         vec![
-            /* 0 */ g_core_type!(System_USize).into(), // Pointer to function
-            /* 1 */ g_core_type!(System_UInt64).into(), // a
-            /* 2 */ g_core_type!(System_UInt32).into(), // b
-            /* 3 */ g_core_type!(System_UInt8).into(), // c
-            /* 4 */ g_core_type!(System_String).into(), // d
-            /* 5 */ g_core_type!(System_NonPurusCallConfiguration).into(),
-            /* 6 */ g_core_type!(System_UInt8).into(), // Call convention
-            /* 7 */ g_core_type!(System_NonPurusCallType).into(), // Return type
-            /* 8 */ g_core_type!(System_UInt8).into(), // Encoding
-            /* 9 */ g_core_type!(System_UInt8).into(), // Object strategy
-            /* 10 */ g_core_type!(System_Object).into(), // Array(ByRefArguments)
-            /* 11 */ g_core_type!(System_Object).into(), // Array(Arguments)
-            /* 12 */ g_core_type!(System_USize).into(), // Index for setting
-            /* 13 */ g_core_type!(System_USize).into(), // For 10
-            /* 14 */ g_core_type!(System_NonPurusCallType).into(), // For 11
-            /* 15 */ g_core_type!(System_Void).into(),
-            /* 16 */ g_core_type!(System_UInt64).into(), // RET
+            /* 0 */ core_type_in!(System_USize in vm).into(), // Pointer to function
+            /* 1 */ core_type_in!(System_UInt64 in vm).into(), // a
+            /* 2 */ core_type_in!(System_UInt32 in vm).into(), // b
+            /* 3 */ core_type_in!(System_UInt8 in vm).into(), // c
+            /* 4 */ core_type_in!(System_String in vm).into(), // d
+            /* 5 */ core_type_in!(System_NonPurusCallConfiguration in vm).into(),
+            /* 6 */ core_type_in!(System_UInt8 in vm).into(), // Call convention
+            /* 7 */ core_type_in!(System_NonPurusCallType in vm).into(), // Return type
+            /* 8 */ core_type_in!(System_UInt8 in vm).into(), // Encoding
+            /* 9 */ core_type_in!(System_UInt8 in vm).into(), // Object strategy
+            /* 10 */ core_type_in!(System_Object in vm).into(), // Array(ByRefArguments)
+            /* 11 */ core_type_in!(System_Object in vm).into(), // Array(Arguments)
+            /* 12 */ core_type_in!(System_USize in vm).into(), // Index for setting
+            /* 13 */ core_type_in!(System_USize in vm).into(), // For 10
+            /* 14 */ core_type_in!(System_NonPurusCallType in vm).into(), // For 11
+            /* 15 */ core_type_in!(System_Void in vm).into(),
+            /* 16 */ core_type_in!(System_UInt64 in vm).into(), // RET
         ],
-        g_core_type!(System_UInt64).into(),
+        core_type_in!(System_UInt64 in vm).into(),
         vec![
             // Load function pointer
             Instruction::Load(Instruction_Load {
@@ -464,8 +462,10 @@ fn non_purus_call_va_arg() {
         safe fn wprintf(format: *const u16, ...) -> std::ffi::c_int;
     }
 
+    create_vm_on_stack!(vm);
+
     let f_ptr = wprintf as *const u8;
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: CallConvention::CDeclWithVararg,
@@ -555,8 +555,11 @@ fn static_message_box() {
             utype : windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_STYLE,
         ) -> windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT
     );
+
+    create_vm_on_stack!(vm);
+
     let f_ptr = MessageBoxW as *const u8;
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: CallConvention::PlatformDefault,
@@ -595,7 +598,7 @@ fn static_message_box() {
 #[cfg(windows)]
 // cSpell:disable
 fn dynamic_message_box() -> global::Result<()> {
-    use crate::test_utils::try_invoke_instructions;
+    use crate::test_utils::try_invoke_instructions_on;
 
     windows::core::link!(
         "user32.dll" "system" fn MessageBoxW(
@@ -606,27 +609,30 @@ fn dynamic_message_box() -> global::Result<()> {
         ) -> windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT
     );
 
-    let (result_ptr, result_layout) = try_invoke_instructions(
+    create_vm_on_stack!(vm);
+
+    let (result_ptr, result_layout) = try_invoke_instructions_on(
+        &vm,
         vec![
-            /* 0 */ g_core_type!(System_USize).into(), // Pointer to function
-            /* 1 */ g_core_type!(System_Pointer).into(),
-            /* 2 */ g_core_type!(System_String).into(),
-            /* 3 */ g_core_type!(System_String).into(),
-            /* 4 */ g_core_type!(System_UInt32).into(),
-            /* 5 */ g_core_type!(System_NonPurusCallConfiguration).into(),
-            /* 6 */ g_core_type!(System_UInt8).into(), // Call convention
-            /* 7 */ g_core_type!(System_NonPurusCallType).into(), // Return type
-            /* 8 */ g_core_type!(System_UInt8).into(), // Encoding
-            /* 9 */ g_core_type!(System_UInt8).into(), // Object strategy
-            /* 10 */ g_core_type!(System_Object).into(), // Array(ByRefArguments)
-            /* 11 */ g_core_type!(System_Object).into(), // Array(Arguments)
-            /* 12 */ g_core_type!(System_USize).into(), // Index for setting
-            /* 13 */ g_core_type!(System_USize).into(), // For 10
-            /* 14 */ g_core_type!(System_NonPurusCallType).into(), // For 11
-            /* 15 */ g_core_type!(System_Void).into(),
-            /* 16 */ g_core_type!(System_Int32).into(), // RET
+            /* 0 */ core_type_in!(System_USize in vm).into(), // Pointer to function
+            /* 1 */ core_type_in!(System_Pointer in vm).into(),
+            /* 2 */ core_type_in!(System_String in vm).into(),
+            /* 3 */ core_type_in!(System_String in vm).into(),
+            /* 4 */ core_type_in!(System_UInt32 in vm).into(),
+            /* 5 */ core_type_in!(System_NonPurusCallConfiguration in vm).into(),
+            /* 6 */ core_type_in!(System_UInt8 in vm).into(), // Call convention
+            /* 7 */ core_type_in!(System_NonPurusCallType in vm).into(), // Return type
+            /* 8 */ core_type_in!(System_UInt8 in vm).into(), // Encoding
+            /* 9 */ core_type_in!(System_UInt8 in vm).into(), // Object strategy
+            /* 10 */ core_type_in!(System_Object in vm).into(), // Array(ByRefArguments)
+            /* 11 */ core_type_in!(System_Object in vm).into(), // Array(Arguments)
+            /* 12 */ core_type_in!(System_USize in vm).into(), // Index for setting
+            /* 13 */ core_type_in!(System_USize in vm).into(), // For 10
+            /* 14 */ core_type_in!(System_NonPurusCallType in vm).into(), // For 11
+            /* 15 */ core_type_in!(System_Void in vm).into(),
+            /* 16 */ core_type_in!(System_Int32 in vm).into(), // RET
         ],
-        g_core_type!(System_Int32).into(),
+        core_type_in!(System_Int32 in vm).into(),
         vec![
             // Load function pointer
             Instruction::Load(Instruction_Load {

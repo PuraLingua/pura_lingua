@@ -4,22 +4,25 @@ use global::{
 };
 
 use crate::{
-    stdlib::{CoreTypeId, CoreTypeIdConstExt, CoreTypeIdExt as _},
-    test_utils::g_core_type,
+    stdlib::{CoreTypeId, CoreTypeIdConstExt},
+    test_utils::{core_type_in, new_assembly_on},
     type_system::{
-        assembly::Assembly, generics::GenericCountRequirement, method_table::MethodTable,
+        generics::GenericCountRequirement, method_table::MethodTable,
         type_handle::MaybeUnloadedTypeHandle, type_ref::TypeRef,
     },
-    virtual_machine::{cpu_manager::CpuID, global_vm},
+    virtual_machine::{create_vm_on_stack, global_vm},
 };
 
 use super::*;
 
 #[test]
 fn test_to_string() {
-    let mut cpu = CpuID::new_write_global();
-    let string_t = CoreTypeId::System_String
-        .global_type_handle()
+    create_vm_on_stack!(vm);
+
+    let mut cpu = vm.add_write_cpu();
+    let string_t = vm
+        .assembly_manager()
+        .get_core_type(CoreTypeId::System_String)
         .unwrap_class();
     let s1 = ManagedReference::new_string(&mut cpu, "aaa");
     let s2 = ManagedReference::new_string(&mut cpu, "bbb");
@@ -60,13 +63,10 @@ fn test_to_string() {
 
 #[test]
 fn array_get_set() -> global::Result<()> {
-    let assembly_id = global_vm()
-        .assembly_manager()
-        .add_assembly(Assembly::new_for_adding(
-            widestring::utf16str!("Test").to_owned(),
-            false,
-            |assembly| {
-                vec![
+    create_vm_on_stack!(vm);
+
+    let assembly = new_assembly_on(&vm, "Test", |assembly| {
+        vec![
                     Class::new(
                         assembly,
                         widestring::utf16str!("Test::Test").to_owned(),
@@ -91,22 +91,22 @@ fn array_get_set() -> global::Result<()> {
                                             method Public {Static}
                                             /* 0 */ MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
                                                 assembly_and_index: either::Either::Right(Box::new(
-                                                    g_core_type!(System_Array_1),
+                                                    vm.assembly_manager().get_core_type(CoreTypeId::System_Array_1).into(),
                                                 )),
-                                                types: vec![g_core_type!(System_String)],
+                                                types: vec![core_type_in!(System_String in vm)],
                                             }).into(),
-                                            /* 1 */ g_core_type!(System_String).into(),
-                                            /* 2 */ g_core_type!(System_String).into(),
-                                            /* 3 */	g_core_type!(System_USize).into(),
-                                            /* 4 */ g_core_type!(System_Void).into(),
+                                            /* 1 */ vm.assembly_manager().get_core_type(CoreTypeId::System_String).into(),
+                                            /* 2 */ vm.assembly_manager().get_core_type(CoreTypeId::System_String).into(),
+                                            /* 3 */	vm.assembly_manager().get_core_type(CoreTypeId::System_USize).into(),
+                                            /* 4 */ vm.assembly_manager().get_core_type(CoreTypeId::System_Void).into(),
                                         ),
                                         GenericCountRequirement::default(),
                                         vec![],
                                         MaybeUnloadedTypeHandle::Unloaded(TypeRef::Specific {
                                             assembly_and_index: either::Either::Right(Box::new(
-                                                g_core_type!(System_Array_1),
+                                                vm.assembly_manager().get_core_type(CoreTypeId::System_Array_1).into(),
                                             )),
-                                            types: vec![g_core_type!(System_String)],
+                                            types: vec![vm.assembly_manager().get_core_type(CoreTypeId::System_String).into()],
                                         }).into(),
                                         CallConvention::PlatformDefault,
                                         None,
@@ -168,14 +168,9 @@ fn array_get_set() -> global::Result<()> {
                     )
                     .into(),
                 ]
-            },
-        ));
+    });
 
-    let mut cpu = CpuID::new_write_global();
-    let assembly = global_vm()
-        .assembly_manager()
-        .get_assembly(assembly_id)
-        .unwrap();
+    let mut cpu = vm.add_write_cpu();
     let test_class = assembly.get_class(0).unwrap();
     let m_set = unsafe {
         test_class

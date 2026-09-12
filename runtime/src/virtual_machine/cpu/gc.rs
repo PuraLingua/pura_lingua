@@ -47,17 +47,19 @@ mod tests {
     use std::ptr::NonNull;
 
     use crate::{
-        test_utils::g_core_class,
+        test_utils::core_class_in,
         value::managed_reference::{ArrayAccessor, ManagedReference},
-        virtual_machine::CpuID,
+        virtual_machine::create_vm_on_stack,
     };
 
     use super::*;
 
     #[test]
     fn gc() {
-        let mut cpu = CpuID::new_write_global();
-        let string_t = g_core_class!(System_String);
+        create_vm_on_stack!(vm);
+
+        let mut cpu = vm.add_write_cpu();
+        let string_t = core_class_in!(System_String in vm);
         let string_mt = unsafe { string_t.as_ref().method_table_ref() };
 
         let mut array_obj =

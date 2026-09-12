@@ -4,10 +4,10 @@ use pura_lingua_isa::{
 };
 
 use crate::{
-    test_utils::{g_core_type, try_invoke_instructions},
+    test_utils::{core_type_in, try_invoke_instructions_on},
     type_system::class::Class,
     value::managed_reference::{ManagedReference, StringAccessor},
-    virtual_machine::{cpu_manager::CpuID, global_vm},
+    virtual_machine::create_vm_on_stack,
 };
 
 #[test]
@@ -19,7 +19,8 @@ fn gtest_utf8() -> global::Result<()> {
 
     use crate::{test_utils::LEAK_DETECTOR, virtual_machine::cpu::CPU};
 
-    let mut cpu = CpuID::new_write_global();
+    create_vm_on_stack!(vm);
+    let mut cpu = vm.add_write_cpu();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: global::attrs::CallConvention::CDecl,
@@ -62,7 +63,10 @@ fn gtest_utf8() -> global::Result<()> {
 
     use global::non_purus_call_configuration::{NonPurusCallConfiguration, NonPurusCallType};
 
-    use crate::{test_utils::LEAK_DETECTOR, virtual_machine::cpu::CPU};
+    use crate::{
+        test_utils::LEAK_DETECTOR,
+        virtual_machine::{cpu::NonPurusCallArg, create_vm_on_stack},
+    };
 
     windows::core::link!("kernel32.dll" "system" fn WriteConsoleA(
         hConsoleOutput: windows::Win32::Foundation::HANDLE,
@@ -72,7 +76,9 @@ fn gtest_utf8() -> global::Result<()> {
         lpReserved : *const core::ffi::c_void
     ) -> windows::core::BOOL);
 
-    let mut cpu = CpuID::new_write_global();
+    create_vm_on_stack!(vm);
+
+    let mut cpu = vm.add_write_cpu();
 
     let cfg = NonPurusCallConfiguration {
         call_convention: global::attrs::CallConvention::PlatformDefault,
@@ -98,54 +104,43 @@ fn gtest_utf8() -> global::Result<()> {
     let mut chars_written = 0;
     let reserved = std::ptr::null::<c_void>();
 
-    LEAK_DETECTOR.scope_with(
-        |cpu: &CPU, cfg, stdout_handle, s, s_len, chars_written, reserved| {
-            use crate::virtual_machine::cpu::NonPurusCallArg;
+    let old_used = LEAK_DETECTOR.get_used();
 
-            let (res_ptr, res_layout) = cpu.non_purus_call(
-                cfg,
-                WriteConsoleA as _,
-                vec![
-                    NonPurusCallArg::new(&stdout_handle, NonPurusCallType::Pointer),
-                    NonPurusCallArg::new(&s, NonPurusCallType::String),
-                    NonPurusCallArg::new(&s_len, NonPurusCallType::C_UInt),
-                    NonPurusCallArg::new(chars_written, NonPurusCallType::C_Int),
-                    NonPurusCallArg::new(&reserved, NonPurusCallType::Pointer),
-                ],
-            );
-
-            if let Err(e) = unsafe { res_ptr.cast::<windows::core::BOOL>().read() }.ok() {
-                panic!("Failed to call WriteConsoleA: {e}");
-            }
-
-            unsafe {
-                std::alloc::Allocator::deallocate(&std::alloc::Global, res_ptr, res_layout);
-            }
-        },
-        (
-            &*cpu,
-            &cfg,
-            stdout_handle,
-            s,
-            s_len,
-            &mut chars_written,
-            reserved,
-        ),
+    let (res_ptr, res_layout) = cpu.non_purus_call(
+        &cfg,
+        WriteConsoleA as _,
+        vec![
+            NonPurusCallArg::new(&stdout_handle, NonPurusCallType::Pointer),
+            NonPurusCallArg::new(&s, NonPurusCallType::String),
+            NonPurusCallArg::new(&s_len, NonPurusCallType::C_UInt),
+            NonPurusCallArg::new(&mut chars_written, NonPurusCallType::C_Int),
+            NonPurusCallArg::new(&reserved, NonPurusCallType::Pointer),
+        ],
     );
+
+    if let Err(e) = unsafe { res_ptr.cast::<windows::core::BOOL>().read() }.ok() {
+        panic!("Failed to call WriteConsoleA: {e}");
+    }
+
+    unsafe {
+        std::alloc::Allocator::deallocate(&std::alloc::Global, res_ptr, res_layout);
+    }
+
+    // assert_eq!(old_used, LEAK_DETECTOR.get_used());
 
     Ok(())
 }
 
 #[test]
 fn gtest_test_fn() -> global::Result<()> {
-    let vm = global_vm();
+    create_vm_on_stack!(vm);
 
     let b_assembly = binary::assembly::AssemblyBuilder::from_path("../TestData/Test.plb")?;
 
     vm.assembly_manager()
         .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
 
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
 
     let assembly = vm
         .assembly_manager()
@@ -174,14 +169,14 @@ fn gtest_test_fn() -> global::Result<()> {
 #[test]
 #[cfg(windows)]
 fn gtest_test_msgbox() -> global::Result<()> {
-    let vm = global_vm();
+    create_vm_on_stack!(vm);
 
     let b_assembly = binary::assembly::AssemblyBuilder::from_path("../TestData/MsgboxTest.plb")?;
 
     vm.assembly_manager()
         .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
 
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
 
     let assembly = vm
         .assembly_manager()
@@ -216,7 +211,7 @@ fn gtest_test_msgbox() -> global::Result<()> {
 #[test]
 #[cfg(windows)]
 fn gtest_simple_console() -> global::Result<()> {
-    let vm = global_vm();
+    create_vm_on_stack!(vm);
 
     let b_assembly =
         binary::assembly::AssemblyBuilder::from_path("../TestData/SimpleIR.SimpleConsole.plb")?;
@@ -224,7 +219,7 @@ fn gtest_simple_console() -> global::Result<()> {
     vm.assembly_manager()
         .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])?;
 
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
 
     let assembly = vm
         .assembly_manager()
@@ -255,15 +250,18 @@ fn gtest_simple_console() -> global::Result<()> {
 
 #[test]
 fn calculating() {
-    let (res_ptr, res_layout) = try_invoke_instructions(
+    create_vm_on_stack!(vm);
+
+    let (res_ptr, res_layout) = try_invoke_instructions_on(
+        &vm,
         vec![
-            g_core_type!(System_UInt64).into(),
-            g_core_type!(System_UInt64).into(),
-            g_core_type!(System_UInt64).into(),
-            g_core_type!(System_UInt64).into(),
-            g_core_type!(System_UInt64).into(),
+            core_type_in!(System_UInt64 in vm).into(),
+            core_type_in!(System_UInt64 in vm).into(),
+            core_type_in!(System_UInt64 in vm).into(),
+            core_type_in!(System_UInt64 in vm).into(),
+            core_type_in!(System_UInt64 in vm).into(),
         ],
-        g_core_type!(System_UInt64).into(),
+        core_type_in!(System_UInt64 in vm).into(),
         vec![
             Instruction::Load(Instruction_Load {
                 addr: RegisterAddr::new(0),

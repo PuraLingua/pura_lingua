@@ -10,7 +10,7 @@ use global::{
 
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdExt},
-    test_utils::{g_core_class, g_core_type},
+    test_utils::{core_class_in, core_type_in},
     type_system::{
         assembly::Assembly,
         assembly_manager::AssemblyRef,
@@ -21,15 +21,18 @@ use crate::{
         type_ref::TypeRef,
     },
     value::managed_reference::{ArrayAccessor, ManagedReference, StringAccessor},
-    virtual_machine::{cpu::MainResult, cpu_manager::CpuID, global_vm},
+    virtual_machine::{
+        VirtualMachine, cpu::MainResult, cpu_manager::CpuID, create_vm_on_stack, global_vm,
+    },
 };
 
 use super::*;
 
 #[test]
 fn test_call() {
-    let mut cpu = CpuID::new_write_global();
-    let assembly_manager = global_vm().assembly_manager();
+    create_vm_on_stack!(vm);
+    let mut cpu = vm.add_write_cpu();
+    let assembly_manager = vm.assembly_manager();
     assembly_manager.add_assembly(Assembly::new_for_adding(
         widestring::utf16str!("Test").to_owned(),
         false,
@@ -73,17 +76,9 @@ fn test_call() {
 
 #[test]
 fn test_normal_f() {
-    dbg!(unsafe {
-        CoreTypeId::System_Exception
-            .global_type_handle()
-            .unwrap_class()
-            .as_ref()
-            .method_table_ref()
-            .list_method_signatures()
-    });
-
-    let mut cpu = CpuID::new_write_global();
-    let assembly_manager = global_vm().assembly_manager();
+    create_vm_on_stack!(vm);
+    let mut cpu = vm.add_write_cpu();
+    let assembly_manager = vm.assembly_manager();
 
     let b_assembly =
         binary::assembly::AssemblyBuilder::from_path("../TestData/TestNormalF.plb").unwrap();
@@ -92,8 +87,7 @@ fn test_normal_f() {
         .load_binaries(&[binary::assembly::Assembly::from_builder(&b_assembly)])
         .unwrap();
 
-    let assembly = global_vm()
-        .assembly_manager()
+    let assembly = assembly_manager
         .get_assembly_by_name(widestring::utf16str!("TestNormalF"))
         .unwrap();
 
@@ -135,7 +129,9 @@ fn test_interface_call() {
         );
     }
 
-    let assembly = crate::test_utils::new_global_assembly("Test", |assembly| {
+    create_vm_on_stack!(vm);
+
+    let assembly = crate::test_utils::new_assembly_on(&vm, "Test", |assembly| {
         vec![
             Interface::new(
                 assembly,
@@ -154,7 +150,7 @@ fn test_interface_call() {
                         ),
                         GenericCountRequirement::default(),
                         vec![],
-                        g_core_type!(System_String).into(),
+                        core_type_in!(System_String in vm).into(),
                         Default::default(),
                         None,
                         vec![],
@@ -169,7 +165,7 @@ fn test_interface_call() {
                 widestring::utf16str!("Test::Test1").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
-                Some(g_core_class!(System_Object)),
+                Some(core_class_in!(System_Object in vm)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
@@ -181,7 +177,7 @@ fn test_interface_call() {
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void).into(),
+                            core_type_in!(System_Void in vm).into(),
                             Default::default(),
                             None,
                             vec![],
@@ -195,7 +191,7 @@ fn test_interface_call() {
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void).into(),
+                            core_type_in!(System_Void in vm).into(),
                             Default::default(),
                             None,
                             vec![],
@@ -206,11 +202,11 @@ fn test_interface_call() {
                             widestring::utf16str!("FTest").to_owned(),
                             global::attr!(
                                 method Public {}
-                                g_core_type!(System_String).into()
+                                core_type_in!(System_String in vm).into()
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_String).into(),
+                            core_type_in!(System_String in vm).into(),
                             Default::default(),
                             None,
                             vec![
@@ -245,7 +241,7 @@ fn test_interface_call() {
                 widestring::utf16str!("Test::Test2").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
-                Some(g_core_class!(System_Object)),
+                Some(core_class_in!(System_Object in vm)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
@@ -257,7 +253,7 @@ fn test_interface_call() {
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void).into(),
+                            core_type_in!(System_Void in vm).into(),
                             Default::default(),
                             None,
                             vec![],
@@ -268,11 +264,11 @@ fn test_interface_call() {
                             widestring::utf16str!("FTest").to_owned(),
                             global::attr!(
                                 method Public {}
-                                g_core_type!(System_String).into()
+                                core_type_in!(System_String in vm).into()
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_String).into(),
+                            core_type_in!(System_String in vm).into(),
                             Default::default(),
                             None,
                             vec![
@@ -307,7 +303,7 @@ fn test_interface_call() {
                 widestring::utf16str!("Test::Main").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
-                Some(g_core_class!(System_Object)),
+                Some(core_class_in!(System_Object in vm)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
@@ -324,12 +320,12 @@ fn test_interface_call() {
                                     assembly: AssemblyRef::Name(string_name!("Test")),
                                     ind: 0,
                                 }).into(),
-                                g_core_type!(System_String).into(),
-                                g_core_type!(System_Void).into(),
+                                core_type_in!(System_String in vm).into(),
+                                core_type_in!(System_Void in vm).into(),
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void).into(),
+                            core_type_in!(System_Void in vm).into(),
                             Default::default(),
                             None,
                             vec![
@@ -410,10 +406,10 @@ fn test_interface_call() {
                             global::attr!(method Public {Static}),
                             GenericCountRequirement::default(),
                             vec![Parameter::new(
-                                g_core_type!(System_String),
+                                core_type_in!(System_String in vm),
                                 global::attr!(parameter {}),
                             )],
-                            g_core_type!(System_Void).into(),
+                            core_type_in!(System_Void in vm).into(),
                             Default::default(),
                             None,
                             Println as _,
@@ -437,7 +433,7 @@ fn test_interface_call() {
             Some(stdlib_header::System::Object::MethodId::__END as u32);
     }
 
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
     assert_eq!(
         cpu.invoke_main_class(unsafe { main_class.as_ref() }, vec![]),
         MainResult::Void
@@ -447,8 +443,9 @@ fn test_interface_call() {
 #[test]
 #[cfg_attr(not(windows), ignore = "SimpleConsole is only accessible in Windows")]
 fn test_interface_from_binary() {
-    let mut cpu = CpuID::new_write_global();
-    let assembly_manager = global_vm().assembly_manager();
+    create_vm_on_stack!(vm);
+    let mut cpu = vm.add_write_cpu();
+    let assembly_manager = vm.assembly_manager();
 
     let binaries = [
         binary::assembly::AssemblyBuilder::from_path("../TestData/SimpleIR.SimpleConsole.plb")
@@ -465,8 +462,7 @@ fn test_interface_from_binary() {
         }))
         .unwrap();
 
-    let assembly = global_vm()
-        .assembly_manager()
+    let assembly = assembly_manager
         .get_assembly_by_name(widestring::utf16str!("TestInterface"))
         .unwrap();
 
@@ -497,14 +493,16 @@ fn test_extra_args() {
         }
     }
 
-    let assembly = crate::test_utils::new_global_assembly("Test", |assembly| {
+    create_vm_on_stack!(vm);
+
+    let assembly = crate::test_utils::new_assembly_on(&vm, "Test", |assembly| {
         vec![
             Class::new(
                 assembly,
                 widestring::utf16str!("Test::Main").to_owned(),
                 global::attr!(class Public {}),
                 GenericCountRequirement::default(),
-                Some(g_core_class!(System_Object)),
+                Some(core_class_in!(System_Object in vm)),
                 vec![],
                 MethodTable::wrap_as_method_generator(|mt| {
                     vec![
@@ -513,14 +511,14 @@ fn test_extra_args() {
                             widestring::utf16str!("Main").to_owned(),
                             global::attr!(
                                 method Public {Static}
-                                g_core_type!(System_String).into(),
-                                g_core_type!(System_String).into(),
-                                g_core_type!(System_String).into(),
-                                g_core_type!(System_Void).into(),
+                                core_type_in!(System_String in vm).into(),
+                                core_type_in!(System_String in vm).into(),
+                                core_type_in!(System_String in vm).into(),
+                                core_type_in!(System_Void in vm).into(),
                             ),
                             GenericCountRequirement::default(),
                             vec![],
-                            g_core_type!(System_Void).into(),
+                            core_type_in!(System_Void in vm).into(),
                             Default::default(),
                             None,
                             vec![
@@ -591,10 +589,10 @@ fn test_extra_args() {
                             global::attr!(method Public {Static AllowExtraArgs}),
                             GenericCountRequirement::default(),
                             vec![Parameter::new(
-                                g_core_type!(System_String),
+                                core_type_in!(System_String in vm),
                                 global::attr!(parameter {}),
                             )],
-                            g_core_type!(System_Void).into(),
+                            core_type_in!(System_Void in vm).into(),
                             Default::default(),
                             None,
                             Println as _,
@@ -618,7 +616,7 @@ fn test_extra_args() {
             Some(stdlib_header::System::Object::MethodId::__END as u32);
     }
 
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
     assert_eq!(
         cpu.invoke_main_class(unsafe { main_class.as_ref() }, vec![]),
         MainResult::Void

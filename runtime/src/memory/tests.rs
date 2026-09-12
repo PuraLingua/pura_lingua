@@ -2,74 +2,58 @@ use std::{alloc::Layout, ptr::NonNull};
 
 use crate::{
     stdlib::{CoreTypeId, CoreTypeIdConstExt as _},
+    test_utils,
     type_system::{
-        assembly::{Assembly, TypeContainer},
-        class::Class,
-        field::Field,
-        generics::GenericCountRequirement,
-        method::Method,
-        method_table::MethodTable,
-        type_handle::MaybeUnloadedTypeHandle,
+        assembly::TypeContainer, class::Class, field::Field, generics::GenericCountRequirement,
+        method::Method, method_table::MethodTable, type_handle::MaybeUnloadedTypeHandle,
     },
-    virtual_machine::global_vm,
+    virtual_machine::create_vm_on_stack,
 };
 
 #[test]
 fn test_layout() {
-    let vm = global_vm();
-    let assembly_manager = vm.assembly_manager();
-    assembly_manager.add_assembly(Assembly::new_for_adding(
-        widestring::utf16str!("Test").to_owned(),
-        false,
-        |assem| {
-            vec![TypeContainer::from(Class::new(
-                assem,
-                widestring::utf16str!("Test::Test").to_owned(),
-                global::attr!(
-                    class Public {}
-                ),
-                GenericCountRequirement::default(),
-                None,
-                Vec::new(),
-                |class| {
-                    MethodTable::new(class, |mt| {
-                        vec![Method::default_sctor(
-                            Some(mt),
-                            global::attr!(method Public {Static}),
-                        )]
-                    })
-                    .as_non_null_ptr()
-                },
-                vec![
-                    Field::new(
-                        widestring::utf16str!("a").to_owned(),
-                        global::attr!(
-                            field Public {}
-                        ),
-                        MaybeUnloadedTypeHandle::Unloaded(
-                            CoreTypeId::System_UInt8.static_type_ref(),
-                        ),
-                    ),
-                    Field::new(
-                        widestring::utf16str!("b").to_owned(),
-                        global::attr!(
-                            field Public {}
-                        ),
-                        MaybeUnloadedTypeHandle::Unloaded(
-                            CoreTypeId::System_UInt64.static_type_ref(),
-                        ),
-                    ),
-                ],
-                None,
-                vec![],
-                None,
-            ))]
-        },
-    ));
+    create_vm_on_stack!(vm);
 
-    let assem = assembly_manager
-        .get_assembly_by_name(widestring::utf16str!("Test"))
-        .unwrap();
+    let assem = test_utils::new_assembly_on(&vm, "Test", |assem| {
+        vec![TypeContainer::from(Class::new(
+            assem,
+            widestring::utf16str!("Test::Test").to_owned(),
+            global::attr!(
+                class Public {}
+            ),
+            GenericCountRequirement::default(),
+            None,
+            Vec::new(),
+            |class| {
+                MethodTable::new(class, |mt| {
+                    vec![Method::default_sctor(
+                        Some(mt),
+                        global::attr!(method Public {Static}),
+                    )]
+                })
+                .as_non_null_ptr()
+            },
+            vec![
+                Field::new(
+                    widestring::utf16str!("a").to_owned(),
+                    global::attr!(
+                        field Public {}
+                    ),
+                    MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_UInt8.static_type_ref()),
+                ),
+                Field::new(
+                    widestring::utf16str!("b").to_owned(),
+                    global::attr!(
+                        field Public {}
+                    ),
+                    MaybeUnloadedTypeHandle::Unloaded(CoreTypeId::System_UInt64.static_type_ref()),
+                ),
+            ],
+            None,
+            vec![],
+            None,
+        ))]
+    });
 
     let class = assem.get_type::<NonNull<Class>>(0).unwrap();
 

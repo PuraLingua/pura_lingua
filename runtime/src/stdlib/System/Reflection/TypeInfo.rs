@@ -32,14 +32,16 @@ mod tests {
 
     use crate::{
         type_system::reflection_info_container::IReflect, value::managed_reference::StringAccessor,
-        virtual_machine::global_vm,
+        virtual_machine::create_vm_on_stack,
     };
 
     use super::*;
 
     #[test]
     fn test_reflection_type() {
-        let ty = global_vm()
+        create_vm_on_stack!(vm);
+
+        let ty = vm
             .assembly_manager()
             .get_core_type(CoreTypeId::System_Object);
         ty.__reflect_update();
@@ -56,7 +58,7 @@ mod tests {
             u16str!("System::Object")
         );
 
-        let ty = global_vm()
+        let ty = vm
             .assembly_manager()
             .get_core_type(CoreTypeId::System_Int64);
         ty.__reflect_update();
@@ -73,7 +75,7 @@ mod tests {
             u16str!("System::Int64")
         );
 
-        let ty = global_vm()
+        let ty = vm
             .assembly_manager()
             .get_core_type(CoreTypeId::System_IDispose);
         ty.__reflect_update();

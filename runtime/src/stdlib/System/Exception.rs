@@ -84,29 +84,33 @@ mod tests {
     use stdlib_header::System::Exception::MethodId;
 
     use crate::{
-        stdlib::{CoreTypeId, CoreTypeIdExt as _},
+        stdlib::CoreTypeId,
         value::managed_reference::{ArrayAccessor, StringAccessor},
-        virtual_machine::{cpu_manager::CpuID, global_vm},
+        virtual_machine::create_vm_on_stack,
     };
 
     use super::*;
 
     #[test]
     fn test_construct_exception() {
-        let vm = global_vm();
-        let u8_t = CoreTypeId::System_UInt8
-            .global_type_handle()
+        create_vm_on_stack!(vm);
+        let u8_t = vm
+            .assembly_manager()
+            .get_core_type(CoreTypeId::System_UInt8)
             .unwrap_struct();
-        let u16_t = CoreTypeId::System_UInt16
-            .global_type_handle()
+        let u16_t = vm
+            .assembly_manager()
+            .get_core_type(CoreTypeId::System_UInt16)
             .unwrap_struct();
-        let array_t = CoreTypeId::System_Array_1
-            .global_type_handle()
+        let array_t = vm
+            .assembly_manager()
+            .get_core_type(CoreTypeId::System_Array_1)
             .unwrap_class();
-        let object_t = CoreTypeId::System_Object
-            .global_type_handle()
+        let object_t = vm
+            .assembly_manager()
+            .get_core_type(CoreTypeId::System_Object)
             .unwrap_class();
-        let mut cpu = CpuID::new_write_global();
+        let mut cpu = vm.add_write_cpu();
         unsafe {
             cpu.push_call_stack_native(
                 u8_t.as_ref()

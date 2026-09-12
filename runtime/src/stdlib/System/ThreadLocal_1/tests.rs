@@ -9,15 +9,18 @@ use std::{
 use stdlib_header::{CoreTypeId, System::ThreadLocal_1};
 
 use crate::{
-    memory::ThreadSafeNonNull, stdlib::CoreTypeIdExt, test_utils::g_core_class,
-    virtual_machine::cpu_manager::CpuID,
+    memory::ThreadSafeNonNull, stdlib::CoreTypeIdExt, test_utils::core_class_in,
+    virtual_machine::create_vm_on_stack,
 };
 
 #[test]
 fn tls_support() {
-    let mut cpu = CpuID::new_write_global();
+    create_vm_on_stack!(vm);
+    let vmr = unsafe { (&raw const vm).as_ref_unchecked() };
 
-    let ThreadLocal_1 = unsafe { g_core_class!(System_ThreadLocal_1).as_ref() };
+    let mut cpu = vm.add_write_cpu();
+
+    let ThreadLocal_1 = unsafe { core_class_in!(System_ThreadLocal_1 in vm).as_ref() };
 
     let instantiated = ThreadLocal_1.instantiate(&[CoreTypeId::System_UInt64.global_type_handle()]);
 
@@ -44,7 +47,7 @@ fn tls_support() {
         let Get = unsafe { Get.as_ref() };
         let Set = unsafe { Set.as_ref() };
 
-        let mut cpu = CpuID::new_write_global();
+        let mut cpu = vmr.add_write_cpu();
         let data = 100u64;
         Set.typed_res_call::<()>(
             &mut cpu,
@@ -71,7 +74,7 @@ fn tls_support() {
             cvar.wait(&mut started);
         }
 
-        let mut cpu = CpuID::new_write_global();
+        let mut cpu = vmr.add_write_cpu();
         let data = 50u64;
         Set.typed_res_call::<()>(
             &mut cpu,

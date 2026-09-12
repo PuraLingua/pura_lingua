@@ -311,14 +311,17 @@ impl ExceptionTableEntry {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::g_core_type;
+    use crate::{
+        test_utils::core_type_in,
+        virtual_machine::{VirtualMachine, create_vm_on_stack},
+    };
 
     use super::*;
 
-    fn generate_entry(r: std::ops::Range<u64>) -> ExceptionTableEntry {
+    fn generate_entry(vm: &VirtualMachine, r: std::ops::Range<u64>) -> ExceptionTableEntry {
         ExceptionTableEntry::new(
             r.into(),
-            g_core_type!(System_Void),
+            core_type_in!(System_Void in vm),
             None,
             Default::default(),
             None,
@@ -328,9 +331,11 @@ mod tests {
 
     #[test]
     fn test_search_exception_entry() {
+        create_vm_on_stack!(vm);
+
         let mut current = 5;
         let table: ExceptionTable<()> = std::iter::repeat_with(|| {
-            let e = generate_entry(current..current + 10);
+            let e = generate_entry(&vm, current..current + 10);
             current += 9;
             e
         })

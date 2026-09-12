@@ -469,13 +469,13 @@ impl ArrayAccessor {
 
 #[cfg(test)]
 mod tests {
-    use crate::virtual_machine::global_vm;
+    use crate::virtual_machine::create_vm_on_stack;
 
     use super::*;
 
     #[test]
     fn array_test() {
-        let vm = global_vm();
+        create_vm_on_stack!(vm);
         let cpu_id = vm.add_cpu();
         let cpu = vm.get_cpu(cpu_id).unwrap();
         let mut cpu_write = cpu.write();

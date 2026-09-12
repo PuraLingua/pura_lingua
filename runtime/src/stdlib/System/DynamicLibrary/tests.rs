@@ -11,8 +11,9 @@ use global::{
 };
 use stdlib_header::CoreTypeId;
 
+#[cfg(windows)]
+use crate::virtual_machine::VirtualMachine;
 use crate::{
-    test_utils::g_core_type,
     type_system::{
         assembly::Assembly,
         assembly_manager::{AssemblyManager, AssemblyRef},
@@ -23,16 +24,16 @@ use crate::{
         method_table::MethodTable,
         type_ref::TypeRef,
     },
-    virtual_machine::{cpu_manager::CpuID, global_vm},
+    virtual_machine::create_vm_on_stack,
 };
 
 #[test]
 fn simple_dynamic_lib_test() {
-    let vm = global_vm();
+    create_vm_on_stack!(vm);
 
     const DLL_PATH: &str = cfg_select! {
-        windows => { "User32.dll" }
-        unix => { "/lib/x86_64-linux-gnu/libc.so.6" }
+        windows => "User32.dll",
+        unix => "/lib/x86_64-linux-gnu/libc.so.6",
     };
 
     const TEST_CLASS_REF: TypeRef = TypeRef::Index {
@@ -67,8 +68,8 @@ fn simple_dynamic_lib_test() {
                                 widestring::utf16str!(".sctor").to_owned(),
                                 global::attr!(
                                     method Public {Static}
-                                    g_core_type!(System_String).into(),
-                                    g_core_type!(System_DynamicLibrary).into(),
+                                    vm.assembly_manager().get_core_type(CoreTypeId::System_String).into(),
+                                    vm.assembly_manager().get_core_type(CoreTypeId::System_DynamicLibrary).into(),
                                 ),
                                 GenericCountRequirement::default(),
                                 vec![],
@@ -83,7 +84,7 @@ fn simple_dynamic_lib_test() {
                                         content: LoadContent::String(DLL_PATH.to_owned()),
                                     }),
                                     Instruction::New(Instruction_New::NewObject {
-                                        ty: g_core_type!(System_DynamicLibrary).into(),
+                                        ty: vm.assembly_manager().get_core_type(CoreTypeId::System_DynamicLibrary).into(),
                                         ctor_name:
                                             stdlib_header::System::DynamicLibrary::MethodId::Constructor_String
                                                 .into(),
@@ -98,7 +99,7 @@ fn simple_dynamic_lib_test() {
                                 ],
                                 ExceptionTable::gen_new(),
                             ),
-                            gen_simple_dynamic_lib_to_invoke(assembly_manager, mt),
+                            gen_simple_dynamic_lib_to_invoke(&vm, assembly_manager, mt),
                         ]
                     }),
                     vec![Field::new(
@@ -117,9 +118,9 @@ fn simple_dynamic_lib_test() {
         },
     ));
 
-    let mut cpu = CpuID::new_write_global();
+    let mut cpu = vm.add_write_cpu();
 
-    let assem = global_vm()
+    let assem = vm
         .assembly_manager()
         .get_assembly_by_name(widestring::utf16str!("Test"))
         .unwrap();
@@ -139,18 +140,30 @@ fn simple_dynamic_lib_test() {
             let mut buffer: [libc::c_char; 80] = [0; 80];
             let time_info = unsafe { libc::localtime(&raw const result) };
             unsafe {
-                let len = libc::strftime(buffer.as_mut_ptr(), buffer.len(), c"%Y-%m-%d %H:%M:%S".as_ptr(), time_info.cast_const());
+                let len = libc::strftime(
+                    buffer.as_mut_ptr(),
+                    buffer.len(),
+                    c"%Y-%m-%d %H:%M:%S".as_ptr(),
+                    time_info.cast_const(),
+                );
                 if len == 0 {
                     panic!("CANNOT FORMAT");
                 }
-                println!("Current time is: {}", std::ffi::CStr::from_ptr(buffer.as_ptr()).display());
+                println!(
+                    "Current time is: {}",
+                    std::ffi::CStr::from_ptr(buffer.as_ptr()).display()
+                );
             }
         }
         windows => {
             let result = unsafe {
                 fn_to_invoke
                     .as_ref()
-                    .typed_res_call::<windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT>(&mut cpu, None, &[])
+                    .typed_res_call::<windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_RESULT>(
+                        &mut cpu,
+                        None,
+                        &[],
+                    )
             };
             println!(
                 "You clicked {}",
@@ -166,12 +179,13 @@ fn simple_dynamic_lib_test() {
 
 #[cfg(windows)]
 fn gen_simple_dynamic_lib_to_invoke(
+    vm: &VirtualMachine,
     _assembly_manager: &AssemblyManager,
     mt: NonNull<MethodTable<Class>>,
 ) -> Pin<Box<Method<Class>>> {
     use global::instruction::Instruction_Call;
 
-    use crate::stdlib::CoreTypeIdConstExt as _;
+    use crate::{stdlib::CoreTypeIdConstExt as _, test_utils::core_type_in};
 
     const TEST_CLASS_REF: TypeRef = TypeRef::Index {
         assembly: AssemblyRef::Name(string_name!("Test")),
@@ -183,33 +197,33 @@ fn gen_simple_dynamic_lib_to_invoke(
         widestring::utf16str!("ToInvoke").to_owned(),
         global::attr!(
             method Public {Static}
-            /* 0 */ g_core_type!(System_USize).into(), // Pointer to function
+            /* 0 */ core_type_in!(System_USize in vm).into(), // Pointer to function
 
-            /* 1 */ g_core_type!(System_Pointer).into(),
-            /* 2 */ g_core_type!(System_String).into(),
-            /* 3 */ g_core_type!(System_String).into(),
-            /* 4 */ g_core_type!(System_UInt32).into(),
+            /* 1 */ core_type_in!(System_Pointer in vm).into(),
+            /* 2 */ core_type_in!(System_String in vm).into(),
+            /* 3 */ core_type_in!(System_String in vm).into(),
+            /* 4 */ core_type_in!(System_UInt32 in vm).into(),
 
-            /* 5 */ g_core_type!(System_NonPurusCallConfiguration).into(),
-            /* 6 */ g_core_type!(System_UInt8).into(), // Call convention
-            /* 7 */ g_core_type!(System_NonPurusCallType).into(), // Return type
-            /* 8 */ g_core_type!(System_UInt8).into(), // Encoding
-            /* 9 */ g_core_type!(System_UInt8).into(), // Object strategy
-            /* 10 */ g_core_type!(System_Object).into(), // Array(ByRefArguments)
-            /* 11 */ g_core_type!(System_Object).into(), // Array(Arguments)
-            /* 12 */ g_core_type!(System_USize).into(), // Index for setting
-            /* 13 */ g_core_type!(System_USize).into(), // For 10
-            /* 14 */ g_core_type!(System_NonPurusCallType).into(), // For 11
-            /* 15 */ g_core_type!(System_Void).into(),
+            /* 5 */  core_type_in!(System_NonPurusCallConfiguration in vm).into(),
+            /* 6 */  core_type_in!(System_UInt8 in vm).into(), // Call convention
+            /* 7 */  core_type_in!(System_NonPurusCallType in vm).into(), // Return type
+            /* 8 */  core_type_in!(System_UInt8 in vm).into(), // Encoding
+            /* 9 */  core_type_in!(System_UInt8 in vm).into(), // Object strategy
+            /* 10 */ core_type_in!(System_Object in vm).into(), // Array(ByRefArguments)
+            /* 11 */ core_type_in!(System_Object in vm).into(), // Array(Arguments)
+            /* 12 */ core_type_in!(System_USize in vm).into(), // Index for setting
+            /* 13 */ core_type_in!(System_USize in vm).into(), // For 10
+            /* 14 */ core_type_in!(System_NonPurusCallType in vm).into(), // For 11
+            /* 15 */ core_type_in!(System_Void in vm).into(),
 
-            /* 16 */ g_core_type!(System_Int32).into(), // RET
+            /* 16 */ core_type_in!(System_Int32 in vm).into(), // RET
 
-            /* 17 */ g_core_type!(System_DynamicLibrary).into(), // Library
-            /* 18 */ g_core_type!(System_String).into(), // MethodName
+            /* 17 */ core_type_in!(System_DynamicLibrary in vm).into(), // Library
+            /* 18 */ core_type_in!(System_String in vm).into(), // MethodName
         ),
         GenericCountRequirement::default(),
         vec![],
-        g_core_type!(System_Int32).into(),
+        core_type_in!(System_Int32 in vm).into(),
         CallConvention::PlatformDefault,
         None,
         vec![
@@ -398,6 +412,7 @@ fn gen_simple_dynamic_lib_to_invoke(
 
 #[cfg(unix)]
 fn gen_simple_dynamic_lib_to_invoke(
+    vm: &VirtualMachine,
     assembly_manager: &AssemblyManager,
     mt: NonNull<MethodTable<Class>>,
 ) -> Pin<Box<Method<Class>>> {
@@ -413,29 +428,29 @@ fn gen_simple_dynamic_lib_to_invoke(
         widestring::utf16str!("ToInvoke").to_owned(),
         global::attr!(
             method Public {Static}
-            /* 0 */ g_core_type!(System_DynamicLibrary).into(), // Library
-            /* 1 */ g_core_type!(System_String).into(), // MethodName
-            /* 2 */ g_core_type!(System_Pointer).into(), // lpMethod
+            /* 0 */ core_type_in!(System_DynamicLibrary in vm).into(), // Library
+            /* 1 */ core_type_in!(System_String in vm).into(), // MethodName
+            /* 2 */ core_type_in!(System_Pointer in vm).into(), // lpMethod
 
             // CallConfig
-            /* 3 */ g_core_type!(System_NonPurusCallConfiguration).into(), // Config
-            /* 4 */ g_core_type!(System_UInt8).into(), // CallConvention
+            /* 3 */ core_type_in!(System_NonPurusCallConfiguration in vm).into(), // Config
+            /* 4 */ core_type_in!(System_UInt8 in vm).into(), // CallConvention
 
-            /* 5 */ g_core_type!(System_NonPurusCallType).into(), // ReturnType
+            /* 5 */ core_type_in!(System_NonPurusCallType in vm).into(), // ReturnType
 
-            /* 6 */ g_core_type!(System_UInt8).into(), // Encoding
-            /* 7 */ g_core_type!(System_UInt8).into(), // ObjectStrategy
-            /* 8 */ g_core_type!(System_Object).into(), // ByRefArguments(System::Array`1[System::USize])
+            /* 6 */ core_type_in!(System_UInt8 in vm).into(), // Encoding
+            /* 7 */ core_type_in!(System_UInt8 in vm).into(), // ObjectStrategy
+            /* 8 */ core_type_in!(System_Object in vm).into(), // ByRefArguments(System::Array`1[System::USize])
 
-            /* 9 */ g_core_type!(System_Object).into(), // Arguments(System::Array`1[System::NonPurusCallType])
-            /* 10 */ g_core_type!(System_USize).into(), // IndexToSet
+            /* 9 */ core_type_in!(System_Object in vm).into(), // Arguments(System::Array`1[System::NonPurusCallType])
+            /* 10 */ core_type_in!(System_USize in vm).into(), // IndexToSet
 
             // Arg0
-            /* 11 */ g_core_type!(System_NonPurusCallType).into(), // Arg0Type
+            /* 11 */ core_type_in!(System_NonPurusCallType in vm).into(), // Arg0Type
 
             // Call
-            /* 12 */ g_core_type!(System_Pointer).into(), // tLoc
-            /* 13 */ g_core_type!(System_Int64).into(), // RET
+            /* 12 */ core_type_in!(System_Pointer in vm).into(), // tLoc
+            /* 13 */ core_type_in!(System_Int64 in vm).into(), // RET
         ),
         GenericCountRequirement::default(),
         vec![],
