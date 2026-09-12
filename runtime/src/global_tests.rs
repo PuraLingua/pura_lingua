@@ -104,7 +104,7 @@ fn gtest_utf8() -> global::Result<()> {
     let mut chars_written = 0;
     let reserved = std::ptr::null::<c_void>();
 
-    let old_used = LEAK_DETECTOR.get_used();
+    let _old_used = LEAK_DETECTOR.get_used();
 
     let (res_ptr, res_layout) = cpu.non_purus_call(
         &cfg,
