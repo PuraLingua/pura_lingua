@@ -1,6 +1,5 @@
 /* cSpell:disable */
 #![feature(mapped_lock_guards)]
-#![feature(allocator_api)]
 #![feature(const_trait_impl)]
 #![feature(const_default)]
 #![feature(const_try)]
@@ -53,8 +52,8 @@
 #![feature(sync_nonpoison)]
 #![feature(nonpoison_rwlock)]
 #![feature(dispatch_from_dyn)]
+#![feature(explicit_tail_calls)]
 #![cfg_attr(test, feature(nonpoison_condvar))]
-#![cfg_attr(test, feature(vec_from_fn))]
 #![cfg_attr(all(unix, test), feature(cstr_display))]
 #![cfg_attr(all(unix, test), feature(c_variadic))]
 /* cSpell:enable */

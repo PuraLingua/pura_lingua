@@ -369,8 +369,7 @@ impl<T: GetAssemblyRef + GetTypeVars> Spec for T {
     }
 }
 
-#[allow(improper_ctypes_definitions)] // It is always called in rust.
-pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
+pub fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
     method: &Method<T>,
     cpu: &mut CPU,
     this: Option<NonNull<()>>,
@@ -400,7 +399,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
 
     let mut status = vec![];
 
-    loop {
+    'fetch: loop {
         if let Some(last_status) = status.pop() {
             match last_status {
                 RunStatus::OnFinally {
@@ -512,7 +511,7 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
                     }
                 }
             } else {
-                return;
+                break 'fetch;
             }
         }
         if let Err(t) = T::spec_match_code(
@@ -577,4 +576,5 @@ pub extern "system" fn __default_entry_point<T: GetTypeVars + GetAssemblyRef>(
         }
         pc += 1;
     }
+    cpu.pop_call_stack();
 }

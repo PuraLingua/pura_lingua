@@ -77,22 +77,6 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
 
         for (ind, param) in self.args.iter().enumerate() {
             if !param.attr.is_by_ref() {
-                // let layout = self.args[ind].get_layout(self);
-                // if layout.size() == 0 {
-                //     complete_arg.push(NonNull::dangling().as_ptr());
-                //     continue;
-                // }
-                // copied_args.push((ind + 2 + this_arg_len, layout));
-                // let ptr = std::alloc::Allocator::allocate_zeroed(&std::alloc::Global, layout)
-                //     .unwrap()
-                //     .as_non_null_ptr()
-                //     .cast::<c_void>();
-
-                // if let Some(a) = NonNull::new(*a) {
-                //     unsafe {
-                //         ptr.cast::<u8>().copy_from(a.cast(), layout.size());
-                //     }
-                // }
                 complete_arg.push(args[ind]);
             } else {
                 complete_arg.push((&raw const args[ind]).cast_mut().cast());
@@ -155,9 +139,13 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
             self.entry_point.as_ptr(),
         ) {
             cpu.prepare_call_stack_for_method(self);
-            default_entry_point::__default_entry_point::<T>(self, cpu, this, args, return_buffer);
-            cpu.pop_call_stack();
-            return;
+            become default_entry_point::__default_entry_point::<T>(
+                self,
+                cpu,
+                this,
+                args,
+                return_buffer,
+            );
         }
         cpu.push_call_stack_native(self);
         let cif = self.get_cif();
@@ -284,9 +272,6 @@ impl<T: GetTypeVars + GetAssemblyRef + GetNonGenericTypeHandleKind> Method<T> {
                 unsafe { result.as_ptr().cast::<R>().read() }
             }
         } else {
-            #[cfg(not(debug_assertions))]
-            let mut result: MaybeUninit<R> = MaybeUninit::uninit();
-            #[cfg(debug_assertions)]
             let mut result: MaybeUninit<R> = MaybeUninit::zeroed();
 
             unsafe {

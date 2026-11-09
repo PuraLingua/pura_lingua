@@ -1,4 +1,3 @@
-#![feature(allocator_api)]
 #![feature(mapped_lock_guards)]
 #![feature(sync_nonpoison)]
 #![feature(nonpoison_rwlock)]
